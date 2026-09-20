@@ -1,0 +1,104 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@layer base {
+  :root {
+    --background: 200 40% 95%;
+    --foreground: 220 20% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 15%;
+
+    --primary: 145 63% 42%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 200 30% 92%;
+    --secondary-foreground: 220 20% 15%;
+
+    --muted: 200 20% 93%;
+    --muted-foreground: 220 10% 46%;
+
+    --accent: 200 40% 90%;
+    --accent-foreground: 220 20% 15%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 200 20% 88%;
+    --input: 200 25% 88%;
+    --ring: 145 63% 42%;
+
+    --radius: 0.75rem;
+
+    /* Zahpoint custom tokens */
+    --tile-pink: 350 80% 95%;
+    --tile-green: 145 50% 92%;
+    --tile-blue: 200 60% 92%;
+    --tile-yellow: 45 80% 92%;
+    --tile-purple: 270 50% 93%;
+    --tile-cyan: 180 50% 92%;
+
+    --success: 145 63% 42%;
+    --success-foreground: 0 0% 100%;
+    --warning: 35 90% 50%;
+    --warning-foreground: 0 0% 100%;
+    --info: 210 80% 55%;
+    --info-foreground: 0 0% 100%;
+
+    --drawer-header: 250 60% 85%;
+    --drawer-body: 170 40% 95%;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 220 20% 10%;
+    --foreground: 200 20% 95%;
+    --card: 220 20% 14%;
+    --card-foreground: 200 20% 95%;
+    --popover: 220 20% 14%;
+    --popover-foreground: 200 20% 95%;
+    --primary: 145 63% 42%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 15% 20%;
+    --secondary-foreground: 200 20% 95%;
+    --muted: 220 15% 20%;
+    --muted-foreground: 200 10% 60%;
+    --accent: 220 15% 22%;
+    --accent-foreground: 200 20% 95%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 15% 22%;
+    --input: 220 15% 22%;
+    --ring: 145 63% 42%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+}
+
+@layer utilities {
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
