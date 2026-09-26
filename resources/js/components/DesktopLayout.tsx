@@ -1,7 +1,9 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import DesktopSidebar from './DesktopSidebar';
 import LicenseExpiryBanner from './LicenseExpiryBanner';
 import { useApp } from '@/context/AppContext';
+import { Menu, X, Store } from 'lucide-react';
+import { usePage } from '@inertiajs/react';
 
 interface DesktopLayoutProps {
   children: ReactNode;
@@ -9,21 +11,89 @@ interface DesktopLayoutProps {
 
 export default function DesktopLayout({ children }: DesktopLayoutProps) {
   const { licenseStatus } = useApp();
+  const { url } = usePage();
   const daysRemaining = licenseStatus?.days_remaining ?? 999;
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Close mobile menu when url changes
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [url]);
+
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileMenuOpen]);
 
   return (
-    <div className="flex min-h-screen w-full">
-      <DesktopSidebar />
-      <main className="flex-1 min-w-0 transition-all duration-300">
+    <div className="flex flex-col lg:flex-row h-screen w-full bg-[#F8F9FA] dark:bg-background overflow-hidden relative">
+      
+      {/* Desktop Sidebar (Hidden on mobile) */}
+      <div className="hidden lg:block h-full z-40 shrink-0 shadow-2xl shadow-black/5">
+        <DesktopSidebar />
+      </div>
+
+      {/* Mobile Top Bar */}
+      <div className="lg:hidden flex items-center justify-between bg-card border-b border-border px-4 py-3 z-30 shrink-0 shadow-sm relative">
+        <div className="flex items-center gap-2">
+           <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center shadow-inner">
+              <Store size={14} className="text-primary-foreground" />
+           </div>
+           <div className="font-black text-lg text-foreground tracking-tight leading-none">Maaldhis</div>
+        </div>
+        <button 
+          onClick={() => setMobileMenuOpen(true)}
+          className="w-10 h-10 rounded-xl bg-muted text-foreground flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-all shadow-sm"
+        >
+          <Menu size={20} />
+        </button>
+      </div>
+
+      {/* Mobile Sidebar Overlay */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-[100] lg:hidden flex">
+          <div 
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" 
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          <div className="relative flex w-[300px] max-w-[85vw] flex-col bg-background h-full shadow-2xl animate-in slide-in-from-left duration-300">
+             <button 
+                onClick={() => setMobileMenuOpen(false)}
+                className="absolute top-4 right-4 w-10 h-10 rounded-xl bg-muted/50 border border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted flex items-center justify-center transition-colors z-50 shadow-sm"
+              >
+                <X size={20} />
+              </button>
+             <div className="h-full overflow-y-auto">
+               <DesktopSidebar isMobile={true} />
+             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Content Area */}
+      <main className="flex-1 min-w-0 flex flex-col overflow-y-auto relative z-10">
+        
+        {/* Subtle background abstract element */}
+        <div className="absolute top-0 right-0 w-[40vw] h-[40vw] max-w-[500px] max-h-[500px] bg-primary/5 rounded-full blur-3xl pointer-events-none -translate-y-1/2 translate-x-1/4"></div>
+
         {licenseStatus?.status === 'active' && daysRemaining <= 7 && (
-          <div className="px-4 pt-4">
+          <div className="px-4 lg:px-8 pt-4 lg:pt-6 pb-2 shrink-0 relative z-20">
             <LicenseExpiryBanner
               daysRemaining={daysRemaining}
               expiryDate={licenseStatus.expiry_date}
             />
           </div>
         )}
-        {children}
+        <div className="flex-1 flex flex-col min-h-0 relative z-10 pb-8">
+          {children}
+        </div>
       </main>
     </div>
   );

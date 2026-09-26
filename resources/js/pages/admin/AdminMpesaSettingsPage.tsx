@@ -1,3 +1,4 @@
+import PageHeader from '@/components/PageHeader';
 import { useState, useEffect } from 'react';
 import { api as apiClient } from '@/api';
 import { toast } from 'sonner';
@@ -181,7 +182,7 @@ export default function AdminMpesaSettingsPage() {
   const toggleSecret = (field: string) => setShowSecrets(prev => ({ ...prev, [field]: !prev[field] }));
 
   const statusConfig: Record<IntegrationStatus, { label: string; icon: any; color: string }> = {
-    not_configured: { label: 'Not Configured', icon: AlertCircle, color: 'text-[hsl(220,10%,50%)]' },
+    not_configured: { label: 'Not Configured', icon: AlertCircle, color: 'text-muted-foreground' },
     connected: { label: 'Connected', icon: CheckCircle2, color: 'text-[hsl(145,63%,50%)]' },
     connection_failed: { label: 'Connection Failed', icon: XCircle, color: 'text-red-400' },
     disabled: { label: 'Disabled', icon: WifiOff, color: 'text-yellow-400' },
@@ -191,16 +192,17 @@ export default function AdminMpesaSettingsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-[hsl(145,63%,42%)] border-t-transparent rounded-full animate-spin" />
+      <PageHeader title="M-Pesa Config" />
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
-  const inputClass = "w-full px-3 py-2.5 rounded-lg bg-[hsl(220,20%,18%)] border border-[hsl(220,15%,25%)] text-white text-sm placeholder:text-[hsl(220,10%,40%)] focus:outline-none focus:ring-1 focus:ring-[hsl(145,63%,42%)]";
+  const inputClass = "w-full px-3 py-2.5 rounded-lg bg-background border border-input text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-[hsl(145,63%,42%)]";
 
   const renderSecretField = (label: string, field: keyof MpesaConfig, required?: boolean) => (
     <div key={field}>
-      <label className="block text-xs font-medium text-[hsl(220,10%,60%)] mb-1.5">
+      <label className="block text-xs font-medium text-muted-foreground mb-1.5">
         {label} {required && <span className="text-red-400">*</span>}
       </label>
       <div className="relative">
@@ -211,7 +213,7 @@ export default function AdminMpesaSettingsPage() {
           className={`${inputClass} pr-10`}
           placeholder={`Enter ${label.toLowerCase()}`}
         />
-        <button type="button" onClick={() => toggleSecret(field)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[hsl(220,10%,50%)] hover:text-white">
+        <button type="button" onClick={() => toggleSecret(field)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
           {showSecrets[field] ? <EyeOff size={16} /> : <Eye size={16} />}
         </button>
       </div>
@@ -220,7 +222,7 @@ export default function AdminMpesaSettingsPage() {
 
   const renderTextField = (label: string, field: keyof MpesaConfig, required?: boolean, placeholder?: string) => (
     <div key={field}>
-      <label className="block text-xs font-medium text-[hsl(220,10%,60%)] mb-1.5">
+      <label className="block text-xs font-medium text-muted-foreground mb-1.5">
         {label} {required && <span className="text-red-400">*</span>}
       </label>
       <input
@@ -234,39 +236,38 @@ export default function AdminMpesaSettingsPage() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-[10px]">
       <div className="flex items-center gap-3">
         <Smartphone size={24} className="text-[hsl(145,63%,50%)]" />
-        <h1 className="text-2xl font-bold text-white">M-Pesa Integration</h1>
-      </div>
-      <p className="text-sm text-[hsl(220,10%,50%)]">
+              </div>
+      <p className="text-sm text-muted-foreground">
         Configure M-Pesa for license/subscription payments. Clients will be able to pay via M-Pesa STK Push when upgrading their plan.
       </p>
 
       {/* Status + Toggle */}
-      <div className="bg-[hsl(220,20%,14%)] rounded-xl border border-[hsl(220,15%,18%)] p-5 flex items-center justify-between">
+      <div className="bg-card rounded-xl border border-border p-5 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <currentStatus.icon size={22} className={currentStatus.color} />
           <div>
             <p className={`font-semibold text-sm ${currentStatus.color}`}>{currentStatus.label}</p>
             {config.last_tested_at && (
-              <p className="text-xs text-[hsl(220,10%,40%)]">Last tested: {new Date(config.last_tested_at).toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground">Last tested: {new Date(config.last_tested_at).toLocaleString()}</p>
             )}
           </div>
         </div>
-        <button onClick={handleToggle} className={`relative inline-flex items-center w-12 h-7 rounded-full transition-colors shrink-0 ${config.is_enabled ? 'bg-[hsl(145,63%,42%)]' : 'bg-[hsl(220,15%,30%)]'}`}>
+        <button onClick={handleToggle} className={`relative inline-flex items-center w-12 h-7 rounded-full transition-colors shrink-0 ${config.is_enabled ? 'bg-primary text-primary-foreground' : 'bg-[hsl(220,15%,30%)]'}`}>
           <span className={`inline-block w-5 h-5 rounded-full bg-white shadow-md transition-transform duration-200 ${config.is_enabled ? 'translate-x-[26px]' : 'translate-x-[3px]'}`} />
         </button>
       </div>
 
       {/* Environment */}
-      <div className="bg-[hsl(220,20%,14%)] rounded-xl border border-[hsl(220,15%,18%)] p-5">
-        <h3 className="text-sm font-semibold text-white mb-3">Environment</h3>
+      <div className="bg-card rounded-xl border border-border p-5">
+        <h3 className="text-sm font-semibold text-foreground mb-3">Environment</h3>
         <div className="flex gap-3">
           {(['sandbox', 'production'] as const).map(env => (
             <button key={env} onClick={() => setConfig(prev => ({ ...prev, environment: env }))}
               className={`flex-1 py-2.5 rounded-lg text-sm font-medium capitalize transition-colors ${
-                config.environment === env ? 'bg-[hsl(145,63%,42%)] text-white' : 'bg-[hsl(220,20%,18%)] text-[hsl(220,10%,60%)] hover:text-white'
+                config.environment === env ? 'bg-primary text-primary-foreground text-foreground' : 'bg-background text-muted-foreground hover:text-foreground'
               }`}>
               {env}
             </button>
@@ -275,8 +276,8 @@ export default function AdminMpesaSettingsPage() {
       </div>
 
       {/* Credentials */}
-      <div className="bg-[hsl(220,20%,14%)] rounded-xl border border-[hsl(220,15%,18%)] p-5 space-y-4">
-        <h3 className="text-sm font-semibold text-white">API Credentials</h3>
+      <div className="bg-card rounded-xl border border-border p-5 space-y-4">
+        <h3 className="text-sm font-semibold text-foreground">API Credentials</h3>
         {renderTextField('Consumer Key', 'consumer_key', true)}
         {renderSecretField('Consumer Secret', 'consumer_secret_encrypted', true)}
         {renderTextField('Shortcode / Business Short Code', 'shortcode', true)}
@@ -284,16 +285,16 @@ export default function AdminMpesaSettingsPage() {
       </div>
 
       {/* URLs */}
-      <div className="bg-[hsl(220,20%,14%)] rounded-xl border border-[hsl(220,15%,18%)] p-5 space-y-4">
-        <h3 className="text-sm font-semibold text-white">URLs</h3>
+      <div className="bg-card rounded-xl border border-border p-5 space-y-4">
+        <h3 className="text-sm font-semibold text-foreground">URLs</h3>
         {renderTextField('Callback URL', 'callback_url', false, 'https://your-domain.com/api/mpesa/callback')}
         {renderTextField('Confirmation URL', 'confirmation_url', false, 'Optional')}
         {renderTextField('Validation URL', 'validation_url', false, 'Optional')}
       </div>
 
       {/* Optional */}
-      <div className="bg-[hsl(220,20%,14%)] rounded-xl border border-[hsl(220,15%,18%)] p-5 space-y-4">
-        <h3 className="text-sm font-semibold text-white">Optional Settings</h3>
+      <div className="bg-card rounded-xl border border-border p-5 space-y-4">
+        <h3 className="text-sm font-semibold text-foreground">Optional Settings</h3>
         {renderTextField('Initiator Name', 'initiator_name', false, 'Optional')}
         {renderSecretField('Security Credential', 'security_credential_encrypted')}
       </div>
@@ -301,13 +302,13 @@ export default function AdminMpesaSettingsPage() {
       {/* Actions */}
       <div className="flex flex-col gap-3">
         <button onClick={handleSave} disabled={saving}
-          className="w-full py-3 rounded-xl bg-[hsl(145,63%,42%)] text-white font-bold flex items-center justify-center gap-2 disabled:opacity-50 hover:opacity-90 transition-opacity">
+          className="w-full py-3 rounded-xl bg-primary text-primary-foreground text-foreground font-bold flex items-center justify-center gap-2 disabled:opacity-50 hover:opacity-90 transition-opacity">
           {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
           Save Settings
         </button>
         <div className="flex gap-3">
           <button onClick={handleTest} disabled={testing || !hasExisting}
-            className="flex-1 py-2.5 rounded-xl bg-[hsl(220,20%,18%)] border border-[hsl(220,15%,25%)] text-white font-medium flex items-center justify-center gap-2 disabled:opacity-40 hover:bg-[hsl(220,15%,20%)]">
+            className="flex-1 py-2.5 rounded-xl bg-background border border-input text-foreground font-medium flex items-center justify-center gap-2 disabled:opacity-40 hover:bg-muted/80">
             {testing ? <Loader2 size={16} className="animate-spin" /> : <TestTube size={16} />}
             Test Connection
           </button>

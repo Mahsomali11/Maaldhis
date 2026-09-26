@@ -3,7 +3,7 @@ import { router } from '@inertiajs/react';
 import { api as apiClient } from '@/api';
 import { useApp } from '@/context/AppContext';
 import PageHeader from '@/components/PageHeader';
-import { Crown, Check, Zap, Shield, Star, Loader2, Smartphone, Phone } from 'lucide-react';
+import { Crown, Check, Zap, Shield, Star, Loader2, Smartphone, Phone, ArrowRight, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Plan {
@@ -20,11 +20,11 @@ interface Plan {
 }
 
 export default function UpgradePage() {
-  const navigate = (url, options) => router.visit(url, options);
+  const navigate = (url: string, options?: any) => router.visit(url, options);
   const { currentStore, licenseStatus, currency } = useApp();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('yearly');
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'manual' | 'mpesa'>('manual');
@@ -87,6 +87,7 @@ export default function UpgradePage() {
 
   const handleSelectPlan = (planId: string) => {
     setSelectedPlan(planId);
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
   };
 
   const handleProceedToPayment = async () => {
@@ -204,9 +205,9 @@ export default function UpgradePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background pb-20 lg:pb-0">
+      <div className="min-h-screen bg-[#F8F9FA] dark:bg-background pb-20 lg:pb-0">
         <PageHeader title="Upgrade Plan" />
-        <div className="flex items-center justify-center py-20">
+        <div className="flex items-center justify-center py-32">
           <Loader2 className="animate-spin text-primary" size={32} />
         </div>
       </div>
@@ -214,52 +215,75 @@ export default function UpgradePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20 lg:pb-0">
+    <div className="min-h-screen bg-[#F8F9FA] dark:bg-background pb-24 lg:pb-12">
       <PageHeader title="Upgrade Plan" />
 
-      <div className="px-4 lg:px-8 py-4 lg:py-6 max-w-5xl mx-auto space-y-6">
+      <div className="px-4 md:px-8 py-8 max-w-6xl mx-auto space-y-12">
+        
+        {/* Header Section */}
+        <div className="text-center space-y-4 max-w-2xl mx-auto">
+           <h1 className="text-4xl md:text-5xl font-black tracking-tight text-foreground">Choose your plan</h1>
+           <p className="text-lg text-muted-foreground font-medium">Unlock premium features and scale your business with the right tools for your store.</p>
+        </div>
+
         {/* Current plan info */}
         {licenseStatus && licenseStatus.status !== 'none' && (
-          <div className="bg-card rounded-2xl p-4 border border-border">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <Shield size={20} className="text-primary" />
+          <div className="bg-card rounded-3xl p-6 border border-border shadow-sm max-w-2xl mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20">
+                <ShieldCheck size={24} className="text-primary" />
               </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-foreground">
-                  Current Plan: <span className="text-primary capitalize">{licenseStatus.plan_name || 'Trial'}</span>
+              <div>
+                <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-1">
+                  Current Plan
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  {licenseStatus.days_remaining !== undefined && licenseStatus.days_remaining >= 0
-                    ? `${licenseStatus.days_remaining} days remaining`
-                    : 'Expired'}
-                  {licenseStatus.expiry_date && ` · Expires ${licenseStatus.expiry_date}`}
-                </p>
+                <div className="flex items-center gap-2">
+                   <span className="text-lg font-black text-foreground capitalize">{licenseStatus.plan_name || 'Trial'}</span>
+                   {licenseStatus.days_remaining !== undefined && licenseStatus.days_remaining >= 0 ? (
+                      <span className="px-2.5 py-0.5 rounded-full bg-success/10 text-success text-[10px] font-bold uppercase tracking-widest">
+                         {licenseStatus.days_remaining} days left
+                      </span>
+                   ) : (
+                      <span className="px-2.5 py-0.5 rounded-full bg-destructive/10 text-destructive text-[10px] font-bold uppercase tracking-widest">
+                         Expired
+                      </span>
+                   )}
+                </div>
               </div>
             </div>
+            {licenseStatus.expiry_date && (
+               <div className="text-right hidden sm:block">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Expires On</p>
+                  <p className="text-sm font-semibold text-foreground">{licenseStatus.expiry_date}</p>
+               </div>
+            )}
           </div>
         )}
 
         {/* Billing toggle */}
-        <div className="flex items-center justify-center gap-3">
-          <button onClick={() => setBillingCycle('monthly')}
-            className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${billingCycle === 'monthly' ? 'bg-primary text-primary-foreground shadow-md' : 'bg-accent text-muted-foreground hover:bg-accent/80'}`}>
-            Monthly
-          </button>
-          <button onClick={() => setBillingCycle('yearly')}
-            className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${billingCycle === 'yearly' ? 'bg-primary text-primary-foreground shadow-md' : 'bg-accent text-muted-foreground hover:bg-accent/80'}`}>
-            Yearly
-            <span className="ml-1.5 text-xs opacity-80">Save 20%</span>
-          </button>
+        <div className="flex items-center justify-center">
+           <div className="bg-card border border-border rounded-2xl p-1.5 flex items-center shadow-sm">
+             <button onClick={() => setBillingCycle('monthly')}
+               className={`px-8 py-3 rounded-xl text-sm font-bold transition-all ${billingCycle === 'monthly' ? 'bg-primary text-primary-foreground shadow-md' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}>
+               Monthly
+             </button>
+             <button onClick={() => setBillingCycle('yearly')}
+               className={`relative px-8 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${billingCycle === 'yearly' ? 'bg-primary text-primary-foreground shadow-md' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}>
+               Yearly
+               <span className={`px-2 py-0.5 rounded-md text-[10px] uppercase tracking-widest font-black ${billingCycle === 'yearly' ? 'bg-background text-primary' : 'bg-primary text-primary-foreground'}`}>Save 20%</span>
+             </button>
+           </div>
         </div>
 
         {/* Plans grid */}
         {plans.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            <p className="text-sm">No plans available at the moment.</p>
+          <div className="bg-card border border-border rounded-3xl p-12 text-center max-w-md mx-auto shadow-sm">
+            <Crown size={48} className="text-muted-foreground/30 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-foreground mb-2">No Plans Available</h3>
+            <p className="text-muted-foreground font-medium text-sm">Please contact your administrator to set up subscription plans.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 max-w-6xl mx-auto">
             {plans.map((plan, index) => {
               const Icon = planIcons[index % planIcons.length];
               const price = billingCycle === 'monthly' ? plan.monthly_price : plan.yearly_price;
@@ -271,45 +295,74 @@ export default function UpgradePage() {
               return (
                 <div key={plan.id}
                   onClick={() => (canRenew || !isCurrentPlan) && handleSelectPlan(plan.id)}
-                  className={`relative rounded-2xl p-5 border-2 transition-all cursor-pointer ${
-                    isSelected ? 'border-primary bg-primary/5 shadow-lg ring-2 ring-primary/20'
-                    : isCurrentPlan && !canRenew ? 'border-primary/30 bg-primary/5 opacity-70 cursor-not-allowed'
-                    : isCurrentPlan && canRenew ? 'border-warning bg-warning/5 hover:border-warning/80 hover:shadow-md'
-                    : 'border-border bg-card hover:border-primary/40 hover:shadow-md'
+                  className={`relative flex flex-col bg-card rounded-3xl p-8 transition-all cursor-pointer border-2 ${
+                    isSelected ? 'border-primary shadow-xl shadow-primary/10 ring-4 ring-primary/5 translate-y-[-4px]'
+                    : isCurrentPlan && !canRenew ? 'border-border opacity-75 cursor-not-allowed bg-muted/30'
+                    : isCurrentPlan && canRenew ? 'border-warning shadow-lg bg-warning/5 hover:-translate-y-1'
+                    : 'border-border shadow-sm hover:border-primary/50 hover:shadow-lg hover:-translate-y-1'
                   }`}>
+                  
                   {isCurrentPlan && (
-                    <div className={`absolute top-3 right-3 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${canRenew ? 'bg-warning/15 text-warning' : 'bg-primary/15 text-primary'}`}>
-                      {canRenew ? 'Renew' : 'Current'}
+                    <div className={`absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-[11px] font-black uppercase tracking-widest shadow-sm ${canRenew ? 'bg-warning text-warning-foreground' : 'bg-foreground text-background'}`}>
+                      {canRenew ? 'Time to Renew' : 'Current Plan'}
                     </div>
                   )}
-                  {isSelected && (
-                    <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-primary flex items-center justify-center">
-                      <Check size={14} className="text-primary-foreground" />
+
+                  <div className="flex justify-between items-start mb-6">
+                    <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
+                      <Icon size={28} />
                     </div>
-                  )}
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <Icon size={22} className="text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-foreground">{plan.name}</h3>
-                      <p className="text-xs text-muted-foreground">{plan.max_users} users · {plan.max_devices} devices · {plan.max_stores} stores</p>
+                    {isSelected && (
+                      <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center shadow-sm animate-in zoom-in">
+                        <Check size={16} className="text-primary-foreground" />
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="mb-6">
+                    <h3 className="text-2xl font-black text-foreground mb-1">{plan.name}</h3>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-4xl font-black text-foreground tracking-tight">{formatLocalPrice(price)}</span>
+                      <span className="text-sm font-bold text-muted-foreground">/{billingCycle === 'monthly' ? 'mo' : 'yr'}</span>
                     </div>
                   </div>
-                  <div className="mb-4">
-                    <span className="text-3xl font-extrabold text-foreground">{formatLocalPrice(price)}</span>
-                    <span className="text-sm text-muted-foreground ml-1">/{billingCycle === 'monthly' ? 'mo' : 'yr'}</span>
+
+                  <div className="space-y-4 mb-8 flex-1">
+                    <div className="bg-muted/30 rounded-2xl p-4 grid grid-cols-2 gap-4">
+                       <div>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Users</p>
+                          <p className="text-sm font-bold text-foreground">{plan.max_users === -1 ? 'Unlimited' : plan.max_users}</p>
+                       </div>
+                       <div>
+                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Stores</p>
+                          <p className="text-sm font-bold text-foreground">{plan.max_stores === -1 ? 'Unlimited' : plan.max_stores}</p>
+                       </div>
+                    </div>
+                    
+                    {features.length > 0 && (
+                      <ul className="space-y-3 pt-4">
+                        {features.map((feature: string, fi: number) => (
+                          <li key={fi} className="flex items-start gap-3 text-sm font-medium text-muted-foreground">
+                            <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                               <Check size={12} className="text-primary" />
+                            </div>
+                            <span>{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
-                  {features.length > 0 && (
-                    <ul className="space-y-2">
-                      {features.map((feature: string, fi: number) => (
-                        <li key={fi} className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Check size={14} className="text-primary shrink-0" />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+
+                  <button 
+                    disabled={isCurrentPlan && !canRenew}
+                    className={`w-full py-4 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 ${
+                       isSelected ? 'bg-primary text-primary-foreground shadow-md'
+                       : isCurrentPlan && !canRenew ? 'bg-muted text-muted-foreground'
+                       : 'bg-foreground text-background hover:opacity-90 shadow-md'
+                    }`}>
+                    {isSelected ? 'Selected' : isCurrentPlan && !canRenew ? 'Current Plan' : 'Select Plan'}
+                    {!isSelected && !(isCurrentPlan && !canRenew) && <ArrowRight size={16} />}
+                  </button>
                 </div>
               );
             })}
@@ -318,28 +371,32 @@ export default function UpgradePage() {
 
         {/* Payment section */}
         {selectedPlan && (
-          <div className="bg-card rounded-2xl p-5 border border-border space-y-4 animate-fade-in">
-            <h3 className="font-bold text-foreground text-lg">
-              {currentPlanName === plans.find(p => p.id === selectedPlan)?.name.toLowerCase() ? 'Renew Plan' : 'Upgrade Plan'}
+          <div className="max-w-2xl mx-auto bg-card rounded-3xl p-6 md:p-10 border border-border shadow-xl animate-in slide-in-from-bottom-8 duration-500">
+            <h3 className="text-2xl font-black text-foreground mb-8 text-center">
+              {currentPlanName === plans.find(p => p.id === selectedPlan)?.name.toLowerCase() ? 'Complete Renewal' : 'Complete Upgrade'}
             </h3>
 
             {/* Payment Method Selection */}
-            <div className="space-y-3">
-              <p className="text-sm font-medium text-foreground">Payment Method</p>
-              <div className="flex gap-3">
+            <div className="space-y-4 mb-8">
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Select Payment Method</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <button onClick={() => setPaymentMethod('manual')}
-                  className={`flex-1 py-3 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-colors ${
-                    paymentMethod === 'manual' ? 'bg-primary text-primary-foreground' : 'bg-accent text-foreground'
+                  className={`py-4 px-6 rounded-2xl font-bold text-sm flex items-center gap-3 transition-all border-2 ${
+                    paymentMethod === 'manual' ? 'border-primary bg-primary/5 text-foreground shadow-sm ring-2 ring-primary/20' : 'border-border bg-card text-muted-foreground hover:border-primary/30'
                   }`}>
-                  <Crown size={18} />
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${paymentMethod === 'manual' ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
+                     <Crown size={20} />
+                  </div>
                   Manual Payment
                 </button>
                 {mpesaEnabled && (
                   <button onClick={() => setPaymentMethod('mpesa')}
-                    className={`flex-1 py-3 rounded-xl font-medium text-sm flex items-center justify-center gap-2 transition-colors ${
-                      paymentMethod === 'mpesa' ? 'bg-primary text-primary-foreground' : 'bg-accent text-foreground'
+                    className={`py-4 px-6 rounded-2xl font-bold text-sm flex items-center gap-3 transition-all border-2 ${
+                      paymentMethod === 'mpesa' ? 'border-success bg-success/5 text-foreground shadow-sm ring-2 ring-success/20' : 'border-border bg-card text-muted-foreground hover:border-success/30'
                     }`}>
-                    <Smartphone size={18} />
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${paymentMethod === 'mpesa' ? 'bg-success text-success-foreground' : 'bg-muted text-muted-foreground'}`}>
+                       <Smartphone size={20} />
+                    </div>
                     M-Pesa
                   </button>
                 )}
@@ -348,44 +405,53 @@ export default function UpgradePage() {
 
             {/* M-Pesa Phone Input */}
             {paymentMethod === 'mpesa' && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">M-Pesa Phone Number</label>
+              <div className="space-y-3 mb-8 bg-success/5 border border-success/20 p-6 rounded-2xl">
+                <label className="text-xs font-bold text-success uppercase tracking-widest">M-Pesa Phone Number</label>
                 <div className="relative">
-                  <Phone size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  <Phone size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <input
                     type="tel"
                     value={mpesaPhone}
                     onChange={e => setMpesaPhone(e.target.value)}
                     placeholder="e.g. 0712345678 or 254712345678"
-                    className="w-full pl-10 pr-4 py-3 rounded-xl border border-input bg-accent/30 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                    className="w-full pl-12 pr-4 py-4 rounded-xl border border-input bg-background text-foreground font-bold shadow-sm placeholder:text-muted-foreground placeholder:font-medium focus:outline-none focus:ring-2 focus:ring-success/30 focus:border-success transition-all text-lg"
                   />
                 </div>
-                <p className="text-xs text-muted-foreground">You will receive an STK Push on this number to complete payment.</p>
+                <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                   <ShieldCheck size={14} className="text-success" />
+                   You will receive a secure STK Push on this number to complete payment.
+                </p>
               </div>
             )}
 
             {paymentMethod === 'manual' && (
-              <p className="text-sm text-muted-foreground">
-                After submitting, the platform administrator will review and activate your license once payment is confirmed.
-              </p>
+              <div className="mb-8 p-6 bg-muted/20 border border-border rounded-2xl flex items-start gap-4">
+                 <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <ShieldCheck size={20} className="text-primary" />
+                 </div>
+                 <p className="text-sm font-medium text-muted-foreground leading-relaxed">
+                   After submitting, the platform administrator will review and activate your license once payment is confirmed via offline channels (Bank Transfer, Cash, etc).
+                 </p>
+              </div>
             )}
 
-            <div className="bg-accent/30 rounded-xl p-4 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Plan</span>
-                <span className="font-semibold text-foreground">{plans.find(p => p.id === selectedPlan)?.name}</span>
+            <div className="bg-muted/10 border border-border/50 rounded-2xl p-6 space-y-4 mb-8 shadow-inner">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground font-medium">Selected Plan</span>
+                <span className="font-bold text-foreground">{plans.find(p => p.id === selectedPlan)?.name}</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Billing</span>
-                <span className="font-semibold text-foreground capitalize">{billingCycle}</span>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground font-medium">Billing Cycle</span>
+                <span className="font-bold text-foreground capitalize">{billingCycle}</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Payment</span>
-                <span className="font-semibold text-foreground capitalize">{paymentMethod === 'mpesa' ? 'M-Pesa' : 'Manual'}</span>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground font-medium">Payment Method</span>
+                <span className="font-bold text-foreground capitalize">{paymentMethod === 'mpesa' ? 'M-Pesa' : 'Manual'}</span>
               </div>
-              <div className="flex justify-between text-sm border-t border-border pt-2 mt-2">
-                <span className="font-semibold text-foreground">Total</span>
-                <span className="font-extrabold text-primary text-lg">
+              <div className="h-px w-full bg-border/50"></div>
+              <div className="flex justify-between items-end">
+                <span className="font-black text-foreground uppercase tracking-widest text-xs mb-1">Total Due</span>
+                <span className="font-black text-foreground text-3xl tracking-tight">
                   {formatLocalPrice(
                     billingCycle === 'monthly'
                       ? plans.find(p => p.id === selectedPlan)?.monthly_price || 0
@@ -396,30 +462,26 @@ export default function UpgradePage() {
             </div>
 
             <button onClick={handleProceedToPayment} disabled={processing || stkPending}
-              className="w-full py-4 rounded-xl bg-primary text-primary-foreground font-bold text-lg flex items-center justify-center gap-2 shadow-md hover:shadow-lg active:scale-[0.97] transition-all disabled:opacity-50">
+              className={`w-full py-5 rounded-2xl font-black text-lg flex items-center justify-center gap-3 shadow-xl hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none ${
+                 paymentMethod === 'mpesa' ? 'bg-success text-success-foreground' : 'bg-primary text-primary-foreground'
+              }`}>
               {processing || stkPending ? (
                 <>
-                  <Loader2 size={20} className="animate-spin" />
+                  <div className="w-6 h-6 border-4 border-current border-t-transparent rounded-full animate-spin" />
                   {stkPending ? 'Sending STK Push...' : 'Processing...'}
                 </>
               ) : paymentMethod === 'mpesa' ? (
                 <>
-                  <Smartphone size={20} />
+                  <Smartphone size={24} />
                   Pay with M-Pesa
                 </>
               ) : (
                 <>
-                  <Crown size={20} />
+                  <Crown size={24} />
                   {currentPlanName === plans.find(p => p.id === selectedPlan)?.name.toLowerCase() ? 'Submit Renewal Request' : 'Submit Upgrade Request'}
                 </>
               )}
             </button>
-
-            {paymentMethod === 'manual' && (
-              <p className="text-xs text-center text-muted-foreground">
-                Contact the administrator for payment details (M-Pesa, bank transfer, etc.)
-              </p>
-            )}
           </div>
         )}
       </div>

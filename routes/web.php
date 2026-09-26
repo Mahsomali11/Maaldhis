@@ -11,6 +11,17 @@ Route::get('/', function () {
     return redirect()->route('login');
 });
 
+Route::get('/test-login', function () {
+    $credentials = ['email' => 'asxaabteyda@gmail.com', 'password' => 'password123'];
+    if (Auth::attempt($credentials)) {
+        $request = Request::create('/dashboard', 'GET');
+        $request->headers->set('X-Inertia', 'true');
+        $response = app()->handle($request);
+        return response($response->getContent(), $response->status());
+    }
+    return "Login Failed";
+});
+
 // Normal User Login
 Route::get('/login', function () {
     return Inertia::render('LoginPage');

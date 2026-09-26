@@ -5,53 +5,43 @@
 @tailwind utilities;
 @layer base {
   :root {
-    --background: 200 40% 95%;
-    --foreground: 220 20% 15%;
-
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    
     --card: 0 0% 100%;
-    --card-foreground: 220 20% 15%;
-
+    --card-foreground: 240 10% 3.9%;
+    
     --popover: 0 0% 100%;
-    --popover-foreground: 220 20% 15%;
+    --popover-foreground: 240 10% 3.9%;
+    
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5.9% 10%;
+    
+    --radius: 0.375rem;
 
-    --primary: 145 63% 42%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 200 30% 92%;
-    --secondary-foreground: 220 20% 15%;
-
-    --muted: 200 20% 93%;
-    --muted-foreground: 220 10% 46%;
-
-    --accent: 200 40% 90%;
-    --accent-foreground: 220 20% 15%;
-
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 200 20% 88%;
-    --input: 200 25% 88%;
-    --ring: 145 63% 42%;
-
-    --radius: 0.75rem;
-
-    /* Zahpoint custom tokens */
-    --tile-pink: 350 80% 95%;
-    --tile-green: 145 50% 92%;
-    --tile-blue: 200 60% 92%;
-    --tile-yellow: 45 80% 92%;
-    --tile-purple: 270 50% 93%;
-    --tile-cyan: 180 50% 92%;
-
-    --success: 145 63% 42%;
-    --success-foreground: 0 0% 100%;
-    --warning: 35 90% 50%;
-    --warning-foreground: 0 0% 100%;
-    --info: 210 80% 55%;
-    --info-foreground: 0 0% 100%;
-
-    --drawer-header: 250 60% 85%;
-    --drawer-body: 170 40% 95%;
+    /* Custom tokens */
+    --success: 142.1 76.2% 36.3%;
+    --success-foreground: 355.7 100% 97.3%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 48 96% 89%;
+    --info: 221.2 83.2% 53.3%;
+    --info-foreground: 210 40% 98%;
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -64,25 +54,33 @@
   }
 
   .dark {
-    --background: 220 20% 10%;
-    --foreground: 200 20% 95%;
-    --card: 220 20% 14%;
-    --card-foreground: 200 20% 95%;
-    --popover: 220 20% 14%;
-    --popover-foreground: 200 20% 95%;
-    --primary: 145 63% 42%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 220 15% 20%;
-    --secondary-foreground: 200 20% 95%;
-    --muted: 220 15% 20%;
-    --muted-foreground: 200 10% 60%;
-    --accent: 220 15% 22%;
-    --accent-foreground: 200 20% 95%;
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+    
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    
     --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 220 15% 22%;
-    --input: 220 15% 22%;
-    --ring: 145 63% 42%;
+    --destructive-foreground: 0 0% 98%;
+    
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
   }
 }
 

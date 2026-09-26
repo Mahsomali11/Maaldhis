@@ -13,9 +13,9 @@ foreach ($admins as $a) {
     echo "Role: {$a->role} | User: " . ($user ? $user->email : 'NOT FOUND (user_id: '.$a->user_id.')') . "\n";
 }
 
-// Check if admin@nasripoint.com user exists and has admin_role
-echo "\n=== Checking admin@nasripoint.com ===\n";
-$adminUser = DB::table('users')->where('email', 'admin@nasripoint.com')->first(['id','email','name']);
+// Check if admin@maaldhis.com user exists and has admin_role
+echo "\n=== Checking admin@maaldhis.com ===\n";
+$adminUser = DB::table('users')->where('email', 'admin@maaldhis.com')->first(['id','email','name']);
 if ($adminUser) {
     echo "Found: {$adminUser->email} (id: {$adminUser->id})\n";
     $role = DB::table('admin_roles')->where('user_id', $adminUser->id)->first();
@@ -29,7 +29,7 @@ if ($adminUser) {
             'role' => 'super_owner',
             'is_active' => true,
         ]);
-        echo "Created super_owner role for admin@nasripoint.com\n";
+        echo "Created super_owner role for admin@maaldhis.com\n";
     }
 } else {
     echo "NOT FOUND\n";

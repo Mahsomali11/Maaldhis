@@ -1,3 +1,4 @@
+import PageHeader from '@/components/PageHeader';
 import { useEffect, useState } from 'react';
 import { api as apiClient } from '@/api';
 import StatCard from '@/components/admin/StatCard';
@@ -52,13 +53,13 @@ export default function AdminAnalyticsPage() {
 
   const COLORS = ['hsl(145,63%,42%)', 'hsl(210,80%,55%)', 'hsl(35,90%,50%)', 'hsl(270,50%,60%)', 'hsl(0,72%,51%)'];
 
-  if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-[hsl(145,63%,42%)] border-t-transparent rounded-full animate-spin" /></div>;
+  if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div>;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-[10px]">
+      <PageHeader title="Analytics" />
       <div>
-        <h1 className="text-2xl font-bold text-white">Platform Analytics</h1>
-        <p className="text-[hsl(220,10%,50%)] text-sm mt-1">All revenue figures are automatically converted to USD</p>
+                <p className="text-muted-foreground text-sm mt-1">All revenue figures are automatically converted to USD</p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -69,8 +70,8 @@ export default function AdminAnalyticsPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-[hsl(220,20%,14%)] rounded-xl p-6 border border-[hsl(220,15%,18%)]">
-          <h3 className="text-white font-semibold mb-4">Top Performing Stores (USD)</h3>
+        <div className="bg-card rounded-xl p-6 border border-border">
+          <h3 className="text-foreground font-semibold mb-4">Top Performing Stores (USD)</h3>
           {topStores.length > 0 ? (
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={topStores}>
@@ -82,11 +83,11 @@ export default function AdminAnalyticsPage() {
                 <Bar dataKey="revenue" fill="hsl(145,63%,42%)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
-          ) : <p className="text-[hsl(220,10%,40%)] text-center py-8">No data yet</p>}
+          ) : <p className="text-muted-foreground text-center py-8">No data yet</p>}
         </div>
 
-        <div className="bg-[hsl(220,20%,14%)] rounded-xl p-6 border border-[hsl(220,15%,18%)]">
-          <h3 className="text-white font-semibold mb-4">Revenue Distribution (USD)</h3>
+        <div className="bg-card rounded-xl p-6 border border-border">
+          <h3 className="text-foreground font-semibold mb-4">Revenue Distribution (USD)</h3>
           {topStores.length > 0 ? (
             <ResponsiveContainer width="100%" height={250}>
               <PieChart>
@@ -97,7 +98,7 @@ export default function AdminAnalyticsPage() {
                   formatter={(value: number) => [`$${value.toFixed(2)}`, 'Revenue (USD)']} />
               </PieChart>
             </ResponsiveContainer>
-          ) : <p className="text-[hsl(220,10%,40%)] text-center py-8">No data yet</p>}
+          ) : <p className="text-muted-foreground text-center py-8">No data yet</p>}
         </div>
       </div>
     </div>

@@ -12,4 +12,10 @@ class StockTransfer extends Model
 
 
     //
+
+    protected static function booted()
+    {
+        static::addGlobalScope(new \App\Models\Scopes\StaffActivityScope(['requested_by', 'approved_by', 'received_by']));
+    }
 }
+

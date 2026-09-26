@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import PageHeader from '@/components/PageHeader';
-import { BookOpen, ShoppingCart, Package, Receipt, CreditCard, ArrowLeftRight, BarChart3, ChevronDown, ChevronUp, DollarSign, Users, RotateCcw, Settings, Smartphone } from 'lucide-react';
+import { BookOpen, ShoppingCart, Package, Receipt, CreditCard, ArrowLeftRight, BarChart3, ChevronDown, ChevronUp, DollarSign, Users, RotateCcw, Settings, Lightbulb, PlayCircle } from 'lucide-react';
 
 const topics = [
   {
@@ -145,7 +145,7 @@ const topics = [
   {
     title: 'App Settings & Preferences',
     icon: Settings,
-    description: 'Customize Nasri Point for your business.',
+    description: 'Customize Maaldhis for your business.',
     steps: [
       'Open the side menu and tap Preferences.',
       'Available settings include:',
@@ -162,58 +162,113 @@ const topics = [
 ];
 
 export default function LearningCenterPage() {
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<string | null>(topics[0].title);
 
   return (
-    <div className="min-h-screen bg-background pb-8">
+    <div className="min-h-screen bg-[#F8F9FA] dark:bg-background pb-12">
       <PageHeader title="Learning Center" />
-      <div className="px-4 py-4 space-y-3">
-        <p className="text-sm text-muted-foreground mb-2">
-          Tap any topic below to learn how to use Nasri Point effectively.
-        </p>
-        {topics.map(topic => {
-          const isOpen = expanded === topic.title;
-          return (
-            <div key={topic.title} className="bg-card rounded-xl overflow-hidden">
-              <button
-                onClick={() => setExpanded(isOpen ? null : topic.title)}
-                className="w-full p-4 flex items-start gap-3 text-left"
-              >
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <topic.icon size={20} className="text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-bold text-foreground">{topic.title}</h4>
-                  <p className="text-sm text-muted-foreground">{topic.description}</p>
-                </div>
-                {isOpen ? <ChevronUp size={20} className="text-muted-foreground mt-1" /> : <ChevronDown size={20} className="text-muted-foreground mt-1" />}
-              </button>
-              {isOpen && (
-                <div className="px-4 pb-4 pt-0 ml-[52px]">
-                  <ol className="space-y-2">
-                    {topic.steps.map((step, i) => (
-                      <li key={i} className="text-sm text-foreground flex gap-2">
-                        {step.startsWith('•') ? (
-                          <span className="text-muted-foreground">{step}</span>
-                        ) : (
-                          <>
-                            <span className="text-primary font-bold flex-shrink-0">{i + 1}.</span>
-                            <span>{step}</span>
-                          </>
-                        )}
-                      </li>
-                    ))}
-                  </ol>
-                  {topic.tip && (
-                    <div className="mt-3 bg-info/10 rounded-lg p-3">
-                      <p className="text-xs text-info font-medium">💡 Tip: {topic.tip}</p>
+      
+      <div className="p-4 md:p-8 max-w-5xl mx-auto w-full space-y-8">
+        
+        {/* Header Section */}
+        <div className="text-center space-y-4 max-w-2xl mx-auto mb-10">
+           <div className="w-16 h-16 rounded-3xl bg-primary/10 flex items-center justify-center mx-auto mb-6 text-primary border border-primary/20">
+              <BookOpen size={32} />
+           </div>
+           <h1 className="text-3xl md:text-4xl font-black tracking-tight text-foreground">Master Maaldhis</h1>
+           <p className="text-base text-muted-foreground font-medium">Explore step-by-step guides and tutorials to get the most out of your POS system.</p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+           
+           {/* Sidebar topics list */}
+           <div className="lg:col-span-1 space-y-2">
+             <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-4 px-2">Tutorial Topics</h3>
+             {topics.map(topic => (
+               <button
+                 key={topic.title}
+                 onClick={() => setExpanded(topic.title)}
+                 className={`w-full p-4 rounded-2xl flex items-center gap-3 text-left transition-all ${
+                    expanded === topic.title
+                      ? 'bg-primary text-primary-foreground shadow-md font-bold'
+                      : 'bg-card border border-border text-foreground font-semibold hover:border-primary/50 hover:shadow-sm'
+                 }`}
+               >
+                 <div className={expanded === topic.title ? 'text-primary-foreground' : 'text-muted-foreground'}>
+                    <topic.icon size={20} />
+                 </div>
+                 <span className="flex-1 line-clamp-1">{topic.title}</span>
+               </button>
+             ))}
+           </div>
+
+           {/* Content Area */}
+           <div className="lg:col-span-2">
+              {topics.map(topic => (
+                 expanded === topic.title && (
+                    <div key={topic.title} className="bg-card rounded-3xl border border-border shadow-lg overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
+                       
+                       {/* Header */}
+                       <div className="p-8 border-b border-border bg-muted/10">
+                          <div className="flex items-center gap-4 mb-4">
+                             <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-inner">
+                                <topic.icon size={28} />
+                             </div>
+                             <div>
+                                <h2 className="text-2xl font-black text-foreground">{topic.title}</h2>
+                                <p className="text-sm font-medium text-muted-foreground mt-1">{topic.description}</p>
+                             </div>
+                          </div>
+                       </div>
+
+                       {/* Steps */}
+                       <div className="p-8 space-y-8">
+                          <div>
+                             <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-6 flex items-center gap-2">
+                                <PlayCircle size={14} className="text-primary" /> Step-by-Step Guide
+                             </h3>
+                             <ol className="space-y-6">
+                                {topic.steps.map((step, i) => (
+                                   <li key={i} className="flex gap-4">
+                                      {step.startsWith('•') ? (
+                                         <div className="flex items-start gap-4">
+                                            <div className="w-6 h-6 flex items-center justify-center shrink-0">
+                                               <div className="w-2 h-2 rounded-full bg-muted-foreground/30"></div>
+                                            </div>
+                                            <span className="text-sm font-medium text-muted-foreground pt-0.5">{step}</span>
+                                         </div>
+                                      ) : (
+                                         <>
+                                            <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0 border border-border shadow-sm">
+                                               <span className="text-xs font-black text-foreground">{i + 1}</span>
+                                            </div>
+                                            <span className="text-sm font-semibold text-foreground pt-0.5 leading-relaxed">{step}</span>
+                                         </>
+                                      )}
+                                   </li>
+                                ))}
+                             </ol>
+                          </div>
+
+                          {/* Pro Tip */}
+                          {topic.tip && (
+                             <div className="bg-info/10 border border-info/20 rounded-2xl p-6 flex gap-4">
+                                <div className="w-10 h-10 rounded-xl bg-info/20 flex items-center justify-center text-info shrink-0">
+                                   <Lightbulb size={20} />
+                                </div>
+                                <div>
+                                   <h4 className="text-xs font-bold text-info uppercase tracking-widest mb-1">Pro Tip</h4>
+                                   <p className="text-sm font-medium text-info/90 leading-relaxed">{topic.tip}</p>
+                                </div>
+                             </div>
+                          )}
+                       </div>
                     </div>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
+                 )
+              ))}
+           </div>
+        </div>
+
       </div>
     </div>
   );

@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import PageHeader from '@/components/PageHeader';
-import FAB from '@/components/FAB';
 import { useApp } from '@/context/AppContext';
-import { Trash2, UserPlus, X, Pencil } from 'lucide-react';
+import { Trash2, UserPlus, X, Pencil, Plus, Search, ShieldAlert, BadgeCheck, LayoutGrid } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -26,8 +25,14 @@ export default function StaffAccountsPage() {
   const [role, setRole] = useState<'admin' | 'cashier' | 'inventory_manager'>('cashier');
   const [storeId, setStoreId] = useState<string>(currentStore?.id || '');
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [search, setSearch] = useState('');
 
-  const storeStaff = staffAccounts.filter(s => s.store_id === currentStore?.id);
+  const storeStaff = staffAccounts.filter(s => 
+     s.store_id === currentStore?.id &&
+     (s.full_name?.toLowerCase().includes(search.toLowerCase()) || 
+      s.email?.toLowerCase().includes(search.toLowerCase()))
+  );
+  
   const staffToDelete = deleteId ? staffAccounts.find(s => s.id === deleteId) : null;
 
   const resetForm = () => {
@@ -38,14 +43,15 @@ export default function StaffAccountsPage() {
     setEditingId(staff.id);
     setName(staff.full_name);
     setEmail(staff.email);
-    setPhone(staff.phone);
+    setPhone(staff.phone || '');
     setPassword('');
     setRole(staff.role as typeof role);
     setStoreId(staff.store_id);
     setShowForm(true);
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!name.trim() || !email.trim()) {
       toast.error('Name and email are required');
       return;
@@ -58,6 +64,7 @@ export default function StaffAccountsPage() {
           phone: phone.trim(),
           role,
           store_id: storeId,
+          ...(password.trim() ? { password: password.trim() } : {}),
         });
         toast.success('Staff account updated!');
       } else {
@@ -90,120 +97,325 @@ export default function StaffAccountsPage() {
     setDeleteId(null);
   };
 
+  const getRoleBadge = (r: string) => {
+     if (r === 'admin') return <span className="inline-flex items-center gap-1 bg-info/10 text-info border border-info/20 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest"><ShieldAlert size={10} /> Admin</span>;
+     if (r === 'inventory_manager') return <span className="inline-flex items-center gap-1 bg-warning/10 text-warning border border-warning/20 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest"><LayoutGrid size={10} /> Inventory</span>;
+     return <span className="inline-flex items-center gap-1 bg-success/10 text-success border border-success/20 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest"><BadgeCheck size={10} /> Cashier</span>;
+  };
+
   return (
-    <div className="min-h-screen bg-background pb-8">
-      <PageHeader title="Staff Accounts" />
-      <div className="px-4 py-4 space-y-4">
-        {storeStaff.length === 0 && !showForm ? (
-          <div className="text-center py-12">
-            <UserPlus size={48} className="mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground mb-2">No staff accounts yet.</p>
-            <p className="text-sm text-muted-foreground">Tap + to create your first staff account.</p>
+    <div className="min-h-screen bg-[#F8F9FA] dark:bg-background pb-12">
+      <PageHeader 
+        title="Staff Accounts" 
+        rightAction={
+          <button 
+            onClick={() => { resetForm(); setShowForm(true); }}
+            className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-bold hover:bg-primary/90 transition-all shadow-sm"
+          >
+            <Plus size={18} />
+            Add Staff
+          </button>
+        }
+      />
+      
+      <div className="p-4 md:p-8 space-y-6 max-w-7xl mx-auto w-full">
+        {/* Main layout grid */}
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 xl:gap-8">
+          
+          {/* Main Table Column */}
+          <div className="xl:col-span-3 space-y-6">
+             {/* Search and filters */}
+             <div className="bg-card p-4 rounded-3xl border border-border shadow-sm flex flex-col sm:flex-row gap-4 items-center">
+                <div className="relative w-full">
+                   <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                   <input
+                      type="text"
+                      placeholder="Search staff by name or email..."
+                      value={search}
+                      onChange={e => setSearch(e.target.value)}
+                      className="w-full pl-11 pr-4 h-12 rounded-xl bg-background border border-input text-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all shadow-sm"
+                   />
+                </div>
+             </div>
+
+            <div className="hidden md:block bg-card rounded-3xl border border-border shadow-sm overflow-hidden">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-border/50 bg-muted/10">
+                    <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Name & Email</th>
+                    <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-center">Role</th>
+                    <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Phone</th>
+                    <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/50">
+                  {storeStaff.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-16 text-center">
+                        <UserPlus size={40} className="mx-auto mb-4 text-muted-foreground/30" />
+                        <p className="text-lg font-bold text-foreground mb-1">No staff found</p>
+                        <p className="text-sm text-muted-foreground">Add staff to help manage this store.</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    storeStaff.map((staff) => (
+                      <tr key={staff.id} className="hover:bg-muted/30 transition-colors group">
+                        <td className="px-6 py-5">
+                          <div className="flex items-center gap-4">
+                             <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-black text-lg shrink-0">
+                                {staff.full_name.charAt(0).toUpperCase()}
+                             </div>
+                             <div>
+                                <div className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">{staff.full_name}</div>
+                                <div className="text-xs font-medium text-muted-foreground">{staff.email}</div>
+                             </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-5 text-center">
+                          {getRoleBadge(staff.role)}
+                        </td>
+                        <td className="px-6 py-5 text-sm font-medium text-foreground">
+                          {staff.phone || '—'}
+                        </td>
+                        <td className="px-6 py-5 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button 
+                              onClick={() => openEdit(staff)} 
+                              className="w-10 h-10 rounded-xl bg-muted text-muted-foreground hover:text-primary hover:bg-primary/10 flex items-center justify-center transition-colors"
+                              title="Edit Staff"
+                            >
+                              <Pencil size={16} />
+                            </button>
+                            <button 
+                              onClick={() => setDeleteId(staff.id)} 
+                              className="w-10 h-10 rounded-xl bg-muted text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex items-center justify-center transition-colors"
+                              title="Remove Staff"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Cards */}
+            <div className="md:hidden space-y-4">
+               {storeStaff.map((staff) => (
+                  <div key={staff.id} className="bg-card rounded-2xl border border-border p-5 shadow-sm">
+                     <div className="flex justify-between items-start mb-4">
+                        <div className="flex items-center gap-3">
+                           <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-black text-lg shrink-0">
+                              {staff.full_name.charAt(0).toUpperCase()}
+                           </div>
+                           <div className="flex flex-col">
+                              <span className="font-bold text-foreground text-sm leading-tight">{staff.full_name}</span>
+                              <span className="text-xs font-medium text-muted-foreground">{staff.email}</span>
+                           </div>
+                        </div>
+                     </div>
+                     <div className="bg-muted/20 rounded-xl p-4 border border-border/50 space-y-3 mb-4">
+                        <div className="flex justify-between items-center">
+                           <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Role</span>
+                           {getRoleBadge(staff.role)}
+                        </div>
+                        <div className="flex justify-between items-center pt-2 mt-2 border-t border-border/50">
+                           <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Phone</span>
+                           <span className="text-xs font-bold text-foreground">{staff.phone || '—'}</span>
+                        </div>
+                     </div>
+                     <div className="flex gap-2">
+                        <button 
+                          onClick={() => openEdit(staff)} 
+                          className="flex-1 py-2.5 rounded-xl bg-muted text-foreground hover:bg-accent text-xs font-bold flex items-center justify-center gap-2 transition-colors"
+                        >
+                          <Pencil size={14} /> Edit
+                        </button>
+                        <button 
+                          onClick={() => setDeleteId(staff.id)} 
+                          className="flex-1 py-2.5 rounded-xl bg-destructive/10 text-destructive hover:bg-destructive/20 text-xs font-bold flex items-center justify-center gap-2 transition-colors"
+                        >
+                          <Trash2 size={14} /> Remove
+                        </button>
+                     </div>
+                  </div>
+               ))}
+               {storeStaff.length === 0 && (
+                  <div className="bg-card rounded-2xl border border-border p-10 text-center shadow-sm">
+                     <UserPlus size={40} className="mx-auto mb-4 text-muted-foreground/30" />
+                     <p className="text-lg font-bold text-foreground mb-1">No staff found</p>
+                     <p className="text-sm text-muted-foreground">Adjust your search or add staff.</p>
+                  </div>
+               )}
+            </div>
           </div>
-        ) : (
-          storeStaff.map(staff => (
-            <div key={staff.id} className="bg-card rounded-xl p-4 flex items-center justify-between">
-              <div>
-                <h4 className="font-semibold text-foreground">{staff.full_name}</h4>
-                <p className="text-sm text-muted-foreground">{staff.email}</p>
-                <span className={`inline-block mt-1 text-xs font-medium px-2 py-0.5 rounded-full capitalize ${
-                  staff.role === 'admin' ? 'bg-info/10 text-info' : 
-                  staff.role === 'cashier' ? 'bg-success/10 text-success' : 
-                  'bg-warning/10 text-warning'
-                }`}>
-                  {staff.role.replace('_', ' ')}
-                </span>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => openEdit(staff)} className="p-2 text-primary">
-                  <Pencil size={18} />
-                </button>
-                <button onClick={() => setDeleteId(staff.id)} className="p-2 text-destructive">
-                  <Trash2 size={18} />
-                </button>
+
+          {/* Sidebar Info Column */}
+          <div className="xl:col-span-1">
+            <div className="bg-card rounded-3xl border border-border shadow-sm p-6 sm:p-8 sticky top-6">
+              <h4 className="text-[11px] font-bold text-primary uppercase tracking-widest mb-6 flex items-center gap-2">
+                 <ShieldAlert size={14} /> Role Permissions
+              </h4>
+              <div className="space-y-6">
+                {[
+                  { name: 'Owner', desc: 'Full access to everything', icon: ShieldAlert, color: 'text-primary bg-primary/10' },
+                  { name: 'Admin', desc: 'Manage staff, inventory, and reports', icon: ShieldAlert, color: 'text-info bg-info/10' },
+                  { name: 'Inventory Manager', desc: 'Manage stock and transfers', icon: LayoutGrid, color: 'text-warning bg-warning/10' },
+                  { name: 'Cashier', desc: 'Process sales and handle payments', icon: BadgeCheck, color: 'text-success bg-success/10' },
+                ].map(r => (
+                  <div key={r.name} className="flex items-start gap-4">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${r.color}`}>
+                       <r.icon size={14} />
+                    </div>
+                    <div>
+                      <span className="text-sm font-bold text-foreground block mb-0.5">{r.name}</span>
+                      <p className="text-xs font-medium text-muted-foreground leading-relaxed">{r.desc}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-          ))
-        )}
-
-        <div className="bg-card rounded-xl p-4">
-          <h4 className="font-bold text-foreground">Available Roles</h4>
-          <div className="mt-3 space-y-2">
-            {[
-              { name: 'Owner', desc: 'Full access to everything' },
-              { name: 'Admin', desc: 'Manage staff, inventory, and reports' },
-              { name: 'Cashier', desc: 'Process sales and handle payments' },
-              { name: 'Inventory Manager', desc: 'Manage stock and transfers' },
-            ].map(r => (
-              <div key={r.name} className="flex items-start gap-2">
-                <div className="w-2 h-2 rounded-full bg-primary mt-1.5" />
-                <div>
-                  <span className="text-sm font-medium text-foreground">{r.name}</span>
-                  <p className="text-xs text-muted-foreground">{r.desc}</p>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </div>
 
+      {/* Modal Dialog */}
       {showForm && (
-        <>
-          <div className="fixed inset-0 z-50 bg-foreground/30 animate-fade-in" onClick={() => { setShowForm(false); resetForm(); }} />
-          <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-50 bg-card rounded-2xl p-5 shadow-xl max-w-md mx-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-foreground">{editingId ? 'Edit' : 'Create'} Staff Account</h3>
-              <button onClick={() => { setShowForm(false); resetForm(); }}><X size={24} className="text-muted-foreground" /></button>
-            </div>
-            <div className="space-y-3">
-              <input value={name} onChange={e => setName(e.target.value)} placeholder="Full name *"
-                className="w-full px-4 py-3 rounded-xl border border-input bg-accent/30 text-foreground placeholder:text-muted-foreground" />
-              <input value={email} onChange={e => setEmail(e.target.value)} placeholder="Email address *" type="email"
-                className="w-full px-4 py-3 rounded-xl border border-input bg-accent/30 text-foreground placeholder:text-muted-foreground" />
-              <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Phone number"
-                className="w-full px-4 py-3 rounded-xl border border-input bg-accent/30 text-foreground placeholder:text-muted-foreground" />
-              {!editingId && (
-                <input value={password} onChange={e => setPassword(e.target.value)} placeholder="Password *" type="password"
-                  className="w-full px-4 py-3 rounded-xl border border-input bg-accent/30 text-foreground placeholder:text-muted-foreground" />
-              )}
-              <select value={storeId} onChange={e => setStoreId(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-input bg-accent/30 text-foreground">
-                <option value="" disabled>Select Store</option>
-                {stores.map(s => (
-                  <option key={s.id} value={s.id}>{s.store_name}</option>
-                ))}
-              </select>
-              <select value={role} onChange={e => setRole(e.target.value as typeof role)}
-                className="w-full px-4 py-3 rounded-xl border border-input bg-accent/30 text-foreground">
-                <option value="cashier">Cashier</option>
-                <option value="admin">Admin</option>
-                <option value="inventory_manager">Inventory Manager</option>
-              </select>
-              <button onClick={handleSubmit}
-                className="w-full py-4 rounded-xl bg-primary text-primary-foreground font-bold text-lg active:scale-[0.98] transition-transform">
-                {editingId ? 'Save Changes' : 'Create Account'}
+        <div className="fixed inset-0 z-50 bg-foreground/20 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
+          <div className="w-full sm:max-w-md bg-card rounded-t-3xl sm:rounded-3xl border border-border shadow-2xl overflow-hidden animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300">
+            <div className="flex justify-between items-center px-6 py-5 border-b border-border bg-muted/10">
+              <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                 {editingId ? <Pencil size={18} className="text-primary"/> : <UserPlus size={18} className="text-primary"/>}
+                 {editingId ? 'Edit Staff Account' : 'Add New Staff'}
+              </h3>
+              <button 
+                onClick={() => { setShowForm(false); resetForm(); }}
+                className="w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              >
+                <X size={16} />
               </button>
             </div>
+            
+            <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-5 overflow-y-auto max-h-[80vh]">
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest block">Full Name <span className="text-destructive">*</span></label>
+                <input 
+                  value={name} 
+                  onChange={e => setName(e.target.value)} 
+                  placeholder="e.g. Jane Doe"
+                  className="w-full px-4 py-3 h-12 rounded-xl border border-input bg-background text-sm text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm" 
+                  required 
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest block">Email Address <span className="text-destructive">*</span></label>
+                <input 
+                  value={email} 
+                  onChange={e => setEmail(e.target.value)} 
+                  placeholder="jane@example.com"
+                  type="email"
+                  className="w-full px-4 py-3 h-12 rounded-xl border border-input bg-background text-sm text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm" 
+                  required 
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest block">Phone Number</label>
+                <input 
+                  value={phone} 
+                  onChange={e => setPhone(e.target.value)} 
+                  placeholder="Optional"
+                  className="w-full px-4 py-3 h-12 rounded-xl border border-input bg-background text-sm text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm" 
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest block">
+                  {editingId ? 'New Password' : 'Password'} {!editingId && <span className="text-destructive">*</span>}
+                </label>
+                <input 
+                  value={password} 
+                  onChange={e => setPassword(e.target.value)} 
+                  placeholder={editingId ? "Leave blank to keep current" : "Set initial password"}
+                  type="password"
+                  className="w-full px-4 py-3 h-12 rounded-xl border border-input bg-background text-sm text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm" 
+                  required={!editingId} 
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest block">Store Assignment</label>
+                  <select 
+                    value={storeId} 
+                    onChange={e => setStoreId(e.target.value)}
+                    className="w-full px-4 h-12 rounded-xl border border-input bg-background text-sm text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
+                  >
+                    <option value="" disabled>Select Store</option>
+                    {stores.map(s => (
+                      <option key={s.id} value={s.id}>{s.store_name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest block">Role Assignment</label>
+                  <select 
+                    value={role} 
+                    onChange={e => setRole(e.target.value as typeof role)}
+                    className="w-full px-4 h-12 rounded-xl border border-input bg-background text-sm text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
+                  >
+                    <option value="cashier">Cashier</option>
+                    <option value="admin">Admin</option>
+                    <option value="inventory_manager">Inventory</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div className="flex gap-3 pt-6 border-t border-border/50 mt-6">
+                <button 
+                  type="button" 
+                  onClick={() => { setShowForm(false); resetForm(); }} 
+                  className="flex-1 py-3 rounded-xl bg-muted text-foreground text-sm font-bold hover:bg-accent transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit" 
+                  className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:opacity-90 transition-opacity shadow-sm"
+                >
+                  {editingId ? 'Save Changes' : 'Create Staff'}
+                </button>
+              </div>
+            </form>
           </div>
-        </>
+        </div>
       )}
 
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove Staff</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to remove "{staffToDelete?.full_name}" from staff?
+        <AlertDialogContent className="rounded-3xl p-0 overflow-hidden border-border">
+          <AlertDialogHeader className="p-6 pb-0">
+            <AlertDialogTitle className="text-xl font-bold flex items-center gap-2 text-destructive">
+               <ShieldAlert size={20} />
+               Remove Staff Account
+            </AlertDialogTitle>
+            <AlertDialogDescription className="pt-2 text-sm font-medium">
+              Are you sure you want to remove <span className="font-bold text-foreground">"{staffToDelete?.full_name}"</span>? 
+              They will lose all access to the system immediately. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">Remove</AlertDialogAction>
+          <AlertDialogFooter className="p-6 bg-muted/10 mt-4 border-t border-border/50 sm:justify-between">
+            <AlertDialogCancel className="rounded-xl border-border bg-background hover:bg-muted font-bold px-6 h-11">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90 font-bold px-6 h-11 shadow-sm">
+              Yes, Remove Access
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <FAB onClick={() => { resetForm(); setShowForm(true); }} />
     </div>
   );
 }

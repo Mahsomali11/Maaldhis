@@ -70,6 +70,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Create staff user
     Route::post('/auth/v1/create-staff', [AuthController::class, 'createStaff']);
+    Route::post('/auth/v1/update-staff-password', [AuthController::class, 'updateStaffPassword']);
 
     // Process Return
     Route::post('/rest/v1/process-return', [\App\Http\Controllers\ReturnController::class, 'processReturn']);

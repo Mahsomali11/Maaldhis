@@ -3,9 +3,19 @@ import { useApp } from '@/context/AppContext';
 import PageHeader from '@/components/PageHeader';
 import { api as apiClient } from '@/api';
 import { toast } from 'sonner';
-import { Plus, Pencil, Trash2, Wallet } from 'lucide-react';
+import { Plus, Pencil, Trash2, Wallet, X, Building2, CreditCard, Landmark, Smartphone } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface PaymentAccount {
   id: string;
@@ -26,6 +36,7 @@ export default function PaymentAccountsPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState({
     account_name: '',
     account_type: 'Cash',
@@ -43,7 +54,6 @@ export default function PaymentAccountsPage() {
     
     if (!error && data) {
       if (data.length === 0) {
-        // Auto-seed from existing payment methods used in sales
         await seedFromExistingPayments();
         return;
       }
@@ -54,7 +64,6 @@ export default function PaymentAccountsPage() {
 
   const seedFromExistingPayments = async () => {
     if (!currentStore) return;
-    // Get distinct payment methods from existing payments
     const { data: existingPayments } = await apiClient
       .from('payments')
       .select('method')
@@ -62,8 +71,6 @@ export default function PaymentAccountsPage() {
     
     const uniqueMethods = new Set<string>();
     existingPayments?.forEach((p) => uniqueMethods.add(p.method));
-    
-    // Always include Cash as a default
     uniqueMethods.add('cash');
     
     const typeMap: Record<string, string> = {
@@ -81,7 +88,6 @@ export default function PaymentAccountsPage() {
     }));
 
     await apiClient.from('payment_accounts').insert(toInsert);
-    // Re-fetch after seeding
     const { data } = await apiClient
       .from('payment_accounts')
       .select('*')
@@ -101,7 +107,8 @@ export default function PaymentAccountsPage() {
     setShowForm(false);
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!currentStore || !form.account_name.trim()) {
       toast.error('Account name is required');
       return;
@@ -153,16 +160,17 @@ export default function PaymentAccountsPage() {
     }
   };
 
-  const deleteAccount = async (account: PaymentAccount) => {
-    // Soft-delete by marking inactive instead of removing
+  const deleteAccount = async () => {
+    if (!deleteId) return;
     const { error } = await apiClient
       .from('payment_accounts')
       .update({ is_active: false })
-      .eq('id', account.id);
+      .eq('id', deleteId);
     if (!error) {
       toast.success('Account deactivated');
       fetchAccounts();
     }
+    setDeleteId(null);
   };
 
   const openEdit = (account: PaymentAccount) => {
@@ -178,156 +186,281 @@ export default function PaymentAccountsPage() {
 
   const typeColor = (type: string) => {
     switch (type) {
-      case 'Cash': return 'default';
-      case 'Mobile Money': return 'secondary';
-      case 'Bank': return 'outline';
-      case 'Card': return 'destructive';
-      default: return 'secondary';
+      case 'Cash': return 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20';
+      case 'Mobile Money': return 'bg-primary/10 text-primary border-primary/20';
+      case 'Bank': return 'bg-blue-500/10 text-blue-600 border-blue-500/20';
+      case 'Card': return 'bg-purple-500/10 text-purple-600 border-purple-500/20';
+      default: return 'bg-muted text-muted-foreground border-border';
     }
   };
 
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'Cash': return <Wallet size={18} />;
+      case 'Mobile Money': return <Smartphone size={18} />;
+      case 'Bank': return <Landmark size={18} />;
+      case 'Card': return <CreditCard size={18} />;
+      default: return <Building2 size={18} />;
+    }
+  };
+
+  const accountToDelete = deleteId ? accounts.find(a => a.id === deleteId) : null;
+
   return (
-    <div className="min-h-screen bg-background pb-8">
-      <PageHeader title="Payment Accounts" />
-      <div className="px-4 py-4 space-y-4 max-w-2xl mx-auto">
-        <p className="text-sm text-muted-foreground">
-          Manage the payment methods available during sales. Only active accounts appear at checkout.
+    <div className="min-h-screen bg-[#F8F9FA] dark:bg-background pb-12">
+      <PageHeader 
+        title="Payment Accounts" 
+        rightAction={
+          <button 
+            onClick={() => { resetForm(); setShowForm(true); }}
+            className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-bold hover:bg-primary/90 transition-all shadow-sm"
+          >
+            <Plus size={18} />
+            <span className="hidden sm:inline">Add Account</span>
+          </button>
+        }
+      />
+      
+      <div className="p-4 sm:p-6 md:px-8 space-y-6 max-w-7xl mx-auto w-full">
+        <p className="text-sm text-muted-foreground max-w-2xl bg-card p-4 rounded-xl border border-border shadow-sm">
+          Manage the payment methods available during sales. Only active accounts appear at checkout. You can deactivate an account if you no longer want to accept it as a payment method.
         </p>
 
-        {/* Add button */}
-        <button
-          onClick={() => { resetForm(); setShowForm(true); }}
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-primary text-primary-foreground font-medium active:scale-[0.98] transition-transform"
-        >
-          <Plus size={20} />
-          Add Payment Account
-        </button>
-
-        {/* Form */}
-        {showForm && (
-          <div className="bg-card rounded-xl p-4 space-y-3 border border-border">
-            <h3 className="font-bold text-foreground">{editingId ? 'Edit Account' : 'New Account'}</h3>
-            <div>
-              <label className="text-sm font-medium text-foreground">Account Name *</label>
-              <input
-                value={form.account_name}
-                onChange={(e) => setForm({ ...form, account_name: e.target.value })}
-                placeholder="e.g. Hormuud EVC"
-                className="w-full mt-1 px-4 py-3 rounded-lg border border-input bg-accent/30 text-foreground placeholder:text-muted-foreground"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-foreground">Account Type</label>
-              <select
-                value={form.account_type}
-                onChange={(e) => setForm({ ...form, account_type: e.target.value })}
-                className="w-full mt-1 px-4 py-3 rounded-lg border border-input bg-accent/30 text-foreground"
-              >
-                {ACCOUNT_TYPES.map((t) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-foreground">Account Number (optional)</label>
-              <input
-                value={form.account_number}
-                onChange={(e) => setForm({ ...form, account_number: e.target.value })}
-                placeholder="e.g. 25261XXXXXX"
-                className="w-full mt-1 px-4 py-3 rounded-lg border border-input bg-accent/30 text-foreground placeholder:text-muted-foreground"
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-foreground">Provider Name (optional)</label>
-              <input
-                value={form.provider_name}
-                onChange={(e) => setForm({ ...form, provider_name: e.target.value })}
-                placeholder="e.g. Hormuud Telecom"
-                className="w-full mt-1 px-4 py-3 rounded-lg border border-input bg-accent/30 text-foreground placeholder:text-muted-foreground"
-              />
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={handleSubmit}
-                className="flex-1 py-3 rounded-lg bg-primary text-primary-foreground font-medium"
-              >
-                {editingId ? 'Update' : 'Add Account'}
-              </button>
-              <button
-                onClick={resetForm}
-                className="flex-1 py-3 rounded-lg bg-accent text-foreground font-medium"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Accounts list */}
         {loading ? (
-          <div className="text-center text-muted-foreground py-8">Loading...</div>
+          <div className="flex flex-col items-center justify-center py-20 bg-card rounded-2xl border border-border shadow-sm">
+             <div className="w-8 h-8 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4"></div>
+             <p className="text-sm font-semibold text-muted-foreground">Loading accounts...</p>
+          </div>
         ) : accounts.length === 0 ? (
-          <div className="text-center py-12 space-y-2">
-            <Wallet size={48} className="mx-auto text-muted-foreground" />
-            <p className="text-muted-foreground">No payment accounts yet</p>
-            <p className="text-sm text-muted-foreground">Add your first payment account above</p>
+          <div className="bg-card rounded-2xl border border-border shadow-sm p-16 text-center flex flex-col items-center">
+            <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center mb-6">
+              <Wallet size={32} className="text-muted-foreground/50" />
+            </div>
+            <h3 className="text-foreground font-semibold text-lg">No payment accounts found</h3>
+            <p className="text-sm text-muted-foreground mt-2 max-w-sm">
+              Add a payment account to accept payments from customers during checkout.
+            </p>
+            <button 
+              onClick={() => { resetForm(); setShowForm(true); }}
+              className="mt-6 px-6 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-bold shadow-sm"
+            >
+              Add Account
+            </button>
           </div>
         ) : (
-          <div className="space-y-3">
-            {accounts.map((account) => (
-              <div
-                key={account.id}
-                className={`bg-card rounded-xl p-4 border transition-colors ${
-                  account.is_active ? 'border-border' : 'border-border opacity-60'
-                }`}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h4 className="font-semibold text-foreground">{account.account_name}</h4>
-                      <Badge variant={typeColor(account.account_type) as any}>
-                        {account.account_type}
-                      </Badge>
-                      {!account.is_active && (
-                        <Badge variant="outline" className="text-muted-foreground">Inactive</Badge>
+          <>
+            {/* Desktop Table */}
+            <div className="hidden md:block bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-border/50 bg-muted/10">
+                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Account Details</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Type</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Provider</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-center">Status</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/50">
+                  {accounts.map((account) => (
+                    <tr key={account.id} className={`transition-all group ${account.is_active ? 'hover:bg-muted/30' : 'opacity-70 bg-muted/20 grayscale-[0.2]'}`}>
+                      <td className="px-6 py-4">
+                        <div className="flex flex-col">
+                           <span className="font-bold text-foreground text-sm">{account.account_name}</span>
+                           {account.account_number && <span className="text-xs font-mono text-muted-foreground mt-0.5">{account.account_number}</span>}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${typeColor(account.account_type)}`}>
+                          {getTypeIcon(account.account_type)}
+                          {account.account_type}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-muted-foreground font-medium">
+                        {account.provider_name || '—'}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <div className="flex items-center justify-center gap-3">
+                          <span className={`text-[10px] font-bold uppercase tracking-wider w-12 text-left ${account.is_active ? 'text-success' : 'text-muted-foreground'}`}>
+                            {account.is_active ? 'Active' : 'Hidden'}
+                          </span>
+                          <Switch
+                            checked={account.is_active}
+                            onCheckedChange={() => toggleActive(account)}
+                            className="data-[state=checked]:bg-success"
+                          />
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button 
+                            onClick={() => openEdit(account)} 
+                            className="p-2 rounded-lg bg-background border border-border text-muted-foreground hover:bg-accent hover:text-foreground transition-colors shadow-sm"
+                            title="Edit Account"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          {account.is_active && (
+                            <button 
+                              onClick={() => setDeleteId(account.id)} 
+                              className="p-2 rounded-lg bg-background border border-border text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20 transition-colors shadow-sm"
+                              title="Deactivate Account"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Stacking Cards */}
+            <div className="md:hidden space-y-4">
+              {accounts.map((account) => (
+                <div key={account.id} className={`bg-card rounded-2xl border border-border p-5 shadow-sm transition-opacity ${!account.is_active && 'opacity-70 bg-muted/20'}`}>
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center text-muted-foreground shrink-0">
+                        {getTypeIcon(account.account_type)}
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-foreground text-base leading-tight">{account.account_name}</h4>
+                        {account.account_number && <span className="text-xs font-mono text-muted-foreground">{account.account_number}</span>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => openEdit(account)} className="p-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"><Pencil size={16} /></button>
+                      {account.is_active && (
+                        <button onClick={() => setDeleteId(account.id)} className="p-2 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><Trash2 size={16} /></button>
                       )}
                     </div>
-                    {account.account_number && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Account: {account.account_number}
-                      </p>
-                    )}
-                    {account.provider_name && (
-                      <p className="text-sm text-muted-foreground">
-                        Provider: {account.provider_name}
-                      </p>
-                    )}
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Switch
-                      checked={account.is_active}
-                      onCheckedChange={() => toggleActive(account)}
-                    />
-                    <button
-                      onClick={() => openEdit(account)}
-                      className="p-2 rounded-lg hover:bg-accent text-muted-foreground"
-                    >
-                      <Pencil size={16} />
-                    </button>
-                    <button
-                      onClick={() => deleteAccount(account)}
-                      className="p-2 rounded-lg hover:bg-destructive/10 text-destructive"
-                      title="Deactivate"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                  
+                  <div className="space-y-3 pt-3 border-t border-border/50">
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Type</span>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${typeColor(account.account_type)}`}>
+                        {account.account_type}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Provider</span>
+                      <span className="font-medium text-foreground">{account.provider_name || '—'}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm pt-2 border-t border-border/30">
+                      <span className="text-muted-foreground">Visibility in checkout</span>
+                      <Switch
+                        checked={account.is_active}
+                        onCheckedChange={() => toggleActive(account)}
+                        className="data-[state=checked]:bg-success scale-90"
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
+
+      {/* Modal Dialog */}
+      {showForm && (
+        <div className="fixed inset-0 z-50 bg-foreground/20 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
+          <div className="w-full sm:max-w-md bg-card rounded-t-3xl sm:rounded-3xl border border-border shadow-2xl overflow-hidden animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300">
+            <div className="flex justify-between items-center px-6 py-5 border-b border-border bg-muted/10">
+              <h3 className="text-xl font-bold text-foreground">{editingId ? 'Edit Account' : 'New Account'}</h3>
+              <button 
+                onClick={resetForm}
+                className="w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-5">
+              <div>
+                <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Account Name <span className="text-destructive">*</span></label>
+                <input
+                  value={form.account_name}
+                  onChange={(e) => setForm({ ...form, account_name: e.target.value })}
+                  placeholder="e.g. Main Cash, M-Pesa Till"
+                  className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Account Type</label>
+                <select
+                  value={form.account_type}
+                  onChange={(e) => setForm({ ...form, account_type: e.target.value })}
+                  className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all appearance-none"
+                >
+                  {ACCOUNT_TYPES.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Account Number <span className="lowercase font-medium">(optional)</span></label>
+                <input
+                  value={form.account_number}
+                  onChange={(e) => setForm({ ...form, account_number: e.target.value })}
+                  placeholder="e.g. 25261XXXXXX, Till 12345"
+                  className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Provider Name <span className="lowercase font-medium">(optional)</span></label>
+                <input
+                  value={form.provider_name}
+                  onChange={(e) => setForm({ ...form, provider_name: e.target.value })}
+                  placeholder="e.g. Hormuud Telecom, Equity Bank"
+                  className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-6 border-t border-border mt-8">
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="flex-1 py-3 rounded-xl bg-muted text-foreground text-sm font-bold hover:bg-accent transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-sm hover:opacity-90 transition-opacity"
+                >
+                  {editingId ? 'Save Changes' : 'Add Account'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-xl">Deactivate Account</AlertDialogTitle>
+            <AlertDialogDescription className="text-base">
+              Are you sure you want to deactivate <span className="font-semibold text-foreground">"{accountToDelete?.account_name}"</span>? It will be hidden from checkout.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-6">
+            <AlertDialogCancel className="rounded-xl h-11 font-bold">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={deleteAccount} className="bg-destructive text-destructive-foreground hover:bg-destructive/90 rounded-xl h-11 font-bold">
+              Yes, Deactivate
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

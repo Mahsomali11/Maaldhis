@@ -1,3 +1,4 @@
+import PageHeader from '@/components/PageHeader';
 import { useEffect, useState } from 'react';
 import { api as apiClient } from '@/api';
 import StatCard from '@/components/admin/StatCard';
@@ -91,16 +92,16 @@ export default function AdminDashboardPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-4 border-[hsl(145,63%,42%)] border-t-transparent rounded-full animate-spin" />
+      <PageHeader title="Platform Overview" />
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-[10px]">
       <div>
-        <h1 className="text-2xl font-bold text-white">Platform Overview</h1>
-        <p className="text-[hsl(220,10%,50%)] text-sm mt-1">Monitor your entire platform at a glance</p>
+                <p className="text-muted-foreground text-sm mt-1">Monitor your entire platform at a glance</p>
       </div>
 
       {/* Stats Grid */}
@@ -117,8 +118,8 @@ export default function AdminDashboardPage() {
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-[hsl(220,20%,14%)] rounded-xl p-6 border border-[hsl(220,15%,18%)]">
-          <h3 className="text-white font-semibold mb-4">Revenue Trend</h3>
+        <div className="bg-card rounded-xl p-6 border border-border">
+          <h3 className="text-foreground font-semibold mb-4">Revenue Trend</h3>
           <ResponsiveContainer width="100%" height={250}>
             <AreaChart data={revenueData}>
               <defs>
@@ -136,8 +137,8 @@ export default function AdminDashboardPage() {
           </ResponsiveContainer>
         </div>
 
-        <div className="bg-[hsl(220,20%,14%)] rounded-xl p-6 border border-[hsl(220,15%,18%)]">
-          <h3 className="text-white font-semibold mb-4">Store Growth</h3>
+        <div className="bg-card rounded-xl p-6 border border-border">
+          <h3 className="text-foreground font-semibold mb-4">Store Growth</h3>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={storeGrowthData}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(220,15%,20%)" />
@@ -151,31 +152,31 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Recent Stores */}
-      <div className="bg-[hsl(220,20%,14%)] rounded-xl border border-[hsl(220,15%,18%)]">
-        <div className="p-5 border-b border-[hsl(220,15%,18%)]">
-          <h3 className="text-white font-semibold">Recent Store Registrations</h3>
+      <div className="bg-card rounded-xl border border-border">
+        <div className="p-5 border-b border-border">
+          <h3 className="text-foreground font-semibold">Recent Store Registrations</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-[hsl(220,15%,18%)]">
-                <th className="text-left py-3 px-5 text-xs font-medium text-[hsl(220,10%,50%)] uppercase">Store Name</th>
-                <th className="text-left py-3 px-5 text-xs font-medium text-[hsl(220,10%,50%)] uppercase">Owner</th>
-                <th className="text-left py-3 px-5 text-xs font-medium text-[hsl(220,10%,50%)] uppercase">Location</th>
-                <th className="text-left py-3 px-5 text-xs font-medium text-[hsl(220,10%,50%)] uppercase">Created</th>
+              <tr className="border-b border-border">
+                <th className="text-left py-3 px-5 text-xs font-medium text-muted-foreground uppercase">Store Name</th>
+                <th className="text-left py-3 px-5 text-xs font-medium text-muted-foreground uppercase">Owner</th>
+                <th className="text-left py-3 px-5 text-xs font-medium text-muted-foreground uppercase">Location</th>
+                <th className="text-left py-3 px-5 text-xs font-medium text-muted-foreground uppercase">Created</th>
               </tr>
             </thead>
             <tbody>
               {recentStores.map((store: any) => (
-                <tr key={store.id} className="border-b border-[hsl(220,15%,18%)] last:border-0 hover:bg-[hsl(220,15%,15%)]">
-                  <td className="py-3 px-5 text-sm text-white">{store.store_name}</td>
-                  <td className="py-3 px-5 text-sm text-[hsl(220,10%,60%)]">{store.profiles?.email || '—'}</td>
-                  <td className="py-3 px-5 text-sm text-[hsl(220,10%,60%)]">{store.location || '—'}</td>
-                  <td className="py-3 px-5 text-sm text-[hsl(220,10%,60%)]">{new Date(store.created_at).toLocaleDateString()}</td>
+                <tr key={store.id} className="border-b border-border last:border-0 hover:bg-muted/50">
+                  <td className="py-3 px-5 text-sm text-foreground">{store.store_name}</td>
+                  <td className="py-3 px-5 text-sm text-muted-foreground">{store.profiles?.email || '—'}</td>
+                  <td className="py-3 px-5 text-sm text-muted-foreground">{store.location || '—'}</td>
+                  <td className="py-3 px-5 text-sm text-muted-foreground">{new Date(store.created_at).toLocaleDateString()}</td>
                 </tr>
               ))}
               {recentStores.length === 0 && (
-                <tr><td colSpan={4} className="py-8 text-center text-[hsl(220,10%,40%)]">No stores registered yet</td></tr>
+                <tr><td colSpan={4} className="py-8 text-center text-muted-foreground">No stores registered yet</td></tr>
               )}
             </tbody>
           </table>

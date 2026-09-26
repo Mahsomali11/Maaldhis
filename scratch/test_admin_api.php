@@ -3,7 +3,7 @@ require __DIR__.'/../vendor/autoload.php';
 $app = require_once __DIR__.'/../bootstrap/app.php';
 $kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
 
-$user = \App\Models\User::where('email', 'superadmin@nasripoint.com')->first();
+$user = \App\Models\User::where('email', 'superadmin@maaldhis.com')->first();
 if (!$user) {
     die("User not found\n");
 }

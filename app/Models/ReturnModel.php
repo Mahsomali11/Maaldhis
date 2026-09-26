@@ -14,4 +14,10 @@ class ReturnModel extends Model
     protected $casts = [
         'refund_amount' => 'float',
     ];
+
+    protected static function booted()
+    {
+        static::addGlobalScope(new \App\Models\Scopes\StaffActivityScope('processed_by'));
+    }
 }
+

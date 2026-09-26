@@ -1,6 +1,6 @@
 // Generate or retrieve a persistent device ID
 export function getDeviceId(): string {
-  const key = 'nasri_device_id';
+  const key = 'maaldhis_device_id';
   let id = localStorage.getItem(key);
   if (!id) {
     id = `dev_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;

@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import PageHeader from '@/components/PageHeader';
-import FAB from '@/components/FAB';
-import { Search, Clock, Trash2, Download, Plus, ScanBarcode, AlertTriangle, Package, Filter, Pencil, Upload } from 'lucide-react';
+import { Search, Trash2, Download, Plus, ScanBarcode, AlertTriangle, Package, Pencil, Upload, X, Box, BarChart2 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import {
   AlertDialog,
@@ -29,22 +28,20 @@ function getStockStatus(item: { type: string; quantity: number; low_stock_thresh
 function StockBadge({ status }: { status: string }) {
   if (status === 'out_of_stock') {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-destructive/15 text-destructive text-[10px] font-bold uppercase tracking-wide">
-        <span className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse" />
+      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-destructive/10 text-destructive border border-destructive/20">
         Out of Stock
       </span>
     );
   }
   if (status === 'low_stock') {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-warning/15 text-warning text-[10px] font-bold uppercase tracking-wide">
-        <AlertTriangle size={10} />
+      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-warning/10 text-warning border border-warning/20">
         Low Stock
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wide">
+    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-success/10 text-success border border-success/20">
       In Stock
     </span>
   );
@@ -65,10 +62,8 @@ export default function InventoryPage() {
   const storeItems = items.filter(i => i.store_id === currentStore?.id && i.type === tab && i.is_active);
   const storeCategories = categories.filter(c => c.store_id === currentStore?.id);
   const existingItemCategories = Array.from(new Set(storeItems.map(i => i.category).filter(Boolean)));
-  // Merge created categories with existing items categories just in case
   const allCategoryNames = Array.from(new Set([...storeCategories.map(c => c.name), ...existingItemCategories]));
 
-  // Apply search and category filter
   let filtered = storeItems.filter(i => 
     i.name.toLowerCase().includes(search.toLowerCase()) || 
     (i.category || '').toLowerCase().includes(search.toLowerCase()) || 
@@ -79,12 +74,10 @@ export default function InventoryPage() {
     filtered = filtered.filter(i => i.category === categoryFilter);
   }
 
-  // Apply stock filter (products only)
   if (tab === 'product' && stockFilter !== 'all') {
     filtered = filtered.filter(i => getStockStatus(i) === stockFilter);
   }
 
-  // Stock summary counts
   const lowStockItems = storeItems.filter(i => getStockStatus(i) === 'low_stock');
   const outOfStockItems = storeItems.filter(i => getStockStatus(i) === 'out_of_stock');
   const inStockItems = storeItems.filter(i => getStockStatus(i) === 'in_stock');
@@ -193,10 +186,10 @@ export default function InventoryPage() {
           quantity: Number(row.Quantity) || 0,
           low_stock_threshold: Number(row.LowStockThreshold) || 5,
           is_active: true
-        })).filter((item: any) => item.name); // only include rows with a name
+        })).filter((item: any) => item.name); 
         
         if (newItems.length === 0) {
-          toast.error('No valid items found to import (Name is required)');
+          toast.error('No valid items found to import');
           return;
         }
         
@@ -206,201 +199,210 @@ export default function InventoryPage() {
         console.error(err);
         toast.error('Failed to import file: ' + err.message);
       }
-      e.target.value = ''; // reset file input
+      e.target.value = '';
     };
     reader.readAsBinaryString(file);
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20 lg:pb-0">
-      <PageHeader title="Inventory Page" rightAction={<Download size={22} className="text-foreground" />} />
-      <div className="px-4 lg:px-8 py-4 lg:py-6 space-y-4 max-w-7xl mx-auto w-full">
+    <div className="min-h-screen bg-[#F8F9FA] dark:bg-background pb-12">
+      <PageHeader 
+        title="Inventory Management" 
+        rightAction={
+          <button onClick={handleDownloadExcel} className="p-2 text-muted-foreground hover:text-foreground transition-colors hidden sm:block">
+            <Download size={20} />
+          </button>
+        } 
+      />
+      
+      <div className="p-6 md:px-8 space-y-8 max-w-7xl mx-auto w-full">
 
-        {/* Stock Summary Cards (products only) */}
+        {/* Stock Summary Cards */}
         {tab === 'product' && (
-          <div className="grid grid-cols-3 gap-3 animate-fade-in">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <button
               onClick={() => setStockFilter(stockFilter === 'in_stock' ? 'all' : 'in_stock')}
-              className={`rounded-xl p-3 text-center transition-all border ${
-                stockFilter === 'in_stock' ? 'border-primary bg-primary/10 ring-2 ring-primary/20' : 'border-border bg-card'
+              className={`rounded-2xl p-6 text-left transition-all border shadow-sm ${
+                stockFilter === 'in_stock' ? 'border-primary bg-primary/5 ring-1 ring-primary/20' : 'border-border bg-card hover:border-primary/50'
               }`}
             >
-              <p className="text-lg lg:text-2xl font-extrabold text-primary">{inStockItems.length}</p>
-              <p className="text-[10px] lg:text-xs font-semibold text-muted-foreground">In Stock</p>
+              <div className="flex justify-between items-start mb-4">
+                 <div className={`p-2.5 rounded-xl ${stockFilter === 'in_stock' ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                    <Box size={20} />
+                 </div>
+              </div>
+              <p className="text-sm font-semibold text-muted-foreground mb-1">In Stock</p>
+              <p className="text-3xl font-bold text-foreground">{inStockItems.length}</p>
             </button>
             <button
               onClick={() => setStockFilter(stockFilter === 'low_stock' ? 'all' : 'low_stock')}
-              className={`rounded-xl p-3 text-center transition-all border ${
-                stockFilter === 'low_stock' ? 'border-warning bg-warning/10 ring-2 ring-warning/20' : 'border-border bg-card'
+              className={`rounded-2xl p-6 text-left transition-all border shadow-sm ${
+                stockFilter === 'low_stock' ? 'border-warning bg-warning/5 ring-1 ring-warning/20' : 'border-border bg-card hover:border-warning/50'
               }`}
             >
-              <p className="text-lg lg:text-2xl font-extrabold text-warning">{lowStockItems.length}</p>
-              <p className="text-[10px] lg:text-xs font-semibold text-muted-foreground">Low Stock</p>
+              <div className="flex justify-between items-start mb-4">
+                 <div className={`p-2.5 rounded-xl ${stockFilter === 'low_stock' ? 'bg-warning/20 text-warning' : 'bg-warning/10 text-warning'}`}>
+                    <BarChart2 size={20} />
+                 </div>
+              </div>
+              <p className="text-sm font-semibold text-muted-foreground mb-1">Low Stock</p>
+              <p className="text-3xl font-bold text-warning">{lowStockItems.length}</p>
             </button>
             <button
               onClick={() => setStockFilter(stockFilter === 'out_of_stock' ? 'all' : 'out_of_stock')}
-              className={`rounded-xl p-3 text-center transition-all border ${
-                stockFilter === 'out_of_stock' ? 'border-destructive bg-destructive/10 ring-2 ring-destructive/20' : 'border-border bg-card'
+              className={`rounded-2xl p-6 text-left transition-all border shadow-sm ${
+                stockFilter === 'out_of_stock' ? 'border-destructive bg-destructive/5 ring-1 ring-destructive/20' : 'border-border bg-card hover:border-destructive/50'
               }`}
             >
-              <p className="text-lg lg:text-2xl font-extrabold text-destructive">{outOfStockItems.length}</p>
-              <p className="text-[10px] lg:text-xs font-semibold text-muted-foreground">Out of Stock</p>
+              <div className="flex justify-between items-start mb-4">
+                 <div className={`p-2.5 rounded-xl ${stockFilter === 'out_of_stock' ? 'bg-destructive/20 text-destructive' : 'bg-destructive/10 text-destructive'}`}>
+                    <AlertTriangle size={20} />
+                 </div>
+              </div>
+              <p className="text-sm font-semibold text-muted-foreground mb-1">Out of Stock</p>
+              <p className="text-3xl font-bold text-destructive">{outOfStockItems.length}</p>
             </button>
           </div>
         )}
 
-        {/* Low stock notification banner */}
         {tab === 'product' && (lowStockItems.length > 0 || outOfStockItems.length > 0) && stockFilter === 'all' && (
-          <div className="bg-destructive/10 border border-destructive/20 rounded-xl px-4 py-3 flex items-center gap-3 animate-fade-in">
-            <AlertTriangle size={18} className="text-destructive shrink-0" />
+          <div className="bg-destructive/10 border border-destructive/20 rounded-xl px-5 py-4 flex items-center gap-3">
+            <AlertTriangle size={20} className="text-destructive shrink-0" />
             <p className="text-sm font-semibold text-destructive flex-1">
-              {outOfStockItems.length > 0 && `${outOfStockItems.length} out of stock`}
-              {outOfStockItems.length > 0 && lowStockItems.length > 0 && ' · '}
-              {lowStockItems.length > 0 && `${lowStockItems.length} running low`}
+              Action Required: {outOfStockItems.length > 0 && `${outOfStockItems.length} items are out of stock`}
+              {outOfStockItems.length > 0 && lowStockItems.length > 0 && ' and '}
+              {lowStockItems.length > 0 && `${lowStockItems.length} items are running low`}
             </p>
             <button
               onClick={() => setStockFilter('low_stock')}
-              className="text-xs font-bold text-destructive hover:underline shrink-0"
+              className="text-sm font-bold text-destructive hover:underline shrink-0"
             >
-              View
+              Review Now
             </button>
           </div>
         )}
 
-        {/* Search + Add */}
-        <div className="relative flex gap-2">
-          <div className="relative flex-1 lg:max-w-md">
-            <Search size={20} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search inventory"
-              className="w-full pl-10 pr-4 py-3 rounded-xl border border-input bg-card text-foreground placeholder:text-muted-foreground" />
-          </div>
-          <select 
-            value={categoryFilter} 
-            onChange={e => setCategoryFilter(e.target.value)}
-            className="px-4 py-3 rounded-xl border border-input bg-card text-foreground hidden md:block"
-          >
-            <option value="all">All Categories</option>
-            {allCategoryNames.map(c => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
-          {(stockFilter !== 'all' || categoryFilter !== 'all') && (
-            <button
-              onClick={() => { setStockFilter('all'); setCategoryFilter('all'); }}
-              className="px-3 py-2 rounded-xl border border-input bg-accent text-foreground text-sm font-medium flex items-center gap-1"
-            >
-              <Filter size={14} /> Clear
-            </button>
-          )}
-          <button onClick={handleDownloadExcel} className="hidden lg:flex items-center gap-2 px-5 py-3 rounded-xl bg-accent text-foreground font-medium border border-border">
-            <Download size={18} /> Export
-          </button>
-          <label className="hidden lg:flex items-center gap-2 px-5 py-3 rounded-xl bg-accent text-foreground font-medium border border-border cursor-pointer">
-            <Upload size={18} /> Import
-            <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleUploadExcel} />
-          </label>
-          <button onClick={() => setShowForm(true)} className="w-12 h-12 rounded-full bg-primary flex items-center justify-center lg:hidden">
-            <Plus size={22} className="text-primary-foreground" />
-          </button>
-          <button onClick={() => setShowForm(true)} className="hidden lg:flex items-center gap-2 px-5 py-3 rounded-xl bg-primary text-primary-foreground font-medium">
-            <Plus size={18} /> Add Item
-          </button>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex bg-card rounded-xl overflow-hidden lg:max-w-xs">
-          <button onClick={() => { setTab('product'); setStockFilter('all'); }}
-            className={`flex-1 py-3 font-medium ${tab === 'product' ? 'bg-primary text-primary-foreground' : 'text-foreground'}`}>
-            Products
-          </button>
-          <button onClick={() => { setTab('service'); setStockFilter('all'); }}
-            className={`flex-1 py-3 font-medium ${tab === 'service' ? 'bg-primary text-primary-foreground' : 'text-foreground'}`}>
-            Services
-          </button>
-        </div>
-
-        {/* Content */}
-        {filtered.length === 0 ? (
-          <div className="bg-card rounded-xl p-8 text-center">
-            <Package size={40} className="text-muted-foreground mx-auto mb-3 opacity-40" />
-            <p className="text-muted-foreground font-medium">
-              {stockFilter !== 'all' ? `No ${stockFilter.replace('_', ' ')} items found.` : `No ${tab}s found.`}
-            </p>
-            {stockFilter !== 'all' && (
-              <button onClick={() => setStockFilter('all')} className="mt-2 text-sm text-primary font-semibold">
-                Show all items
+        <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden flex flex-col">
+          {/* Controls Bar */}
+          <div className="p-4 border-b border-border bg-muted/20 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
+            
+            <div className="flex bg-muted/50 p-1 rounded-xl">
+              <button onClick={() => { setTab('product'); setStockFilter('all'); }}
+                className={`px-5 py-2 rounded-lg text-sm font-bold transition-colors ${tab === 'product' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
+                Products
               </button>
-            )}
+              <button onClick={() => { setTab('service'); setStockFilter('all'); }}
+                className={`px-5 py-2 rounded-lg text-sm font-bold transition-colors ${tab === 'service' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
+                Services
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+              <div className="relative flex-1 md:w-64">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search inventory..."
+                  className="w-full pl-9 pr-3 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm" />
+              </div>
+              
+              <select 
+                value={categoryFilter} 
+                onChange={e => setCategoryFilter(e.target.value)}
+                className="h-11 px-4 rounded-xl border border-input bg-background text-sm text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm hidden sm:block appearance-none"
+              >
+                <option value="all">All Categories</option>
+                {allCategoryNames.map(c => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+              
+              {(stockFilter !== 'all' || categoryFilter !== 'all') && (
+                <button
+                  onClick={() => { setStockFilter('all'); setCategoryFilter('all'); }}
+                  className="h-11 px-4 rounded-xl border border-input bg-muted text-foreground text-sm font-bold hover:bg-accent transition-colors flex items-center shadow-sm"
+                >
+                  Clear
+                </button>
+              )}
+              
+              <label className="hidden lg:flex h-11 items-center gap-2 px-4 rounded-xl bg-background text-foreground hover:bg-accent border border-input text-sm font-bold cursor-pointer transition-colors shadow-sm">
+                <Upload size={16} /> Import Excel
+                <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleUploadExcel} />
+              </label>
+              
+              <button onClick={() => setShowForm(true)} className="h-11 flex items-center gap-2 px-5 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-sm hover:opacity-90 transition-opacity ml-auto md:ml-0">
+                <Plus size={18} /> <span className="hidden sm:inline">Add Item</span>
+              </button>
+            </div>
           </div>
-        ) : (
-          <>
-            {/* Desktop: Table layout */}
-            <div className="hidden lg:block bg-card rounded-2xl ring-1 ring-border overflow-hidden">
-              <table className="w-full">
+
+          {/* Table */}
+          {filtered.length === 0 ? (
+            <div className="p-16 text-center flex flex-col items-center">
+              <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center mb-6">
+                <Package size={32} className="text-muted-foreground/50" />
+              </div>
+              <p className="text-foreground font-semibold text-lg">
+                {stockFilter !== 'all' ? `No ${stockFilter.replace('_', ' ')} items found.` : `No ${tab}s found.`}
+              </p>
+              <p className="text-sm text-muted-foreground mt-2 max-w-sm">
+                Try clearing your filters or add a new item to get started.
+              </p>
+              {stockFilter !== 'all' && (
+                <button onClick={() => setStockFilter('all')} className="mt-4 px-4 py-2 bg-muted text-foreground font-bold rounded-lg text-sm hover:bg-accent transition-colors">
+                  Clear filters
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[900px]">
                 <thead>
-                  <tr className="border-b border-border bg-accent/30">
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-muted-foreground uppercase">Code</th>
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-muted-foreground uppercase">Product Name</th>
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-muted-foreground uppercase">Category</th>
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-muted-foreground uppercase">Barcode</th>
-                    <th className="text-right px-5 py-3 text-xs font-semibold text-muted-foreground uppercase">Cost Price</th>
-                    <th className="text-right px-5 py-3 text-xs font-semibold text-muted-foreground uppercase">Sell Price</th>
+                  <tr className="border-b border-border/50 bg-muted/10">
+                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">Code</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">Product Name</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">Category</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap text-right">Cost Price</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap text-right">Sell Price</th>
                     {tab === 'product' && (
                       <>
-                        <th className="text-right px-5 py-3 text-xs font-semibold text-muted-foreground uppercase">Remaining</th>
-                        <th className="text-right px-5 py-3 text-xs font-semibold text-muted-foreground uppercase">Low Stock Level</th>
-                        <th className="text-center px-5 py-3 text-xs font-semibold text-muted-foreground uppercase">Status</th>
+                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap text-right">Qty</th>
+                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap text-center">Status</th>
                       </>
                     )}
-                    <th className="text-right px-5 py-3 text-xs font-semibold text-muted-foreground uppercase">Actions</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-border/50">
                   {filtered.map(item => {
                     const status = getStockStatus(item);
-                    const isAlert = status === 'low_stock' || status === 'out_of_stock';
                     return (
                       <tr
                         key={item.id}
-                        className={`border-b border-border last:border-0 transition-colors ${
-                          isAlert
-                            ? 'bg-destructive/5 hover:bg-destructive/10'
-                            : 'hover:bg-accent/20'
-                        }`}
+                        className="hover:bg-muted/30 transition-colors group"
                       >
-                        <td className="px-5 py-3.5 text-sm text-muted-foreground font-mono">{item.item_code}</td>
-                        <td className="px-5 py-3.5">
-                          <div className="flex items-center gap-2">
-                            <span className={`text-sm font-semibold ${isAlert ? 'text-destructive' : 'text-foreground'}`}>
-                              {item.name}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-5 py-3.5 text-sm text-muted-foreground">{item.category || '—'}</td>
-                        <td className="px-5 py-3.5 text-sm text-muted-foreground">{item.barcode || '—'}</td>
-                        <td className="px-5 py-3.5 text-sm text-muted-foreground text-right">{formatCurrency(item.cost_price)}</td>
-                        <td className="px-5 py-3.5 text-sm font-semibold text-primary text-right">{formatCurrency(item.sell_price)}</td>
+                        <td className="px-6 py-4 text-sm text-muted-foreground font-mono">{item.item_code}</td>
+                        <td className="px-6 py-4 text-sm font-semibold text-foreground">{item.name}</td>
+                        <td className="px-6 py-4 text-sm text-muted-foreground">{item.category || '—'}</td>
+                        <td className="px-6 py-4 text-sm text-muted-foreground text-right">{formatCurrency(item.cost_price)}</td>
+                        <td className="px-6 py-4 text-sm font-bold text-foreground text-right">{formatCurrency(item.sell_price)}</td>
                         {tab === 'product' && (
                           <>
-                            <td className={`px-5 py-3.5 text-sm font-bold text-right ${
+                            <td className={`px-6 py-4 text-sm font-bold text-right ${
                               status === 'out_of_stock' ? 'text-destructive' :
-                              status === 'low_stock' ? 'text-destructive' :
-                              'text-primary'
+                              status === 'low_stock' ? 'text-warning' :
+                              'text-foreground'
                             }`}>
                               {item.quantity}
                             </td>
-                            <td className="px-5 py-3.5 text-sm text-muted-foreground text-right">
-                              {item.low_stock_threshold}
-                            </td>
-                            <td className="px-5 py-3.5 text-center">
+                            <td className="px-6 py-4 text-center">
                               <StockBadge status={status} />
                             </td>
                           </>
                         )}
-                        <td className="px-5 py-3.5 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <button onClick={() => openEdit(item)} className="p-1.5 rounded-lg hover:bg-primary/10 transition-colors"><Pencil size={16} className="text-primary" /></button>
-                            <button onClick={() => setDeleteTarget(item)} className="p-1.5 rounded-lg hover:bg-destructive/10 transition-colors"><Trash2 size={16} className="text-destructive" /></button>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => openEdit(item)} className="p-2 rounded-lg bg-background border border-border text-muted-foreground hover:bg-accent hover:text-foreground transition-colors shadow-sm"><Pencil size={14} /></button>
+                            <button onClick={() => setDeleteTarget(item)} className="p-2 rounded-lg bg-background border border-border text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20 transition-colors shadow-sm"><Trash2 size={14} /></button>
                           </div>
                         </td>
                       </tr>
@@ -409,114 +411,87 @@ export default function InventoryPage() {
                 </tbody>
               </table>
             </div>
-
-            {/* Mobile: Card layout */}
-            <div className="lg:hidden space-y-3">
-              {filtered.map(item => {
-                const status = getStockStatus(item);
-                const isAlert = status === 'low_stock' || status === 'out_of_stock';
-                return (
-                  <div
-                    key={item.id}
-                    className={`rounded-xl p-4 border transition-all ${
-                      isAlert
-                        ? 'bg-destructive/8 border-destructive/25 ring-1 ring-destructive/10'
-                        : 'bg-card border-border'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <span className="bg-card px-2 py-1 rounded text-xs font-medium text-muted-foreground border border-border">{item.item_code}</span>
-                        <h4 className={`font-bold truncate ${isAlert ? 'text-destructive' : 'text-foreground'}`}>{item.name}</h4>
-                      </div>
-                      <div className="flex gap-2 shrink-0 ml-2">
-                        <button onClick={() => openEdit(item)}>
-                          <Pencil size={18} className="text-primary" />
-                        </button>
-                        <button onClick={() => setDeleteTarget(item)}>
-                          <Trash2 size={18} className="text-destructive" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {tab === 'product' && (
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <span className={`text-sm font-bold ${
-                            status === 'out_of_stock' || status === 'low_stock' ? 'text-destructive' : 'text-primary'
-                          }`}>
-                            Remaining: {item.quantity}
-                          </span>
-                          <StockBadge status={status} />
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="flex justify-between mt-1">
-                      <p className="text-sm text-muted-foreground">Cost: {formatCurrency(item.cost_price)}</p>
-                      <p className="text-sm font-medium text-primary">Sell: {formatCurrency(item.sell_price)}</p>
-                    </div>
-
-                    {tab === 'product' && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Low stock level: {item.low_stock_threshold}
-                      </p>
-                    )}
-
-                    {item.barcode && <p className="text-xs text-muted-foreground mt-1">⊞ {item.barcode}</p>}
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Add Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 z-50 bg-foreground/30 flex items-end lg:items-center lg:justify-center">
-           <div className="w-full lg:w-[480px] bg-card rounded-t-2xl lg:rounded-2xl p-6 max-h-[80vh] overflow-y-auto">
-             <h3 className="text-lg font-bold text-foreground mb-4">{editingItem ? 'Edit' : 'Add'} {tab === 'product' ? 'Product' : 'Service'}</h3>
-             <form onSubmit={handleSubmit} className="space-y-3">
-              <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Item name"
-                className="w-full px-4 py-3 rounded-lg border border-input bg-accent/30 text-foreground placeholder:text-muted-foreground" required />
-              <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
-                className="w-full px-4 py-3 rounded-lg border border-input bg-accent/30 text-foreground appearance-none">
-                <option value="">Select Category (Optional)</option>
-                {allCategoryNames.map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-              <div className="relative flex gap-2">
-                <input value={form.barcode} onChange={e => setForm(f => ({ ...f, barcode: e.target.value }))} placeholder="Barcode (optional)"
-                  className="flex-1 px-4 py-3 rounded-lg border border-input bg-accent/30 text-foreground placeholder:text-muted-foreground" />
-                <button type="button" onClick={() => setShowScanner(true)}
-                  className="w-12 h-12 rounded-lg border border-input bg-accent/30 flex items-center justify-center text-primary active:scale-95 transition-transform">
-                  <ScanBarcode size={22} />
-                </button>
-              </div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                <input type="number" value={form.cost_price} onChange={e => setForm(f => ({ ...f, cost_price: e.target.value }))} placeholder="Cost price"
-                  className="w-full px-4 py-3 rounded-lg border border-input bg-accent/30 text-foreground placeholder:text-muted-foreground" required />
-                <input type="number" value={form.sell_price} onChange={e => setForm(f => ({ ...f, sell_price: e.target.value }))} placeholder="Sell price (optional)"
-                  className="w-full px-4 py-3 rounded-lg border border-input bg-accent/30 text-foreground placeholder:text-muted-foreground" />
-              </div>
-              {tab === 'product' && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                  <input type="number" value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))} placeholder="Quantity"
-                    className="w-full px-4 py-3 rounded-lg border border-input bg-accent/30 text-foreground placeholder:text-muted-foreground" required />
-                  <input type="number" value={form.low_stock_threshold} onChange={e => setForm(f => ({ ...f, low_stock_threshold: e.target.value }))} placeholder="Low stock threshold"
-                    className="w-full px-4 py-3 rounded-lg border border-input bg-accent/30 text-foreground placeholder:text-muted-foreground" />
+        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
+           <div className="w-full max-w-lg bg-card rounded-2xl border border-border shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+             <div className="px-6 py-5 border-b border-border bg-muted/10 flex justify-between items-center">
+               <h3 className="text-lg font-bold text-foreground">{editingItem ? 'Edit' : 'Add'} {tab === 'product' ? 'Product' : 'Service'}</h3>
+               <button onClick={() => { setShowForm(false); setEditingItem(null); }} className="w-8 h-8 rounded-full flex items-center justify-center bg-background border border-border text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"><X size={16} /></button>
+             </div>
+             <div className="p-6 max-h-[75vh] overflow-y-auto">
+               <form onSubmit={handleSubmit} className="space-y-5">
+                <div>
+                  <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Item Name <span className="text-destructive">*</span></label>
+                  <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Wireless Mouse"
+                    className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all" required />
                 </div>
-              )}
-              <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => { setShowForm(false); setEditingItem(null); setForm({ name: '', barcode: '', cost_price: '', sell_price: '', quantity: '', low_stock_threshold: '5' }); }} className="flex-1 py-3 rounded-xl bg-accent text-foreground font-medium">Cancel</button>
-                <button type="submit" className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground font-bold">{editingItem ? 'Save' : 'Add'}</button>
-              </div>
-            </form>
-          </div>
+                
+                <div>
+                  <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Category</label>
+                  <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                    className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all appearance-none">
+                    <option value="">Select Category (Optional)</option>
+                    {allCategoryNames.map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Barcode</label>
+                  <div className="relative flex gap-2">
+                    <input value={form.barcode} onChange={e => setForm(f => ({ ...f, barcode: e.target.value }))} placeholder="Optional barcode"
+                      className="flex-1 px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all" />
+                    <button type="button" onClick={() => setShowScanner(true)}
+                      className="w-11 h-11 rounded-xl border border-border bg-background shadow-sm flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
+                      <ScanBarcode size={18} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Cost Price <span className="text-destructive">*</span></label>
+                    <input type="number" step="0.01" value={form.cost_price} onChange={e => setForm(f => ({ ...f, cost_price: e.target.value }))} placeholder="0.00"
+                      className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all" required />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Sell Price <span className="text-destructive">*</span></label>
+                    <input type="number" step="0.01" value={form.sell_price} onChange={e => setForm(f => ({ ...f, sell_price: e.target.value }))} placeholder="0.00"
+                      className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all" required />
+                  </div>
+                </div>
+
+                {tab === 'product' && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Initial Quantity <span className="text-destructive">*</span></label>
+                      <input type="number" value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))} placeholder="0"
+                        className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all" required />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Low Stock Alert</label>
+                      <input type="number" value={form.low_stock_threshold} onChange={e => setForm(f => ({ ...f, low_stock_threshold: e.target.value }))} placeholder="5"
+                        className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all" />
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-6 border-t border-border mt-6">
+                  <button type="button" onClick={() => { setShowForm(false); setEditingItem(null); setForm({ name: '', category: '', barcode: '', cost_price: '', sell_price: '', quantity: '', low_stock_threshold: '5' }); }} className="flex-1 py-3 rounded-xl bg-muted text-foreground text-sm font-bold hover:bg-accent transition-colors">Cancel</button>
+                  <button type="submit" className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:opacity-90 transition-opacity shadow-sm">{editingItem ? 'Save Changes' : 'Add Item'}</button>
+                </div>
+               </form>
+             </div>
+           </div>
         </div>
       )}
+      
       {showScanner && (
         <BarcodeScanner
           onScan={(code) => {
@@ -528,16 +503,16 @@ export default function InventoryPage() {
       )}
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Product</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete "{deleteTarget?.name}"? This action cannot be undone.
+            <AlertDialogTitle className="text-xl">Delete Item</AlertDialogTitle>
+            <AlertDialogDescription className="text-base">
+              Are you sure you want to delete <span className="font-semibold text-foreground">"{deleteTarget?.name}"</span>? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => { deleteItem(deleteTarget?.id); setDeleteTarget(null); }} className="bg-destructive text-destructive-foreground">Delete</AlertDialogAction>
+          <AlertDialogFooter className="mt-6">
+            <AlertDialogCancel className="rounded-xl h-11 font-bold">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { deleteItem(deleteTarget?.id); setDeleteTarget(null); }} className="bg-destructive text-destructive-foreground rounded-xl h-11 font-bold">Yes, Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

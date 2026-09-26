@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import PageHeader from '@/components/PageHeader';
-import FAB from '@/components/FAB';
 import { useApp } from '@/context/AppContext';
-import { X, ArrowRight } from 'lucide-react';
+import { X, ArrowRight, Plus, Package, MapPin, Truck, Store, ArrowRightLeft, Clock, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import { api as apiClient } from '@/api';
 
@@ -61,122 +60,341 @@ export default function StockTransfersPage() {
       return;
     }
 
-    toast.success('Stock transfer created');
+    toast.success('Stock transfer created successfully');
     setShowAdd(false);
     setDestStoreId('');
     setSelectedItems([]);
     await refreshData();
   };
+  
+  const getStatusBadge = (status: string) => {
+     const statusConfig: Record<string, { bg: string, text: string, border: string, icon: any }> = { 
+        pending: { bg: 'bg-warning/10', text: 'text-warning', border: 'border-warning/20', icon: Clock }, 
+        approved: { bg: 'bg-info/10', text: 'text-info', border: 'border-info/20', icon: ShieldAlert }, 
+        received: { bg: 'bg-success/10', text: 'text-success', border: 'border-success/20', icon: CheckCircle2 }, 
+        rejected: { bg: 'bg-destructive/10', text: 'text-destructive', border: 'border-destructive/20', icon: X } 
+     };
+     
+     const config = statusConfig[status] || statusConfig.pending;
+     const Icon = config.icon;
+     
+     return (
+       <span className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1 text-[10px] font-bold border uppercase tracking-widest ${config.bg} ${config.text} ${config.border}`}>
+         <Icon size={12} />
+         {status}
+       </span>
+     );
+  };
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <PageHeader title="Stock Transfers" />
-      <div className="px-4 py-4 space-y-4">
+    <div className="min-h-screen bg-[#F8F9FA] dark:bg-background pb-12">
+      <PageHeader 
+        title="Stock Transfers" 
+        rightAction={
+          <button 
+            onClick={() => {
+              if (stores.length <= 1) {
+                toast.error('You need at least 2 stores to transfer stock');
+                return;
+              }
+              setShowAdd(true);
+            }} 
+            className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-primary/90 transition-all shadow-sm"
+          >
+            <ArrowRightLeft size={18} />
+            <span className="hidden sm:inline">New Transfer</span>
+          </button>
+        }
+      />
+      
+      <div className="p-4 md:p-8 space-y-6 max-w-7xl mx-auto w-full">
         {stores.length <= 1 ? (
-          <div className="bg-card rounded-xl p-8 text-center">
-            <p className="text-muted-foreground">You need at least 2 stores to transfer stock.</p>
-            <p className="text-sm text-muted-foreground mt-2">Create another store to get started.</p>
+          <div className="bg-card rounded-3xl border border-border p-16 text-center shadow-sm">
+            <div className="w-20 h-20 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-6">
+               <Store size={36} className="text-muted-foreground/50" />
+            </div>
+            <h3 className="text-xl font-black text-foreground mb-2">Multiple Stores Required</h3>
+            <p className="text-sm font-medium text-muted-foreground max-w-md mx-auto">
+               You need at least two stores connected to your account to perform stock transfers. Please create another store branch first.
+            </p>
           </div>
         ) : stockTransfers.length === 0 ? (
-          <div className="bg-card rounded-xl p-8 text-center">
-            <p className="text-muted-foreground">No stock transfers yet.</p>
-            <p className="text-sm text-muted-foreground mt-2">Tap + to create a transfer.</p>
+          <div className="bg-card rounded-3xl border border-border p-16 text-center shadow-sm">
+            <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
+               <ArrowRightLeft size={36} className="text-primary" />
+            </div>
+            <h3 className="text-xl font-black text-foreground mb-2">No Transfers Yet</h3>
+            <p className="text-sm font-medium text-muted-foreground max-w-md mx-auto mb-6">
+               You haven't initiated or received any stock transfers. Move inventory between your stores easily.
+            </p>
+            <button 
+               onClick={() => setShowAdd(true)}
+               className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-all shadow-sm"
+            >
+               <ArrowRightLeft size={18} /> Start Transfer
+            </button>
           </div>
         ) : (
-          <div className="space-y-3">
-            {stockTransfers.map(st => {
-              const source = stores.find(s => s.id === st.source_store_id);
-              const dest = stores.find(s => s.id === st.destination_store_id);
-              return (
-                <div key={st.id} className="bg-card rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-bold text-foreground">{source?.store_name || 'Unknown'}</span>
-                    <ArrowRight size={16} className="text-muted-foreground" />
-                    <span className="font-bold text-foreground">{dest?.store_name || 'Unknown'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">{new Date(st.created_at).toLocaleDateString()}</span>
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                      st.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                      st.status === 'approved' ? 'bg-blue-100 text-blue-800' :
-                      st.status === 'received' ? 'bg-green-100 text-green-800' :
-                      'bg-red-100 text-red-800'
-                    }`}>{st.status}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <>
+            <div className="hidden md:block bg-card rounded-3xl border border-border shadow-sm overflow-hidden">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-border/50 bg-muted/10">
+                    <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Date</th>
+                    <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-right">Source Store</th>
+                    <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-center">Direction</th>
+                    <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Destination Store</th>
+                    <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-center">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/50">
+                  {stockTransfers.map(st => {
+                    const source = stores.find(s => s.id === st.source_store_id);
+                    const dest = stores.find(s => s.id === st.destination_store_id);
+                    return (
+                      <tr key={st.id} className="hover:bg-muted/30 transition-colors group">
+                        <td className="px-6 py-5">
+                          <div className="flex flex-col">
+                             <span className="font-bold text-sm text-foreground">
+                               {new Date(st.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                             </span>
+                             <span className="text-xs font-medium text-muted-foreground flex items-center gap-1 mt-0.5">
+                                <Clock size={12} />
+                                {new Date(st.created_at).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                             </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-5 text-right">
+                          <div className="flex flex-col items-end">
+                             <span className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">{source?.store_name || 'Unknown'}</span>
+                             <span className="text-xs font-medium text-muted-foreground flex items-center gap-1 mt-0.5">
+                                <MapPin size={10} /> {source?.location || '—'}
+                             </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-5">
+                          <div className="flex justify-center items-center">
+                             <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                <ArrowRight size={14} className="text-primary" />
+                             </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-5">
+                           <div className="flex flex-col items-start">
+                             <span className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">{dest?.store_name || 'Unknown'}</span>
+                             <span className="text-xs font-medium text-muted-foreground flex items-center gap-1 mt-0.5">
+                                <MapPin size={10} /> {dest?.location || '—'}
+                             </span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-5 text-center">
+                          {getStatusBadge(st.status)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Cards */}
+            <div className="md:hidden space-y-4">
+               {stockTransfers.map(st => {
+                  const source = stores.find(s => s.id === st.source_store_id);
+                  const dest = stores.find(s => s.id === st.destination_store_id);
+                  return (
+                     <div key={st.id} className="bg-card rounded-2xl border border-border p-5 shadow-sm">
+                        <div className="flex justify-between items-center mb-4 pb-4 border-b border-border/50">
+                           <div className="flex flex-col">
+                              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Transfer Date</span>
+                              <span className="font-bold text-sm text-foreground">{new Date(st.created_at).toLocaleDateString()}</span>
+                           </div>
+                           {getStatusBadge(st.status)}
+                        </div>
+                        
+                        <div className="flex items-center gap-3">
+                           <div className="flex-1 bg-muted/20 border border-border/50 rounded-xl p-3 text-center">
+                              <span className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">From</span>
+                              <span className="font-bold text-sm text-foreground truncate block">{source?.store_name || 'Unknown'}</span>
+                           </div>
+                           <div className="shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                              <ArrowRight size={14} className="text-primary" />
+                           </div>
+                           <div className="flex-1 bg-primary/5 border border-primary/10 rounded-xl p-3 text-center">
+                              <span className="block text-[10px] font-bold text-primary/70 uppercase tracking-widest mb-1">To</span>
+                              <span className="font-bold text-sm text-primary truncate block">{dest?.store_name || 'Unknown'}</span>
+                           </div>
+                        </div>
+                     </div>
+                  );
+               })}
+            </div>
+          </>
         )}
       </div>
 
       {/* Add Transfer Modal */}
       {showAdd && (
-        <div className="fixed inset-0 z-50 bg-foreground/30 flex items-end">
-          <div className="w-full bg-card rounded-t-2xl p-6 max-h-[80vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-bold text-foreground">New Stock Transfer</h3>
-              <button onClick={() => setShowAdd(false)}><X size={24} className="text-muted-foreground" /></button>
+        <div className="fixed inset-0 z-50 bg-foreground/20 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
+          <div className="w-full sm:max-w-2xl bg-card rounded-t-3xl sm:rounded-3xl border border-border shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300">
+            <div className="flex justify-between items-center px-6 py-5 border-b border-border bg-muted/10">
+              <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+                 <ArrowRightLeft size={18} className="text-primary" />
+                 New Stock Transfer
+              </h3>
+              <button 
+                onClick={() => setShowAdd(false)}
+                className="w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              >
+                <X size={16} />
+              </button>
             </div>
 
-            <label className="text-sm font-medium text-foreground">From: {currentStore?.store_name}</label>
+            <div className="p-6 sm:p-8 overflow-y-auto space-y-8">
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest block">From (Source)</label>
+                  <div className="w-full px-4 py-3 h-12 rounded-xl border border-border/50 bg-muted/30 text-muted-foreground font-bold text-sm flex items-center gap-2">
+                    <Store size={16} /> {currentStore?.store_name}
+                  </div>
+                </div>
 
-            <select value={destStoreId} onChange={e => setDestStoreId(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg border border-input bg-accent/30 text-foreground mt-2 mb-4">
-              <option value="">Select Destination Store</option>
-              {otherStores.map(s => (
-                <option key={s.id} value={s.id}>{s.store_name} - {s.location}</option>
-              ))}
-            </select>
+                <div className="hidden md:flex justify-center translate-y-3">
+                   <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <ArrowRight size={18} className="text-primary" />
+                   </div>
+                </div>
+                <div className="md:hidden flex justify-center -my-2">
+                   <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center rotate-90">
+                      <ArrowRight size={14} className="text-primary" />
+                   </div>
+                </div>
 
-            {/* Add items */}
-            <label className="text-sm font-medium text-foreground">Items to Transfer</label>
-            <div className="flex gap-2 mt-2 mb-3">
-              <select value={addItemId} onChange={e => setAddItemId(e.target.value)}
-                className="flex-1 px-3 py-2 rounded-lg border border-input bg-accent/30 text-foreground text-sm">
-                <option value="">Select item</option>
-                {items.filter(i => i.type === 'product' && i.quantity > 0).map(i => (
-                  <option key={i.id} value={i.id}>{i.name} (qty: {i.quantity})</option>
-                ))}
-              </select>
-              <input type="number" value={addQty} onChange={e => setAddQty(e.target.value)} min="1"
-                className="w-16 px-2 py-2 rounded-lg border border-input bg-accent/30 text-foreground text-sm text-center" />
-              <button onClick={handleAddItem} className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-bold">Add</button>
-            </div>
-
-            {selectedItems.length > 0 && (
-              <div className="bg-accent/30 rounded-lg p-3 mb-4 space-y-2">
-                {selectedItems.map(si => {
-                  const item = items.find(i => i.id === si.item_id);
-                  return (
-                    <div key={si.item_id} className="flex justify-between text-sm">
-                      <span className="text-foreground">{item?.name || 'Unknown'}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground">x{si.quantity}</span>
-                        <button onClick={() => setSelectedItems(prev => prev.filter(x => x.item_id !== si.item_id))}
-                          className="text-destructive"><X size={14} /></button>
-                      </div>
-                    </div>
-                  );
-                })}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest block">To (Destination) <span className="text-destructive">*</span></label>
+                  <select 
+                    value={destStoreId} 
+                    onChange={e => setDestStoreId(e.target.value)}
+                    className="w-full px-4 h-12 rounded-xl border border-input bg-background text-sm text-foreground font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
+                  >
+                    <option value="" disabled>Select Destination Store...</option>
+                    {otherStores.map(s => (
+                      <option key={s.id} value={s.id}>{s.store_name} - {s.location}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
-            )}
 
-            <div className="flex gap-3">
-              <button onClick={() => setShowAdd(false)} className="flex-1 py-3 rounded-xl bg-accent text-foreground font-medium">Cancel</button>
-              <button onClick={handleCreateTransfer} className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground font-bold">Create Transfer</button>
+              <div className="h-px bg-border/50 w-full"></div>
+
+              <div className="space-y-4">
+                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                   <Package size={14} /> Items to Transfer
+                </label>
+                
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex-1 relative">
+                     <select 
+                       value={addItemId} 
+                       onChange={e => setAddItemId(e.target.value)}
+                       className="w-full px-4 h-12 rounded-xl border border-input bg-background text-sm text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
+                     >
+                       <option value="">Select an item from inventory...</option>
+                       {items.filter(i => i.type === 'product' && i.quantity > 0).map(i => (
+                         <option key={i.id} value={i.id}>{i.name} (In stock: {i.quantity})</option>
+                       ))}
+                     </select>
+                  </div>
+                  
+                  <div className="flex gap-3">
+                    <input 
+                      type="number" 
+                      value={addQty} 
+                      onChange={e => setAddQty(e.target.value)} 
+                      min="1"
+                      className="w-24 px-4 h-12 rounded-xl border border-input bg-background text-sm text-foreground font-bold text-center focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm" 
+                    />
+                    <button 
+                      onClick={handleAddItem} 
+                      className="px-6 h-12 rounded-xl bg-secondary text-secondary-foreground text-sm font-bold hover:bg-secondary/80 transition-colors shadow-sm"
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+
+                {selectedItems.length > 0 ? (
+                  <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden mt-4">
+                    <table className="w-full text-left">
+                      <thead className="bg-muted/10 border-b border-border/50">
+                        <tr>
+                          <th className="px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Item Name</th>
+                          <th className="px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest text-right">Transfer Qty</th>
+                          <th className="px-5 py-3 w-12"></th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/50">
+                        {selectedItems.map(si => {
+                          const item = items.find(i => i.id === si.item_id);
+                          return (
+                            <tr key={si.item_id} className="hover:bg-muted/30 transition-colors group">
+                              <td className="px-5 py-3 text-sm font-bold text-foreground">
+                                 <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 rounded bg-muted/50 flex items-center justify-center text-muted-foreground">
+                                       <Package size={12} />
+                                    </div>
+                                    {item?.name || 'Unknown'}
+                                 </div>
+                              </td>
+                              <td className="px-5 py-3 text-sm font-black text-right text-primary">
+                                 <span className="bg-primary/10 px-2.5 py-1 rounded-lg">x{si.quantity}</span>
+                              </td>
+                              <td className="px-5 py-3 text-right">
+                                <button 
+                                  onClick={() => setSelectedItems(prev => prev.filter(x => x.item_id !== si.item_id))}
+                                  className="w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+                                >
+                                  <X size={14} />
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="text-center p-8 border border-dashed border-border rounded-2xl mt-4 bg-muted/5">
+                    <Package size={24} className="mx-auto mb-2 text-muted-foreground/30" />
+                    <p className="text-sm font-bold text-foreground mb-1">No items selected</p>
+                    <p className="text-xs font-medium text-muted-foreground">Select items above to add them to this transfer list.</p>
+                  </div>
+                )}
+              </div>
+
             </div>
+            
+            <div className="p-4 sm:p-6 border-t border-border bg-muted/10 flex gap-3 justify-end mt-auto">
+              <button 
+                onClick={() => setShowAdd(false)} 
+                className="flex-1 sm:flex-none px-6 py-3 rounded-xl bg-muted text-foreground text-sm font-bold hover:bg-accent transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleCreateTransfer} 
+                disabled={selectedItems.length === 0 || !destStoreId}
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-50 shadow-sm"
+              >
+                <Truck size={16} /> Initiate Transfer
+              </button>
+            </div>
+
           </div>
         </div>
       )}
 
-      <FAB onClick={() => {
-        if (stores.length <= 1) {
-          toast.error('You need at least 2 stores to transfer stock');
-          return;
-        }
-        setShowAdd(true);
-      }} />
     </div>
   );
 }

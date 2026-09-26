@@ -90,7 +90,7 @@ interface AppContextType extends Omit<AppState, 'session'> {
   addCashMovement: (movement: Omit<CashMovement, 'id' | 'created_at'>) => Promise<void>;
   addStaffAccount: (staff: Omit<StaffAccount, 'id' | 'created_at'> & { password?: string }) => Promise<void>;
   deleteStaffAccount: (id: string) => Promise<void>;
-  updateStaffAccount: (id: string, updates: Partial<StaffAccount>) => Promise<void>;
+  updateStaffAccount: (id: string, updates: Partial<StaffAccount> & { password?: string }) => Promise<void>;
   updateProfile: (updates: { full_name?: string; phone?: string }) => Promise<boolean>;
   changePassword: (newPassword: string) => Promise<boolean>;
   refreshData: () => Promise<void>;
@@ -878,12 +878,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const updateStaffAccount = useCallback(async (id: string, updates: Partial<StaffAccount>) => {
-    const { error } = await apiClient.from('staff_accounts').update(updates as any).eq('id', id);
+  const updateStaffAccount = useCallback(async (id: string, updates: Partial<StaffAccount> & { password?: string }) => {
+    const { password, ...staffUpdates } = updates;
+    const { error } = await apiClient.from('staff_accounts').update(staffUpdates as any).eq('id', id);
     if (!error) {
+      if (password) {
+        await fetch('/api/auth/v1/update-staff-password', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-XSRF-TOKEN': getCsrfToken()
+          },
+          body: JSON.stringify({ staff_id: id, password })
+        });
+      }
       setState(prev => ({
         ...prev,
-        staffAccounts: prev.staffAccounts.map(s => s.id === id ? { ...s, ...updates } : s),
+        staffAccounts: prev.staffAccounts.map(s => s.id === id ? { ...s, ...staffUpdates } : s),
       }));
     }
   }, []);

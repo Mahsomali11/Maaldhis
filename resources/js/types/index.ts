@@ -1,4 +1,4 @@
-// Types for the Nasri Point POS system
+// Types for the Maaldhis POS system
 export interface Category {
   id: string;
   store_id: string;

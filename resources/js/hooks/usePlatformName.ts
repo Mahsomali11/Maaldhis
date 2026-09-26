@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api as apiClient } from '@/api';
 
-const DEFAULT_NAME = 'Nasri Point';
+const DEFAULT_NAME = 'Maaldhis';
 let cachedName: string | null = null;
 
 export function clearPlatformNameCache() {

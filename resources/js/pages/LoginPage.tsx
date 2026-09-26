@@ -14,87 +14,118 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen w-full flex bg-background">
       <Head title="Sign In" />
-      <div className="px-4 py-4">
-        <h1 className="text-2xl font-bold text-foreground">Welcome to Nasri Point</h1>
-      </div>
       
-      <div className="flex-1 bg-card rounded-t-2xl px-6 py-8 flex flex-col">
-        <div className="flex justify-center mb-8">
-          <div className="w-32 h-32 rounded-full bg-drawer-header flex items-center justify-center">
-            <div className="text-center">
-              <StoreIcon size={48} className="mx-auto text-card mb-1" />
-              <span className="text-xs font-bold text-primary tracking-wider">NASRI POINT</span>
-            </div>
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit} className="flex-1 flex flex-col gap-5">
-          {errors.email && <p className="text-destructive text-sm text-center">{errors.email}</p>}
+      {/* Left Panel: Form */}
+      <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-6 sm:p-12 lg:p-24 relative z-10">
+        <div className="w-full max-w-[420px] space-y-8">
           
-          <div className="relative">
-            <input
-              type="email"
-              value={data.email}
-              onChange={e => setData('email', e.target.value)}
-              className="w-full px-4 py-4 rounded-lg border-2 border-info bg-accent/30 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
-              placeholder="Enter email address"
-              required
-            />
+          <div className="flex flex-col items-start mb-8">
+            <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-6">
+               <StoreIcon size={24} className="text-primary" />
+            </div>
+            <h1 className="text-3xl font-light text-foreground tracking-tight">Welcome <span className="font-semibold">Back</span></h1>
+            <p className="text-sm text-muted-foreground mt-2">Sign in to your point of sale system.</p>
           </div>
 
-          <div className="relative">
-            <input
-              type="password"
-              value={data.password}
-              onChange={e => setData('password', e.target.value)}
-              className="w-full px-4 py-4 rounded-lg border-2 border-primary bg-accent/30 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
-              placeholder="Enter password"
-              required
-            />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <label className="flex items-center gap-2 text-sm text-foreground">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {errors.email && (
+              <div className="bg-destructive/10 border border-destructive/20 text-destructive text-sm p-3 rounded-md">
+                {errors.email}
+              </div>
+            )}
+            
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Email Address</label>
               <input
-                type="checkbox"
-                checked={data.remember}
-                onChange={e => setData('remember', e.target.checked)}
-                className="w-5 h-5 rounded border-border"
+                type="email"
+                value={data.email}
+                onChange={e => setData('email', e.target.value)}
+                className="w-full px-4 h-11 rounded-md border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all shadow-sm"
+                placeholder="Enter email address"
+                required
               />
-              Remember password
-            </label>
-            <Link href="/reset-password" className="text-sm text-info underline">
-              Forgot password
-            </Link>
-          </div>
+            </div>
 
-          <button
-            type="submit"
-            disabled={processing}
-            className="w-full py-4 rounded-xl bg-primary text-primary-foreground font-bold text-lg mt-4 active:scale-[0.98] transition-transform disabled:opacity-50"
-          >
-            {processing ? 'Signing in...' : 'Sign in'}
-          </button>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Password</label>
+                <Link href="/reset-password" className="text-xs text-primary hover:underline font-medium transition-colors">
+                  Forgot password?
+                </Link>
+              </div>
+              <input
+                type="password"
+                value={data.password}
+                onChange={e => setData('password', e.target.value)}
+                className="w-full px-4 h-11 rounded-md border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all shadow-sm"
+                placeholder="Enter password"
+                required
+              />
+            </div>
 
-          <p className="text-center text-sm text-muted-foreground mt-4">
-            Don't have an account?{' '}
-            <Link href="/signup" className="text-info underline font-medium">
-              Create an account
-            </Link>
-          </p>
+            <div className="flex items-center pt-1">
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <div className="relative flex items-center justify-center">
+                  <input
+                    type="checkbox"
+                    checked={data.remember}
+                    onChange={e => setData('remember', e.target.checked)}
+                    className="peer sr-only"
+                  />
+                  <div className="w-4 h-4 border border-input rounded flex items-center justify-center peer-checked:bg-primary peer-checked:border-primary transition-colors">
+                    <svg className="w-3 h-3 text-primary-foreground opacity-0 peer-checked:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                </div>
+                <span className="text-sm text-foreground group-hover:text-primary transition-colors">Remember me</span>
+              </label>
+            </div>
 
-          <div className="mt-6 pt-6 border-t border-border">
+            <button
+              type="submit"
+              disabled={processing}
+              className="w-full h-11 rounded-md bg-primary text-primary-foreground text-sm font-bold shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50 mt-4"
+            >
+              {processing ? 'Signing in...' : 'Sign in'}
+            </button>
+          </form>
+
+          <div className="pt-6 border-t border-border mt-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <p className="text-sm text-muted-foreground">
+              Don't have an account?{' '}
+              <Link href="/signup" className="text-foreground hover:text-primary font-semibold transition-colors">
+                Create one
+              </Link>
+            </p>
             <Link 
               href="/admin/login" 
-              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-accent text-foreground font-medium text-sm hover:bg-accent/80 transition-colors"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
-              Access Admin Panel
+              Admin Access &rarr;
             </Link>
           </div>
-        </form>
+        </div>
       </div>
+
+      {/* Right Panel: Decorative (Hidden on mobile) */}
+      <div className="hidden lg:flex w-1/2 bg-muted relative overflow-hidden items-center justify-center border-l border-border">
+        {/* Subtle architectural/geometric pattern or gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-background/50"></div>
+        <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, black 1px, transparent 0)', backgroundSize: '32px 32px' }}></div>
+        
+        <div className="relative z-10 max-w-lg p-12">
+          <h2 className="text-4xl font-light text-foreground leading-tight tracking-tight mb-6">
+            Empower your <span className="font-semibold">business</span> with modern point of sale.
+          </h2>
+          <p className="text-lg text-muted-foreground">
+            A fast, reliable, and beautifully designed interface to handle sales, inventory, and analytics all in one place.
+          </p>
+        </div>
+      </div>
+
     </div>
   );
 }

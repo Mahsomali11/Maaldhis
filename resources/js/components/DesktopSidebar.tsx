@@ -1,11 +1,12 @@
-import { router, usePage, Link } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import {
   Home, Receipt, TrendingUp, CreditCard, Undo2, Package, BarChart3,
   Users, ArrowLeftRight, Clock, Truck, UserCog, FileText, ShoppingCart,
-  Settings, BookOpen, HelpCircle, Store, LogOut, ChevronLeft, ChevronRight, User, Wallet, Lock,
-  ChevronsUpDown, Check, Plus, Shield, ChevronDown
+  Settings, BookOpen, HelpCircle, Store, LogOut, ChevronDown, Check, Plus, Lock, User, Wallet,
+  ChevronsUpDown, ShieldCheck, LayoutDashboard, Database, Smartphone, DollarSign, Layers
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
+import { useAdmin } from '@/context/AdminContext';
 import { useFeatureAccess } from '@/hooks/useFeatureAccess';
 import { ROUTE_FEATURE_MAP } from '@/lib/features';
 import type { FeatureKey } from '@/lib/features';
@@ -13,7 +14,7 @@ import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 
 const mainNav = [
-  { label: 'Dashboard', icon: Home, path: '/dashboard' },
+  { label: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
   { label: 'Start Sale', icon: ShoppingCart, path: '/start-sale' },
   { label: 'Inventory', icon: Package, path: '/inventory', subItems: [
       { label: 'Items', path: '/inventory' },
@@ -40,20 +41,24 @@ const bottomNav = [
   { label: 'Payment Accounts', icon: Wallet, path: '/payment-accounts' },
   { label: 'Preferences', icon: Settings, path: '/preferences' },
   { label: 'Learning Center', icon: BookOpen, path: '/learning-center' },
-  { label: 'Help', icon: HelpCircle, path: '/help' },
+  { label: 'Help & Support', icon: HelpCircle, path: '/help' },
 ];
 
-export default function DesktopSidebar() {
-  const navigate = (url, options) => router.visit(url, options);
-  const { url } = usePage(); const location = { pathname: url };
+export default function DesktopSidebar({ isMobile = false }: { isMobile?: boolean }) {
+  const navigate = (url: string, options?: any) => router.visit(url, options);
+  const { url } = usePage(); 
+  const location = { pathname: url };
   const { currentStore, stores, setCurrentStore, user, logout } = useApp();
+  const { admin, isAdminAuthenticated, logout: adminLogout } = useAdmin();
   const { hasFeature } = useFeatureAccess();
-  const [collapsed, setCollapsed] = useState(false);
+  
   const [storeDropdownOpen, setStoreDropdownOpen] = useState(false);
   const [inventoryOpen, setInventoryOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
-  const role = user?.role || 'owner';
+  const displayUser = admin || user;
+  const role = admin ? admin.admin_role : (user?.role || 'owner');
+  const isAdmin = isAdminAuthenticated;
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -65,22 +70,20 @@ export default function DesktopSidebar() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [storeDropdownOpen]);
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) => location.pathname === path || (path !== '/inventory' && location.pathname.startsWith(path + '/'));
+  const isExactActive = (path: string) => location.pathname === path;
 
-  // Filter navigation items based on role
   const isItemVisible = (path: string) => {
+    if (role === 'superadmin') return true;
     if (role === 'owner' || role === 'admin') return true;
-    
     if (role === 'cashier') {
       const allowedPaths = ['/dashboard', '/start-sale', '/receipt-history', '/returns', '/customers', '/profile', '/help'];
       return allowedPaths.includes(path);
     }
-    
     if (role === 'inventory_manager') {
       const allowedPaths = ['/dashboard', '/inventory', '/stock-transfers', '/suppliers', '/stock-report', '/profile', '/help'];
       return allowedPaths.includes(path);
     }
-    
     return false;
   };
 
@@ -92,58 +95,60 @@ export default function DesktopSidebar() {
     const featureKey = ROUTE_FEATURE_MAP[path] as FeatureKey | undefined;
     const isLocked = featureKey ? !hasFeature(featureKey) : false;
     const hasSubItems = subItems && subItems.length > 0;
-    const isSubItemActive = hasSubItems && subItems.some(s => isActive(s.path));
-    const active = isActive(path) || isSubItemActive;
+    
+    // Custom active logic for items with subItems
+    const isSubItemActive = hasSubItems && subItems.some(s => isExactActive(s.path));
+    const active = hasSubItems ? isSubItemActive : isActive(path);
     const isOpen = hasSubItems && (inventoryOpen || isSubItemActive);
 
     return (
-      <div className="w-full">
+      <div className="w-full relative px-3">
         <button
           onClick={() => {
             if (isLocked) {
               toast.error('This feature is not included in your current plan. Please upgrade.');
               navigate('/upgrade');
-            } else if (hasSubItems && !collapsed) {
+            } else if (hasSubItems) {
               setInventoryOpen(!inventoryOpen);
             } else {
               navigate(path);
             }
           }}
-          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group ${
+          className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-bold transition-all ${
             isLocked
-              ? 'text-muted-foreground/50 cursor-not-allowed'
+              ? 'text-muted-foreground/40 cursor-not-allowed'
               : active
-                ? 'bg-primary/10 text-primary'
-                : 'text-muted-foreground hover:bg-accent hover:text-foreground'
+                ? 'bg-primary text-primary-foreground shadow-md'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
           }`}
-          title={collapsed ? label + (isLocked ? ' 🔒' : '') : undefined}
         >
-          <Icon size={20} className={`shrink-0 ${isLocked ? 'text-muted-foreground/40' : active ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'}`} />
-          {!collapsed && (
-            <>
-              <span className="truncate flex-1 text-left">{label}</span>
-              {hasSubItems && <ChevronDown size={16} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />}
-            </>
-          )}
-          {!collapsed && isLocked && <Lock size={14} className="text-muted-foreground/50 shrink-0" />}
+          <div className="flex items-center gap-3">
+             <Icon size={18} className={active ? 'text-primary-foreground' : 'text-muted-foreground'} />
+             <span className="truncate">{label}</span>
+          </div>
+          {hasSubItems && <ChevronDown size={14} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />}
+          {isLocked && <Lock size={12} className="opacity-50" />}
         </button>
         
-        {/* Sub Items */}
-        {hasSubItems && isOpen && !collapsed && !isLocked && (
-          <div className="pl-9 pr-3 py-1 mt-1 space-y-1">
-            {subItems.map((subItem) => (
-              <button
-                key={subItem.path}
-                onClick={() => navigate(subItem.path)}
-                className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                  isActive(subItem.path)
-                    ? 'text-primary font-medium bg-primary/5'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-                }`}
-              >
-                {subItem.label}
-              </button>
-            ))}
+        {hasSubItems && isOpen && !isLocked && (
+          <div className="pl-9 pr-3 py-1.5 mt-1 space-y-1 relative before:content-[''] before:absolute before:left-5 before:top-0 before:bottom-2 before:w-px before:bg-border">
+            {subItems.map((subItem) => {
+              const subActive = isExactActive(subItem.path);
+              return (
+                <button
+                  key={subItem.path}
+                  onClick={() => navigate(subItem.path)}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-sm font-semibold transition-all relative ${
+                    subActive
+                      ? 'text-primary bg-primary/10'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                  }`}
+                >
+                  {subActive && <span className="absolute -left-[17px] top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-primary ring-2 ring-background"></span>}
+                  {subItem.label}
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
@@ -151,122 +156,136 @@ export default function DesktopSidebar() {
   };
 
   return (
-    <aside
-      className={`hidden lg:flex flex-col h-screen sticky top-0 bg-card border-r border-border transition-all duration-300 ${
-        collapsed ? 'w-[72px]' : 'w-[260px]'
-      }`}
-    >
-      {/* Store Header */}
-      <div className="p-4 border-b border-border relative" ref={dropdownRef}>
-        {!collapsed ? (
-          <button
-            onClick={() => setStoreDropdownOpen(!storeDropdownOpen)}
-            className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-accent transition-colors text-left"
-          >
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-              <Store size={20} className="text-primary" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h3 className="font-bold text-foreground text-sm truncate">{currentStore?.store_name || 'My Store'}</h3>
-              <p className="text-xs text-muted-foreground truncate">{user?.full_name}</p>
-            </div>
-            <ChevronsUpDown size={16} className="text-muted-foreground shrink-0" />
-          </button>
-        ) : (
-          <button
-            onClick={() => setStoreDropdownOpen(!storeDropdownOpen)}
-            className="w-full flex justify-center p-1 rounded-xl hover:bg-accent transition-colors"
-            title={currentStore?.store_name || 'Switch Store'}
-          >
-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Store size={20} className="text-primary" />
-            </div>
-          </button>
-        )}
+    <>
+      <aside className={`shrink-0 h-[100dvh] sticky top-0 flex flex-col bg-background z-40 ${isMobile ? 'w-full' : 'w-[280px] border-r border-border'}`}>
+        
+        {/* Brand Header */}
+        <div className="pt-8 pb-6 px-6 shrink-0 flex items-center gap-3 cursor-pointer" onClick={() => navigate('/dashboard')}>
+          <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20 shrink-0">
+            <Store size={20} className="text-primary-foreground" />
+          </div>
+          <div className="flex flex-col">
+            <span className="font-black text-xl tracking-tight text-foreground leading-none">Maaldhis</span>
+            <span className="text-[10px] font-bold text-primary uppercase tracking-widest mt-1 leading-none">POS System</span>
+          </div>
+        </div>
 
-        {/* Dropdown */}
-        {storeDropdownOpen && (
-          <div className={`absolute z-50 top-full mt-1 bg-popover border border-border rounded-xl shadow-lg overflow-hidden ${collapsed ? 'left-2 w-56' : 'left-4 right-4'}`}>
-            <div className="p-1.5 max-h-60 overflow-y-auto">
-              {stores.map(store => (
-                <button
-                  key={store.id}
-                  onClick={() => {
-                    setCurrentStore(store);
-                    setStoreDropdownOpen(false);
-                    navigate('/dashboard');
-                  }}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
-                    store.id === currentStore?.id
-                      ? 'bg-primary/10 text-primary font-medium'
-                      : 'text-foreground hover:bg-accent'
-                  }`}
-                >
-                  <Store size={16} className="shrink-0 text-muted-foreground" />
-                  <div className="min-w-0 flex-1 text-left">
-                    <p className="truncate font-medium text-sm">{store.store_name}</p>
-                    <p className="truncate text-xs text-muted-foreground">{store.location}</p>
+        {/* Store Selector */}
+        {!isAdmin && (
+          <div className="px-6 mb-8 relative z-50" ref={dropdownRef}>
+            <button
+              onClick={() => setStoreDropdownOpen(!storeDropdownOpen)}
+              className="w-full flex items-center justify-between bg-card border border-border p-3 rounded-2xl transition-all shadow-sm hover:shadow-md hover:border-primary/30"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                {currentStore?.logo_url ? (
+                  <img src={currentStore.logo_url} alt="" className="w-10 h-10 rounded-xl object-cover border border-border shrink-0" />
+                ) : (
+                  <div className="w-10 h-10 rounded-xl bg-muted/50 border border-border/50 flex items-center justify-center shrink-0">
+                    <Store size={18} className="text-muted-foreground" />
                   </div>
-                  {store.id === currentStore?.id && <Check size={16} className="shrink-0 text-primary" />}
-                </button>
-              ))}
-            </div>
-            <div className="border-t border-border p-1.5">
-              <button
-                onClick={() => {
-                  setStoreDropdownOpen(false);
-                  navigate('/create-store');
-                }}
-                className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium text-primary hover:bg-primary/5 transition-colors"
-              >
-                <Plus size={16} />
-                <span>Add New Store</span>
-              </button>
-            </div>
+                )}
+                <div className="text-left min-w-0 flex flex-col justify-center">
+                  <p className="text-sm font-black text-foreground truncate">{currentStore?.store_name || 'My Store'}</p>
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest truncate">{role}</p>
+                </div>
+              </div>
+              <ChevronsUpDown size={16} className="text-muted-foreground shrink-0" />
+            </button>
+
+            {storeDropdownOpen && (
+              <div className="absolute top-full left-6 right-6 mt-2 bg-card border border-border rounded-2xl shadow-xl overflow-hidden text-foreground animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="p-3 border-b border-border bg-muted/10">
+                  <p className="font-bold text-sm text-foreground truncate">{currentStore?.store_name || 'My Store'}</p>
+                  <p className="text-xs font-medium text-muted-foreground truncate">{currentStore?.location || 'No location set'}</p>
+                </div>
+                <div className="p-2 max-h-48 overflow-y-auto space-y-1 scrollbar-hide">
+                  {stores.map(store => (
+                    <button
+                      key={store.id}
+                      onClick={() => {
+                        setCurrentStore(store);
+                        setStoreDropdownOpen(false);
+                        navigate('/dashboard');
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                        store.id === currentStore?.id
+                          ? 'bg-primary/10 text-primary'
+                          : 'hover:bg-muted text-foreground'
+                      }`}
+                    >
+                      <span className="truncate">{store.store_name}</span>
+                      {store.id === currentStore?.id && <Check size={16} />}
+                    </button>
+                  ))}
+                </div>
+                <div className="border-t border-border p-2 bg-muted/30">
+                  <button onClick={() => { setStoreDropdownOpen(false); navigate('/create-store'); }} className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold bg-card border border-border hover:bg-muted transition-colors text-foreground shadow-sm">
+                    <Plus size={16} /> <span>Add New Store</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
-      </div>
 
-      {/* Navigation */}
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
-        {/* Main */}
-        <div className="space-y-1">
-          {!collapsed && <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-2">Main</p>}
-          {filteredMainNav.map(item => <NavItem key={item.path} {...item} />)}
+        {/* Navigation Links */}
+        <div className="flex-1 overflow-y-auto pb-8 space-y-8 scrollbar-hide px-3">
+          
+          {isAdmin ? (
+             <div className="space-y-1">
+               <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest px-4 mb-3">Admin Panel</p>
+               <NavItem label="Dashboard" icon={LayoutDashboard} path="/admin/dashboard" />
+               <NavItem label="Stores" icon={Store} path="/admin/stores" />
+               <NavItem label="Licenses" icon={ShieldCheck} path="/admin/licenses" />
+               <NavItem label="Subscriptions" icon={CreditCard} path="/admin/subscriptions" />
+               <NavItem label="Payments" icon={DollarSign} path="/admin/payments" />
+               <NavItem label="Users" icon={Users} path="/admin/users" />
+               <NavItem label="Plans" icon={Layers} path="/admin/plans" />
+               <NavItem label="Analytics" icon={BarChart3} path="/admin/analytics" />
+               <NavItem label="Support" icon={HelpCircle} path="/admin/support" />
+               <NavItem label="Exchange Rates" icon={ArrowLeftRight} path="/admin/exchange-rates" />
+               <NavItem label="M-Pesa Config" icon={Smartphone} path="/admin/mpesa-settings" />
+               <NavItem label="Settings" icon={Settings} path="/admin/settings" />
+             </div>
+          ) : (
+            <>
+              <div className="space-y-1">
+                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest px-4 mb-3">Main</p>
+                {filteredMainNav.map(item => <NavItem key={item.path} {...item} />)}
+              </div>
+              <div className="space-y-1">
+                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest px-4 mb-3">Modules</p>
+                {filteredModuleNav.map(item => <NavItem key={item.path} {...item} />)}
+              </div>
+              <div className="space-y-1">
+                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest px-4 mb-3">Settings</p>
+                {filteredBottomNav.map(item => <NavItem key={item.path} {...item} />)}
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Modules */}
-        <div className="space-y-1">
-          {!collapsed && <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-2">Modules</p>}
-          {filteredModuleNav.map(item => <NavItem key={item.path} {...item} />)}
+        {/* Bottom User Actions */}
+        <div className="p-4 shrink-0 border-t border-border bg-card">
+           <div className="bg-muted/30 border border-border/50 rounded-2xl p-2 flex flex-col gap-1">
+              <button onClick={() => navigate(isAdmin ? '/admin/settings' : '/profile')} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-card hover:shadow-sm transition-all border border-transparent hover:border-border">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 text-primary">
+                  {isAdmin ? <ShieldCheck size={16} /> : <User size={16} />}
+                </div>
+                <div className="flex-1 flex flex-col items-start min-w-0">
+                  <span className="truncate w-full text-left text-sm font-bold text-foreground leading-tight">{displayUser?.full_name || 'User'}</span>
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-tight">{role}</span>
+                </div>
+              </button>
+              <div className="h-px bg-border/50 my-1 mx-2"></div>
+              <button onClick={isAdmin ? adminLogout : logout} className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl hover:bg-destructive/10 text-destructive transition-colors text-sm font-bold">
+                <LogOut size={16} />
+                <span>Sign Out</span>
+              </button>
+           </div>
         </div>
-
-        {/* Settings */}
-        <div className="space-y-1">
-          {!collapsed && <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider px-3 mb-2">Settings</p>}
-          {filteredBottomNav.map(item => <NavItem key={item.path} {...item} />)}
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div className="p-3 border-t border-border space-y-1">
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-          title={collapsed ? 'Expand' : 'Collapse'}
-        >
-          {collapsed ? <ChevronRight size={20} className="shrink-0" /> : <ChevronLeft size={20} className="shrink-0" />}
-          {!collapsed && <span>Collapse</span>}
-        </button>
-        <button
-          onClick={logout}
-          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
-          title={collapsed ? 'Logout' : undefined}
-        >
-          <LogOut size={20} className="shrink-0" />
-          {!collapsed && <span>Logout</span>}
-        </button>
-      </div>
-    </aside>
+      </aside>
+    </>
   );
 }

@@ -18,4 +18,10 @@ class Sale extends Model
     ];
 
     public function stores() { return $this->belongsTo(Store::class, 'store_id'); }
+
+    protected static function booted()
+    {
+        static::addGlobalScope(new \App\Models\Scopes\StaffActivityScope('staff_user_id'));
+    }
 }
+

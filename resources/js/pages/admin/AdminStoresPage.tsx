@@ -1,3 +1,4 @@
+import PageHeader from '@/components/PageHeader';
 import { useEffect, useState } from 'react';
 import { api as apiClient } from '@/api';
 import { useAdmin } from '@/context/AdminContext';
@@ -76,29 +77,29 @@ export default function AdminStoresPage() {
     return <span className={`px-2 py-0.5 rounded-full text-xs ${colors[license.status] || colors.cancelled}`}>{license.status}</span>;
   };
 
-  if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-[hsl(145,63%,42%)] border-t-transparent rounded-full animate-spin" /></div>;
+  if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div>;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-[10px]">
+      <PageHeader title="Stores Management" />
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Stores Management</h1>
-          <p className="text-[hsl(220,10%,50%)] text-sm">{stores.length} total stores</p>
+                    <p className="text-muted-foreground text-sm">{stores.length} total stores</p>
         </div>
       </div>
 
       <div className="relative max-w-sm">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[hsl(220,10%,40%)]" />
-        <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search stores..." className="w-full pl-10 pr-4 py-2 rounded-lg bg-[hsl(220,20%,14%)] border border-[hsl(220,15%,20%)] text-white text-sm placeholder:text-[hsl(220,10%,40%)] focus:outline-none focus:ring-1 focus:ring-[hsl(145,63%,42%)]" />
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+        <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search stores..." className="w-full pl-10 pr-4 py-2 rounded-lg bg-card border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-[hsl(145,63%,42%)]" />
       </div>
 
-      <div className="bg-[hsl(220,20%,14%)] rounded-xl border border-[hsl(220,15%,18%)] overflow-hidden">
+      <div className="bg-card rounded-xl border border-border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-[hsl(220,15%,18%)]">
+              <tr className="border-b border-border">
                 {['Store Name', 'Owner', 'Phone', 'Location', 'Plan', 'License', 'Expiry', 'Actions'].map(h => (
-                  <th key={h} className="text-left py-3 px-4 text-xs font-medium text-[hsl(220,10%,50%)] uppercase">{h}</th>
+                  <th key={h} className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -106,17 +107,17 @@ export default function AdminStoresPage() {
               {filtered.map((store: any) => {
                 const lic = getLicense(store.id);
                 return (
-                  <tr key={store.id} className="border-b border-[hsl(220,15%,18%)] last:border-0 hover:bg-[hsl(220,15%,15%)]">
-                    <td className="py-3 px-4 text-sm text-white font-medium">{store.store_name}</td>
-                    <td className="py-3 px-4 text-sm text-[hsl(220,10%,60%)]">{store.profiles?.email || '—'}</td>
-                    <td className="py-3 px-4 text-sm text-[hsl(220,10%,60%)]">{store.phone || '—'}</td>
-                    <td className="py-3 px-4 text-sm text-[hsl(220,10%,60%)]">{store.location || '—'}</td>
-                    <td className="py-3 px-4 text-sm text-[hsl(220,10%,60%)]">{lic?.plans?.name || '—'}</td>
+                  <tr key={store.id} className="border-b border-border last:border-0 hover:bg-muted/50">
+                    <td className="py-3 px-4 text-sm text-foreground font-medium">{store.store_name}</td>
+                    <td className="py-3 px-4 text-sm text-muted-foreground">{store.profiles?.email || '—'}</td>
+                    <td className="py-3 px-4 text-sm text-muted-foreground">{store.phone || '—'}</td>
+                    <td className="py-3 px-4 text-sm text-muted-foreground">{store.location || '—'}</td>
+                    <td className="py-3 px-4 text-sm text-muted-foreground">{lic?.plans?.name || '—'}</td>
                     <td className="py-3 px-4">{getStatusBadge(lic)}</td>
-                    <td className="py-3 px-4 text-sm text-[hsl(220,10%,60%)]">{lic?.expiry_date || '—'}</td>
+                    <td className="py-3 px-4 text-sm text-muted-foreground">{lic?.expiry_date || '—'}</td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-1">
-                        <button onClick={() => { setSelectedStore(store); setShowDetail(true); }} className="p-1.5 rounded hover:bg-[hsl(220,15%,20%)] text-[hsl(220,10%,50%)]" title="View"><Eye size={16} /></button>
+                        <button onClick={() => { setSelectedStore(store); setShowDetail(true); }} className="p-1.5 rounded hover:bg-muted/80 text-muted-foreground" title="View"><Eye size={16} /></button>
                         <button onClick={() => updateLicenseStatus(store.id, 'active')} className="p-1.5 rounded hover:bg-green-500/10 text-green-400" title="Activate"><CheckCircle size={16} /></button>
                         <button onClick={() => updateLicenseStatus(store.id, 'suspended')} className="p-1.5 rounded hover:bg-yellow-500/10 text-yellow-400" title="Suspend"><Pause size={16} /></button>
                         {isSuperOwner && (
@@ -128,7 +129,7 @@ export default function AdminStoresPage() {
                 );
               })}
               {filtered.length === 0 && (
-                <tr><td colSpan={8} className="py-8 text-center text-[hsl(220,10%,40%)]">No stores found</td></tr>
+                <tr><td colSpan={8} className="py-8 text-center text-muted-foreground">No stores found</td></tr>
               )}
             </tbody>
           </table>
@@ -138,28 +139,28 @@ export default function AdminStoresPage() {
       {/* Store Detail Modal */}
       {showDetail && selectedStore && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowDetail(false)}>
-          <div className="bg-[hsl(220,20%,14%)] rounded-2xl border border-[hsl(220,15%,20%)] max-w-lg w-full p-6" onClick={e => e.stopPropagation()}>
-            <h2 className="text-xl font-bold text-white mb-4">{selectedStore.store_name}</h2>
+          <div className="bg-card rounded-2xl border border-border max-w-lg w-full p-6" onClick={e => e.stopPropagation()}>
+            <h2 className="text-xl font-bold text-foreground mb-4">{selectedStore.store_name}</h2>
             <div className="space-y-3 text-sm">
-              <div className="flex justify-between"><span className="text-[hsl(220,10%,50%)]">Owner</span><span className="text-white">{selectedStore.profiles?.full_name || selectedStore.profiles?.email}</span></div>
-              <div className="flex justify-between"><span className="text-[hsl(220,10%,50%)]">Email</span><span className="text-white">{selectedStore.profiles?.email}</span></div>
-              <div className="flex justify-between"><span className="text-[hsl(220,10%,50%)]">Phone</span><span className="text-white">{selectedStore.phone || '—'}</span></div>
-              <div className="flex justify-between"><span className="text-[hsl(220,10%,50%)]">Location</span><span className="text-white">{selectedStore.location || '—'}</span></div>
-              <div className="flex justify-between"><span className="text-[hsl(220,10%,50%)]">Currency</span><span className="text-white">{selectedStore.currency}</span></div>
-              <div className="flex justify-between"><span className="text-[hsl(220,10%,50%)]">Store Code</span><span className="text-white">{selectedStore.store_code || '—'}</span></div>
-              <div className="flex justify-between"><span className="text-[hsl(220,10%,50%)]">Created</span><span className="text-white">{new Date(selectedStore.created_at).toLocaleDateString()}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Owner</span><span className="text-foreground">{selectedStore.profiles?.full_name || selectedStore.profiles?.email}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Email</span><span className="text-foreground">{selectedStore.profiles?.email}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Phone</span><span className="text-foreground">{selectedStore.phone || '—'}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Location</span><span className="text-foreground">{selectedStore.location || '—'}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Currency</span><span className="text-foreground">{selectedStore.currency}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Store Code</span><span className="text-foreground">{selectedStore.store_code || '—'}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Created</span><span className="text-foreground">{new Date(selectedStore.created_at).toLocaleDateString()}</span></div>
               {(() => { const lic = getLicense(selectedStore.id); return lic ? (
                 <>
-                  <hr className="border-[hsl(220,15%,20%)]" />
-                  <div className="flex justify-between"><span className="text-[hsl(220,10%,50%)]">License Key</span><span className="text-white font-mono text-xs">{lic.license_key}</span></div>
-                  <div className="flex justify-between"><span className="text-[hsl(220,10%,50%)]">Plan</span><span className="text-white">{lic.plans?.name}</span></div>
-                  <div className="flex justify-between"><span className="text-[hsl(220,10%,50%)]">License Status</span>{getStatusBadge(lic)}</div>
-                  <div className="flex justify-between"><span className="text-[hsl(220,10%,50%)]">Expiry</span><span className="text-white">{lic.expiry_date}</span></div>
-                  <p className="text-xs text-[hsl(220,10%,40%)] mt-1">This license belongs to the owner account and covers all their stores.</p>
+                  <hr className="border-border" />
+                  <div className="flex justify-between"><span className="text-muted-foreground">License Key</span><span className="text-foreground font-mono text-xs">{lic.license_key}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Plan</span><span className="text-foreground">{lic.plans?.name}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">License Status</span>{getStatusBadge(lic)}</div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Expiry</span><span className="text-foreground">{lic.expiry_date}</span></div>
+                  <p className="text-xs text-muted-foreground mt-1">This license belongs to the owner account and covers all their stores.</p>
                 </>
               ) : null; })()}
             </div>
-            <button onClick={() => setShowDetail(false)} className="mt-6 w-full py-2.5 rounded-lg bg-[hsl(220,15%,20%)] text-white hover:bg-[hsl(220,15%,25%)] transition-colors">Close</button>
+            <button onClick={() => setShowDetail(false)} className="mt-6 w-full py-2.5 rounded-lg bg-muted text-foreground hover:bg-accent transition-colors">Close</button>
           </div>
         </div>
       )}

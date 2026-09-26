@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 
 $u = User::create([
-    'email' => 'superadmin@nasripoint.com', 
+    'email' => 'superadmin@maaldhis.com', 
     'password' => Hash::make('password'), 
     'name' => 'Super Admin', 
     'full_name' => 'Super Admin', 
@@ -22,4 +22,4 @@ DB::table('admin_roles')->insert([
     'is_active' => true
 ]); 
 
-echo "Created admin user: admin@nasripoint.com\n";
+echo "Created admin user: admin@maaldhis.com\n";

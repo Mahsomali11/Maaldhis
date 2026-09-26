@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { api as apiClient } from '@/api';
 import PageHeader from '@/components/PageHeader';
-import BottomNav from '@/components/BottomNav';
-import { TrendingUp, TrendingDown, DollarSign, Package, Wallet, BarChart3 } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Package, Wallet, BarChart3, CalendarDays, Activity } from 'lucide-react';
 
 interface PaymentAccount {
   id: string;
@@ -13,7 +12,7 @@ interface PaymentAccount {
 }
 
 export default function SalesReportPage() {
-  const { sales, saleItems, expenses, payments, returns, currentStore, formatCurrency } = useApp();
+  const { sales, saleItems, expenses, payments, currentStore, formatCurrency } = useApp();
   const [tab, setTab] = useState<'today' | 'month' | 'all'>('today');
   const [paymentAccounts, setPaymentAccounts] = useState<PaymentAccount[]>([]);
 
@@ -60,13 +59,12 @@ export default function SalesReportPage() {
     return true;
   });
 
-  // Group payments by method dynamically from payment accounts
   const salePaymentsByMethod = paymentAccounts.map(acc => {
     const total = filteredPayments
       .filter(p => p.payment_type === 'sale' && p.method === acc.account_name)
       .reduce((s, p) => s + p.amount, 0);
     return { account: acc, total };
-  }).filter(item => item.total > 0 || paymentAccounts.length <= 6); // show all if few accounts, or only used ones
+  }).filter(item => item.total > 0 || paymentAccounts.length <= 6);
 
   const creditPaymentsByMethod = paymentAccounts.map(acc => {
     const total = filteredPayments
@@ -95,17 +93,7 @@ export default function SalesReportPage() {
   const netProfit = grossSalesProfit + grossCreditProfit - totalExpenses - totalLoss;
   const totalItemsSold = filteredSaleItems.reduce((s, si) => s + si.quantity, 0);
 
-  const dateDisplay = tab === 'today' ? now.toLocaleDateString('en-GB') : tab === 'month' ? now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'All Time';
-
-  const MetricCard = ({ icon: Icon, label, value, color = 'text-primary', bgColor = 'bg-primary/10' }: any) => (
-    <div className="bg-card rounded-xl p-4 flex items-center gap-3 ring-1 ring-border">
-      <div className={`w-10 h-10 rounded-full ${bgColor} flex items-center justify-center shrink-0`}>
-        <Icon size={20} className={color} />
-      </div>
-      <span className="flex-1 text-sm text-foreground">{label}</span>
-      <span className={`font-bold ${color}`}>{value}</span>
-    </div>
-  );
+  const dateDisplay = tab === 'today' ? now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : tab === 'month' ? now.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) : 'All Time';
 
   const getAccountIcon = (type: string) => {
     switch (type) {
@@ -116,83 +104,135 @@ export default function SalesReportPage() {
     }
   };
 
+  const MetricCard = ({ icon: Icon, label, value, color = 'text-primary', bgColor = 'bg-primary/10' }: any) => (
+    <div className="bg-card rounded-2xl p-6 border border-border shadow-sm flex items-center gap-5 transition-transform hover:-translate-y-1">
+      <div className={`w-14 h-14 rounded-xl ${bgColor} flex items-center justify-center shrink-0`}>
+        <Icon size={24} className={color} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-1 truncate">{label}</p>
+        <p className={`text-2xl font-black ${color} truncate tracking-tight`}>{value}</p>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="min-h-screen bg-background pb-20 lg:pb-0">
-      <PageHeader title="Sales Report" />
-      <div className="px-4 lg:px-8 py-4 lg:py-6 space-y-4 max-w-7xl mx-auto w-full">
-        {/* Tabs */}
-        <div className="flex gap-0 bg-card rounded-xl overflow-hidden lg:max-w-sm">
-          {(['today', 'month', 'all'] as const).map(t => (
-            <button key={t} onClick={() => setTab(t)}
-              className={`flex-1 py-3 font-medium text-sm capitalize ${tab === t ? 'bg-primary text-primary-foreground' : 'text-foreground'}`}>
-              {t === 'month' ? 'This Month' : t === 'all' ? 'All Time' : 'Today'}
-            </button>
-          ))}
+    <div className="min-h-screen bg-[#F8F9FA] dark:bg-background pb-12">
+      <PageHeader 
+        title="Sales Report" 
+        rightAction={
+          <div className="flex bg-muted/50 p-1.5 rounded-xl border border-border">
+            {(['today', 'month', 'all'] as const).map(t => (
+              <button 
+                key={t} 
+                onClick={() => setTab(t)}
+                className={`px-6 py-2 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 capitalize ${tab === t ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'}`}
+              >
+                {t === 'month' ? 'This Month' : t === 'all' ? 'All Time' : 'Today'}
+              </button>
+            ))}
+          </div>
+        }
+      />
+      
+      <div className="p-4 sm:p-6 md:px-8 space-y-8 max-w-7xl mx-auto w-full">
+        {/* Date Display */}
+        <div className="flex items-center gap-3 text-foreground bg-card p-4 rounded-xl border border-border shadow-sm inline-flex">
+          <CalendarDays size={20} className="text-primary" />
+          <h2 className="text-base font-bold">{dateDisplay}</h2>
         </div>
 
-        <div className="bg-card rounded-xl p-4 text-center lg:text-left lg:max-w-sm">
-          <p className="text-lg font-medium text-foreground">{dateDisplay}</p>
-        </div>
-
-        {filteredSales.length === 0 ? (
-          <div className="bg-card rounded-xl p-8 text-center">
-            <p className="text-muted-foreground">There are no transactions {tab === 'today' ? 'today' : 'in this period'}.</p>
+        {filteredSales.length === 0 && tab !== 'all' ? (
+          <div className="bg-card rounded-2xl border border-border p-16 text-center shadow-sm flex flex-col items-center">
+            <div className="w-24 h-24 rounded-full bg-muted/50 flex items-center justify-center mb-6">
+              <Activity size={40} className="text-muted-foreground/50" />
+            </div>
+            <h3 className="text-xl font-bold text-foreground mb-2">No transactions</h3>
+            <p className="text-muted-foreground">There are no transactions in this period.</p>
           </div>
         ) : (
-          <div className="space-y-4 lg:space-y-6">
-            {/* Dynamic payment methods from payment accounts */}
-            <div className="lg:grid lg:grid-cols-2 lg:gap-6 space-y-4 lg:space-y-0">
-              <div className="space-y-2">
-                <h3 className="font-bold text-muted-foreground text-xs uppercase">Payment Methods (Cash Sales)</h3>
-                {salePaymentsByMethod.length > 0 ? (
-                  salePaymentsByMethod.map(({ account, total }) => (
-                    <MetricCard
-                      key={account.id}
-                      icon={getAccountIcon(account.account_type)}
-                      label={account.account_name}
-                      value={formatCurrency(total)}
-                    />
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground py-2">No payment accounts configured</p>
-                )}
+          <div className="space-y-8">
+            
+            {/* Top Level Summary */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="bg-card rounded-3xl p-8 border border-border shadow-sm flex flex-col justify-center items-center text-center overflow-hidden relative">
+                <div className={`absolute top-0 w-full h-2 ${netProfit >= 0 ? 'bg-success' : 'bg-destructive'}`}></div>
+                <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-3">Net Profit</p>
+                <p className={`text-5xl md:text-6xl font-black tracking-tighter ${netProfit >= 0 ? 'text-success' : 'text-destructive'}`}>
+                  {formatCurrency(netProfit)}
+                </p>
+                <div className={`mt-6 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider ${netProfit >= 0 ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}>
+                  {netProfit >= 0 ? 'Profitable' : 'Loss'}
+                </div>
               </div>
-              <div className="space-y-2">
-                <h3 className="font-bold text-muted-foreground text-xs uppercase">Payment Methods (Credit Payments)</h3>
-                {creditPaymentsByMethod.length > 0 ? (
-                  creditPaymentsByMethod.map(({ account, total }) => (
-                    <MetricCard
-                      key={account.id}
-                      icon={getAccountIcon(account.account_type)}
-                      label={account.account_name}
-                      value={formatCurrency(total)}
-                    />
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground py-2">No payment accounts configured</p>
-                )}
+
+              <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <MetricCard icon={BarChart3} label="Total Sales Revenue" value={formatCurrency(totalSalesRevenue)} color="text-primary" bgColor="bg-primary/10" />
+                <MetricCard icon={TrendingUp} label="Gross Sales Profit" value={formatCurrency(grossSalesProfit)} color="text-success" bgColor="bg-success/10" />
+                <MetricCard icon={BarChart3} label="Total Credit Payments" value={formatCurrency(totalCreditPayments)} color="text-blue-500" bgColor="bg-blue-500/10" />
+                <MetricCard icon={TrendingUp} label="Gross Credit Profit" value={formatCurrency(grossCreditProfit)} color="text-success" bgColor="bg-success/10" />
+                <MetricCard icon={DollarSign} label="Expenses" value={formatCurrency(totalExpenses)} color="text-destructive" bgColor="bg-destructive/10" />
+                <MetricCard icon={TrendingDown} label="Total Loss" value={formatCurrency(totalLoss)} color="text-destructive" bgColor="bg-destructive/10" />
               </div>
             </div>
 
-            <h3 className="font-bold text-muted-foreground text-xs uppercase">Financial Summary</h3>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              <MetricCard icon={BarChart3} label="Total Sales Revenue" value={formatCurrency(totalSalesRevenue)} color="text-info" bgColor="bg-info/10" />
-              <MetricCard icon={BarChart3} label="Total Credit Payments" value={formatCurrency(totalCreditPayments)} color="text-info" bgColor="bg-info/10" />
-              <MetricCard icon={TrendingUp} label="Gross Sales Profit" value={formatCurrency(grossSalesProfit)} />
-              <MetricCard icon={TrendingUp} label="Gross Credit Profit" value={formatCurrency(grossCreditProfit)} />
-              <MetricCard icon={TrendingDown} label="Total Loss" value={`-${formatCurrency(totalLoss)}`} color="text-destructive" bgColor="bg-destructive/10" />
-              <MetricCard icon={DollarSign} label="Expenses" value={formatCurrency(totalExpenses)} color="text-destructive" bgColor="bg-destructive/10" />
-              <MetricCard icon={TrendingUp} label="Net Profit" value={formatCurrency(netProfit)} color={netProfit >= 0 ? 'text-primary' : 'text-destructive'} bgColor={netProfit >= 0 ? 'bg-primary/10' : 'bg-destructive/10'} />
+            {/* Additional Metrics */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <MetricCard icon={Package} label="Total Items Sold" value={totalItemsSold.toString()} color="text-foreground" bgColor="bg-muted" />
               {currentStore?.tax_enabled && (
-                <MetricCard icon={DollarSign} label="Total Tax Collected" value={formatCurrency(totalTaxCollected)} color="text-info" bgColor="bg-info/10" />
+                <MetricCard icon={DollarSign} label="Total Tax Collected" value={formatCurrency(totalTaxCollected)} color="text-amber-500" bgColor="bg-amber-500/10" />
               )}
-              <MetricCard icon={Package} label="Total Items Sold" value={totalItemsSold} color="text-info" bgColor="bg-info/10" />
             </div>
+
+            {/* Payment Methods */}
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 pt-4">
+              <div className="bg-card rounded-3xl p-6 sm:p-8 border border-border shadow-sm">
+                <h3 className="font-black text-foreground text-xl mb-6">Payment Methods <span className="text-muted-foreground font-medium text-lg">(Cash Sales)</span></h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {salePaymentsByMethod.length > 0 ? (
+                    salePaymentsByMethod.map(({ account, total }) => (
+                      <MetricCard
+                        key={account.id}
+                        icon={getAccountIcon(account.account_type)}
+                        label={account.account_name}
+                        value={formatCurrency(total)}
+                        color="text-primary"
+                        bgColor="bg-primary/10"
+                      />
+                    ))
+                  ) : (
+                    <div className="col-span-2 p-8 border border-dashed border-border rounded-2xl text-center">
+                       <p className="text-sm font-bold text-muted-foreground">No payment accounts configured</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-card rounded-3xl p-6 sm:p-8 border border-border shadow-sm">
+                <h3 className="font-black text-foreground text-xl mb-6">Payment Methods <span className="text-muted-foreground font-medium text-lg">(Credit Payments)</span></h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {creditPaymentsByMethod.length > 0 ? (
+                    creditPaymentsByMethod.map(({ account, total }) => (
+                      <MetricCard
+                        key={account.id}
+                        icon={getAccountIcon(account.account_type)}
+                        label={account.account_name}
+                        value={formatCurrency(total)}
+                        color="text-blue-500"
+                        bgColor="bg-blue-500/10"
+                      />
+                    ))
+                  ) : (
+                    <div className="col-span-2 p-8 border border-dashed border-border rounded-2xl text-center">
+                       <p className="text-sm font-bold text-muted-foreground">No payment accounts configured</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            
           </div>
         )}
-      </div>
-      <div className="lg:hidden">
-        <BottomNav />
       </div>
     </div>
   );

@@ -11,7 +11,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppProvider } from '@/context/AppContext';
 import { AdminProvider } from '@/context/AdminContext';
 import DesktopLayout from '@/components/DesktopLayout';
-import AdminLayout from '@/components/admin/AdminLayout';
 
 const queryClient = new QueryClient();
 
@@ -28,7 +27,7 @@ if (appEl && appEl.dataset.page) {
 }
 
 createInertiaApp({
-    title: (title) => `${title} - NasriPoint`,
+    title: (title) => `${title} - Maaldhis`,
     page: initialPageData,
     resolve: (name) => {
         const pages = import.meta.glob('./pages/**/*.tsx', { eager: true });
@@ -43,14 +42,11 @@ createInertiaApp({
             // Apply Layouts
             const isAdmin = name.startsWith('admin/');
             
-            if (isAdmin && name !== 'admin/AdminLoginPage' && !page.default.layout) {
-                page.default.layout = (pageElement) => <AdminLayout>{pageElement}</AdminLayout>;
-            } 
-            else if (!isAdmin && 
-                !name.startsWith('LoginPage') && 
+            if (!name.startsWith('LoginPage') && 
                 !name.startsWith('SignupPage') && 
                 !name.startsWith('ResetPasswordPage') &&
                 !name.startsWith('CustomerDisplayPage') &&
+                !name.startsWith('admin/AdminLoginPage') &&
                 !name.startsWith('NotFound') && 
                 !page.default.layout) {
                 

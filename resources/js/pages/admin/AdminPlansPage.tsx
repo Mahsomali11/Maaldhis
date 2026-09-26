@@ -1,3 +1,4 @@
+import PageHeader from '@/components/PageHeader';
 import { useEffect, useState } from 'react';
 import { api as apiClient } from '@/api';
 import { toast } from 'sonner';
@@ -118,32 +119,32 @@ export default function AdminPlansPage() {
     return Object.values(features).filter(Boolean).length;
   };
 
-  if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-[hsl(145,63%,42%)] border-t-transparent rounded-full animate-spin" /></div>;
+  if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div>;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-[10px]">
+      <PageHeader title="Subscription Plans" />
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-white">Subscription Plans</h1>
-        <button onClick={() => { setEditing(null); resetForm(); setShowForm(true); }} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[hsl(145,63%,42%)] text-white text-sm font-medium hover:opacity-90">
+                <button onClick={() => { setEditing(null); resetForm(); setShowForm(true); }} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-foreground text-sm font-medium hover:opacity-90">
           <Plus size={16} /> Add Plan
         </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {plans.filter((p: any) => p.is_active).map((plan: any) => (
-          <div key={plan.id} className="bg-[hsl(220,20%,14%)] rounded-xl border border-[hsl(220,15%,18%)] p-6">
+          <div key={plan.id} className="bg-card rounded-xl border border-border p-6">
             <div className="flex items-start justify-between mb-4">
               <div>
-                <h3 className="text-lg font-bold text-white">{plan.name}</h3>
-                <p className="text-[hsl(145,63%,55%)] text-2xl font-bold mt-1">${plan.monthly_price}<span className="text-sm text-[hsl(220,10%,50%)]">/mo</span></p>
-                <p className="text-sm text-[hsl(220,10%,50%)]">${plan.yearly_price}/year</p>
+                <h3 className="text-lg font-bold text-foreground">{plan.name}</h3>
+                <p className="text-primary text-2xl font-bold mt-1">${plan.monthly_price}<span className="text-sm text-muted-foreground">/mo</span></p>
+                <p className="text-sm text-muted-foreground">${plan.yearly_price}/year</p>
               </div>
               <div className="flex gap-1">
-                <button onClick={() => openEdit(plan)} className="p-1.5 rounded hover:bg-[hsl(220,15%,20%)] text-[hsl(220,10%,50%)]"><Edit2 size={16} /></button>
+                <button onClick={() => openEdit(plan)} className="p-1.5 rounded hover:bg-muted/80 text-muted-foreground"><Edit2 size={16} /></button>
                 {isSuperOwner && <button onClick={() => deletePlan(plan.id)} className="p-1.5 rounded hover:bg-red-500/10 text-red-400"><Trash2 size={16} /></button>}
               </div>
             </div>
-            <div className="space-y-2 text-sm text-[hsl(220,10%,60%)]">
+            <div className="space-y-2 text-sm text-muted-foreground">
               <p>{plan.max_users} users · {plan.max_devices} devices · {plan.max_stores} store{plan.max_stores > 1 ? 's' : ''}</p>
               <p>{plan.storage_limit} GB storage</p>
               <p className="text-xs mt-1">{getEnabledCount(plan)} of {ALL_FEATURES.length} features enabled</p>
@@ -154,7 +155,7 @@ export default function AdminPlansPage() {
                     ? features[f.key] === true
                     : Array.isArray(features) && features.includes(f.key);
                   return (
-                    <span key={f.key} className={`px-2 py-0.5 rounded text-xs ${enabled ? 'bg-[hsl(145,63%,42%)]/15 text-[hsl(145,63%,55%)]' : 'bg-[hsl(220,15%,20%)] text-[hsl(220,10%,40%)] line-through'}`}>
+                    <span key={f.key} className={`px-2 py-0.5 rounded text-xs ${enabled ? 'bg-primary text-primary-foreground/15 text-primary' : 'bg-muted text-muted-foreground line-through'}`}>
                       {f.label}
                     </span>
                   );
@@ -167,8 +168,8 @@ export default function AdminPlansPage() {
 
       {showForm && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowForm(false)}>
-          <div className="bg-[hsl(220,20%,14%)] rounded-2xl border border-[hsl(220,15%,20%)] max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <h2 className="text-xl font-bold text-white mb-4">{editing ? 'Edit Plan' : 'Create Plan'}</h2>
+          <div className="bg-card rounded-2xl border border-border max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <h2 className="text-xl font-bold text-foreground mb-4">{editing ? 'Edit Plan' : 'Create Plan'}</h2>
             <div className="space-y-3">
               {[
                 { label: 'Plan Name', key: 'name', type: 'text' },
@@ -176,8 +177,8 @@ export default function AdminPlansPage() {
                 { label: 'Yearly Price ($)', key: 'yearly_price', type: 'number' },
               ].map(f => (
                 <div key={f.key}>
-                  <label className="text-sm text-[hsl(220,10%,60%)] mb-1 block">{f.label}</label>
-                  <input type={f.type} value={(form as any)[f.key]} onChange={e => setForm({ ...form, [f.key]: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-[hsl(220,20%,18%)] border border-[hsl(220,15%,25%)] text-white text-sm" />
+                  <label className="text-sm text-muted-foreground mb-1 block">{f.label}</label>
+                  <input type={f.type} value={(form as any)[f.key]} onChange={e => setForm({ ...form, [f.key]: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-background border border-input text-foreground text-sm" />
                 </div>
               ))}
               <div className="grid grid-cols-2 gap-3">
@@ -188,8 +189,8 @@ export default function AdminPlansPage() {
                   { label: 'Storage (GB)', key: 'storage_limit' },
                 ].map(f => (
                   <div key={f.key}>
-                    <label className="text-sm text-[hsl(220,10%,60%)] mb-1 block">{f.label}</label>
-                    <input type="number" value={(form as any)[f.key]} onChange={e => setForm({ ...form, [f.key]: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-[hsl(220,20%,18%)] border border-[hsl(220,15%,25%)] text-white text-sm" />
+                    <label className="text-sm text-muted-foreground mb-1 block">{f.label}</label>
+                    <input type="number" value={(form as any)[f.key]} onChange={e => setForm({ ...form, [f.key]: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-background border border-input text-foreground text-sm" />
                   </div>
                 ))}
               </div>
@@ -197,9 +198,9 @@ export default function AdminPlansPage() {
               {/* Feature Toggles */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm text-[hsl(220,10%,60%)]">Feature Permissions</label>
+                  <label className="text-sm text-muted-foreground">Feature Permissions</label>
                   <div className="flex gap-2">
-                    <button onClick={enableAllFeatures} className="text-xs text-[hsl(145,63%,55%)] hover:underline">Enable All</button>
+                    <button onClick={enableAllFeatures} className="text-xs text-primary hover:underline">Enable All</button>
                     <button onClick={disableAllFeatures} className="text-xs text-red-400 hover:underline">Disable All</button>
                   </div>
                 </div>
@@ -212,14 +213,14 @@ export default function AdminPlansPage() {
                         onClick={() => toggleFeature(f.key)}
                         className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors text-left ${
                           enabled
-                            ? 'bg-[hsl(145,63%,42%)]/10 text-[hsl(145,63%,55%)]'
+                            ? 'bg-primary text-primary-foreground/10 text-primary'
                             : 'text-[hsl(220,10%,45%)] hover:bg-[hsl(220,15%,18%)]'
                         }`}
                       >
                         <div className={`w-5 h-5 rounded flex items-center justify-center shrink-0 ${
-                          enabled ? 'bg-[hsl(145,63%,42%)]' : 'border border-[hsl(220,15%,25%)]'
+                          enabled ? 'bg-primary text-primary-foreground' : 'border border-input'
                         }`}>
-                          {enabled && <Check size={14} className="text-white" />}
+                          {enabled && <Check size={14} className="text-foreground" />}
                         </div>
                         <span>{f.label}</span>
                       </button>
@@ -229,8 +230,8 @@ export default function AdminPlansPage() {
               </div>
             </div>
             <div className="flex gap-3 mt-6">
-              <button onClick={() => setShowForm(false)} className="flex-1 py-2.5 rounded-lg bg-[hsl(220,15%,20%)] text-white">Cancel</button>
-              <button onClick={savePlan} disabled={!form.name} className="flex-1 py-2.5 rounded-lg bg-[hsl(145,63%,42%)] text-white hover:opacity-90 disabled:opacity-50">Save</button>
+              <button onClick={() => setShowForm(false)} className="flex-1 py-2.5 rounded-lg bg-muted text-foreground">Cancel</button>
+              <button onClick={savePlan} disabled={!form.name} className="flex-1 py-2.5 rounded-lg bg-primary text-primary-foreground text-foreground hover:opacity-90 disabled:opacity-50">Save</button>
             </div>
           </div>
         </div>

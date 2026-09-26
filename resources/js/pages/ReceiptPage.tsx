@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import { useApp } from '@/context/AppContext';
-import { Check, Printer, Share2, Download, FileText } from 'lucide-react';
+import { Check, Printer, Share2, Download, FileText, ArrowLeft, RotateCcw, Plus } from 'lucide-react';
 import { useState } from 'react';
 import { printReceipt, shareReceipt, type ReceiptFormat } from '@/lib/receipt-printer';
 import { toast } from 'sonner';
@@ -12,7 +12,7 @@ export default function ReceiptPage({ saleId }: { saleId?: string }) {
   const [printAction, setPrintAction] = useState<'print' | 'download'>('print');
 
   const sale = sales.find(s => s.id === saleId);
-  if (!sale) return <div className="min-h-screen bg-background flex items-center justify-center text-muted-foreground">Receipt not found</div>;
+  if (!sale) return <div className="min-h-screen bg-background flex flex-col items-center justify-center text-muted-foreground"><p className="text-lg font-semibold">Receipt not found</p><button onClick={() => navigate('/dashboard')} className="mt-4 px-6 py-2 rounded-xl bg-primary text-primary-foreground font-bold">Go to Dashboard</button></div>;
 
   const items = saleItems.filter(si => si.sale_id === sale.id);
   const customer = sale.customer_id ? customers.find(c => c.id === sale.customer_id) : null;
@@ -50,190 +50,200 @@ export default function ReceiptPage({ saleId }: { saleId?: string }) {
   const storeInitials = (currentStore?.store_name || 'S').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center px-4 py-8">
+    <div className="min-h-screen bg-[#F8F9FA] dark:bg-background flex flex-col items-center py-10 px-4">
       {/* Receipt Preview */}
-      <div className="w-full max-w-sm bg-card rounded-2xl p-6 shadow-lg">
-        <div className="flex justify-center mb-4">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+      <div className="w-full max-w-[380px] bg-card rounded-2xl p-8 shadow-xl border border-border relative overflow-hidden">
+        
+        {/* Receipt Zig-Zag Top (Purely CSS) */}
+        <div className="absolute top-0 left-0 right-0 h-2 w-full" style={{ background: 'radial-gradient(circle at 10px 0, transparent 0, transparent 10px, var(--card) 10px) repeat-x', backgroundSize: '20px 20px', backgroundPosition: '-10px -10px', display: 'none' }}></div>
+
+        <div className="flex justify-center mb-5">
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center ring-4 ring-primary/5">
             <Check size={32} className="text-primary" />
           </div>
         </div>
-        <h2 className="text-center text-xl font-bold text-foreground mb-1">Sale Complete!</h2>
-        <p className="text-center text-sm text-muted-foreground mb-6">Receipt #{sale.receipt_no}</p>
+        
+        <h2 className="text-center text-2xl font-black tracking-tight text-foreground mb-1">Sale Complete</h2>
+        <p className="text-center text-sm font-medium text-muted-foreground mb-6 bg-muted/50 py-1 px-3 rounded-full inline-block mx-auto max-w-fit flex items-center justify-center self-center">Receipt #{sale.receipt_no}</p>
 
-        <div className="border-t border-dashed border-border pt-4 space-y-1">
+        <div className="border-t-2 border-dashed border-border/60 pt-5 space-y-1.5">
           {/* Store Logo */}
           {storeLogo ? (
-            <div className="flex justify-center mb-2">
-              <img src={storeLogo} alt={currentStore?.store_name} className="w-16 h-16 object-contain rounded-lg" />
+            <div className="flex justify-center mb-3">
+              <img src={storeLogo} alt={currentStore?.store_name} className="w-16 h-16 object-contain rounded-xl" />
             </div>
           ) : (
-            <div className="flex justify-center mb-2">
-              <div className="w-16 h-16 rounded-lg bg-primary/10 flex items-center justify-center">
-                <span className="text-lg font-bold text-primary">{storeInitials}</span>
+            <div className="flex justify-center mb-3">
+              <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center">
+                <span className="text-xl font-black text-primary">{storeInitials}</span>
               </div>
             </div>
           )}
-          <div className="text-center text-sm font-medium text-foreground">{currentStore?.store_name}</div>
-          {currentStore?.location && <div className="text-center text-xs text-muted-foreground">{currentStore.location}</div>}
-          {currentStore?.phone && <div className="text-center text-xs text-muted-foreground">Tel: {currentStore.phone}</div>}
-          <div className="text-center text-xs text-muted-foreground">Store ID: {currentStore?.store_code}</div>
-          <div className="text-center text-xs text-muted-foreground">{new Date(sale.sold_at).toLocaleString()}</div>
+          <div className="text-center text-base font-bold text-foreground">{currentStore?.store_name}</div>
+          {currentStore?.location && <div className="text-center text-sm font-medium text-muted-foreground">{currentStore.location}</div>}
+          {currentStore?.phone && <div className="text-center text-sm font-medium text-muted-foreground">Tel: {currentStore.phone}</div>}
+          <div className="text-center text-xs font-semibold text-muted-foreground/60 mt-2">ID: {currentStore?.store_code}</div>
+          <div className="text-center text-xs font-semibold text-muted-foreground/60">{new Date(sale.sold_at).toLocaleString()}</div>
+          
           {customer && (
-            <div className="text-center text-sm text-foreground">
+            <div className="text-center text-sm font-semibold text-foreground mt-3 bg-muted/30 py-1.5 rounded-lg">
               Customer: {customer.name}{customer.phone ? ` (${customer.phone})` : ''}
             </div>
           )}
-          <div className="text-center text-xs text-muted-foreground">Cashier: {user?.full_name}</div>
+          <div className="text-center text-xs font-medium text-muted-foreground mt-2">Cashier: {user?.full_name}</div>
         </div>
 
-        <div className="border-t border-dashed border-border mt-4 pt-4 space-y-2">
+        <div className="border-t-2 border-dashed border-border/60 mt-5 pt-5 space-y-3">
           {items.map(item => (
-            <div key={item.id} className="flex justify-between text-sm">
-              <div className="flex-1 min-w-0">
-                <span className="text-foreground">{item.item_name}</span>
-                <span className="text-muted-foreground"> x{item.quantity}</span>
-                <span className="text-xs text-muted-foreground block">@ {formatCurrency(item.sell_price)}</span>
+            <div key={item.id} className="flex justify-between items-start text-sm">
+              <div className="flex-1 min-w-0 pr-3">
+                <span className="text-foreground font-semibold line-clamp-2 leading-tight">{item.item_name}</span>
+                <span className="text-xs font-bold text-muted-foreground mt-0.5 block">{item.quantity} × {formatCurrency(item.sell_price)}</span>
               </div>
-              <span className="text-foreground font-medium ml-2">{formatCurrency(item.line_total)}</span>
+              <span className="text-foreground font-bold">{formatCurrency(item.line_total)}</span>
             </div>
           ))}
         </div>
 
-        <div className="border-t border-dashed border-border mt-4 pt-4 space-y-1">
+        <div className="border-t-2 border-dashed border-border/60 mt-5 pt-5 space-y-2">
           {(sale.discount > 0 || sale.tax > 0) && (
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Subtotal</span>
-              <span className="text-foreground">{formatCurrency(sale.subtotal)}</span>
+              <span className="text-muted-foreground font-medium">Subtotal</span>
+              <span className="text-foreground font-semibold">{formatCurrency(sale.subtotal)}</span>
             </div>
           )}
           {sale.discount > 0 && (
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Discount</span>
-              <span className="text-destructive">-{formatCurrency(sale.discount)}</span>
+              <span className="text-muted-foreground font-medium">Discount</span>
+              <span className="text-destructive font-bold">-{formatCurrency(sale.discount)}</span>
             </div>
           )}
           {sale.tax > 0 && (
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Tax {sale.tax_rate ? `(${sale.tax_rate}%)` : ''}</span>
-              <span className="text-foreground">{formatCurrency(sale.tax)}</span>
+              <span className="text-muted-foreground font-medium">Tax {sale.tax_rate ? `(${sale.tax_rate}%)` : ''}</span>
+              <span className="text-foreground font-semibold">{formatCurrency(sale.tax)}</span>
             </div>
           )}
-          <div className="flex justify-between font-bold text-lg pt-1">
-            <span className="text-foreground">Total</span>
-            <span className="text-primary">{formatCurrency(sale.total)}</span>
+          <div className="flex justify-between items-end pt-2 pb-2">
+            <span className="text-foreground font-bold">Total</span>
+            <span className="text-foreground font-black text-2xl tracking-tight leading-none">{formatCurrency(sale.total)}</span>
           </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Paid</span>
-            <span className="text-primary">{formatCurrency(sale.paid_amount)}</span>
-          </div>
-          {sale.outstanding_amount > 0 && (
+          
+          <div className="bg-muted/30 rounded-xl p-3 space-y-1.5 mt-2">
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Credit Balance</span>
-              <span className="text-destructive">{formatCurrency(sale.outstanding_amount)}</span>
+              <span className="text-muted-foreground font-medium">Paid ({paymentMethod.toUpperCase()})</span>
+              <span className="text-primary font-bold">{formatCurrency(sale.paid_amount)}</span>
             </div>
-          )}
-          {sale.paid_amount > sale.total && sale.outstanding_amount <= 0 && (
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Change</span>
-              <span className="text-primary">{formatCurrency(sale.paid_amount - sale.total)}</span>
-            </div>
-          )}
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Payment Method</span>
-            <span className="text-foreground font-medium">{paymentMethod.toUpperCase()}</span>
+            {sale.outstanding_amount > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground font-medium">Credit Balance</span>
+                <span className="text-destructive font-bold">{formatCurrency(sale.outstanding_amount)}</span>
+              </div>
+            )}
+            {sale.paid_amount > sale.total && sale.outstanding_amount <= 0 && (
+              <div className="flex justify-between text-sm pt-1 border-t border-border/50">
+                <span className="text-muted-foreground font-medium">Change Due</span>
+                <span className="text-foreground font-bold">{formatCurrency(sale.paid_amount - sale.total)}</span>
+              </div>
+            )}
           </div>
         </div>
 
         {sale.status === 'returned' && (
-          <div className="mt-3 bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-2 text-center">
-            <span className="text-destructive font-bold text-sm">RETURNED / REFUNDED</span>
+          <div className="mt-4 bg-destructive/10 border border-destructive/20 rounded-xl px-4 py-3 text-center">
+            <span className="text-destructive font-black tracking-widest text-sm">REFUNDED</span>
           </div>
         )}
 
-        <div className="border-t border-dashed border-border mt-4 pt-3 space-y-1">
-          <p className="text-center text-xs text-muted-foreground">{currentStore?.receipt_thank_you_message || 'Thank you for your purchase!'}</p>
+        <div className="mt-6 space-y-1.5">
+          <p className="text-center text-xs font-medium text-foreground">{currentStore?.receipt_thank_you_message || 'Thank you for your purchase!'}</p>
           {currentStore?.receipt_footer_text && (
             <p className="text-center text-xs text-muted-foreground">{currentStore.receipt_footer_text}</p>
           )}
-          <p className="text-center text-[10px] text-muted-foreground/60 italic">Powered by Nasri Point</p>
+          <p className="text-center text-[10px] font-bold tracking-widest text-muted-foreground/40 uppercase mt-4">Powered by Maaldhis</p>
         </div>
       </div>
 
       {/* Action Buttons */}
-      <div className="w-full max-w-sm mt-4 grid grid-cols-3 gap-3">
+      <div className="w-full max-w-[380px] mt-6 grid grid-cols-3 gap-3">
         <button onClick={() => openFormatPicker('print')}
-          className="py-3 rounded-xl bg-info text-info-foreground font-bold flex flex-col items-center justify-center gap-1 active:scale-[0.98] transition-transform">
-          <Printer size={20} />
-          <span className="text-xs">Print</span>
+          className="py-4 rounded-2xl bg-info/10 text-info font-bold flex flex-col items-center justify-center gap-1.5 hover:bg-info/20 active:scale-[0.98] transition-all">
+          <Printer size={22} />
+          <span className="text-[11px] uppercase tracking-wider">Print</span>
         </button>
         <button onClick={() => openFormatPicker('download')}
-          className="py-3 rounded-xl bg-primary text-primary-foreground font-bold flex flex-col items-center justify-center gap-1 active:scale-[0.98] transition-transform">
-          <Download size={20} />
-          <span className="text-xs">PDF</span>
+          className="py-4 rounded-2xl bg-primary/10 text-primary font-bold flex flex-col items-center justify-center gap-1.5 hover:bg-primary/20 active:scale-[0.98] transition-all">
+          <Download size={22} />
+          <span className="text-[11px] uppercase tracking-wider">PDF</span>
         </button>
         <button onClick={handleShare}
-          className="py-3 rounded-xl bg-accent text-foreground font-bold flex flex-col items-center justify-center gap-1 active:scale-[0.98] transition-transform">
-          <Share2 size={20} />
-          <span className="text-xs">Share</span>
+          className="py-4 rounded-2xl bg-muted text-foreground font-bold flex flex-col items-center justify-center gap-1.5 hover:bg-accent active:scale-[0.98] transition-all">
+          <Share2 size={22} />
+          <span className="text-[11px] uppercase tracking-wider">Share</span>
         </button>
       </div>
 
-      <button onClick={() => navigate('/dashboard')}
-        className="w-full max-w-sm mt-3 py-3 rounded-xl bg-card ring-1 ring-border text-foreground font-bold active:scale-[0.98] transition-transform">
-        Back to Dashboard
-      </button>
+      <div className="w-full max-w-[380px] mt-4 space-y-3">
+        <button onClick={() => navigate('/start-sale')}
+          className="w-full py-4 rounded-2xl bg-foreground text-background font-bold text-sm hover:opacity-90 active:scale-[0.98] transition-all shadow-md flex items-center justify-center gap-2">
+          <Plus size={18} /> New Sale
+        </button>
+
+        <button onClick={() => navigate('/dashboard')}
+          className="w-full py-4 rounded-2xl bg-card border border-border text-foreground font-bold text-sm hover:bg-accent active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-sm">
+          <ArrowLeft size={18} /> Back to Dashboard
+        </button>
+      </div>
 
       <button onClick={() => navigate('/receipt-history')}
-        className="w-full max-w-sm mt-2 py-3 rounded-xl text-muted-foreground font-medium text-sm">
-        View Receipt History
+        className="mt-6 text-sm font-bold text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2">
+        <RotateCcw size={16} /> View Receipt History
       </button>
 
       {/* Format Picker Modal */}
       {showFormatPicker && (
-        <div className="fixed inset-0 z-50 bg-foreground/30 flex items-end lg:items-center lg:justify-center" onClick={() => setShowFormatPicker(false)}>
-          <div className="w-full lg:w-[400px] bg-card rounded-t-2xl lg:rounded-2xl p-6 space-y-3" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-bold text-foreground mb-2">
-              {printAction === 'print' ? 'Select Print Format' : 'Select PDF Format'}
-            </h3>
+        <div className="fixed inset-0 z-50 bg-foreground/20 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200" onClick={() => setShowFormatPicker(false)}>
+          <div className="w-full sm:w-[420px] bg-card rounded-t-3xl sm:rounded-3xl p-6 sm:p-8 space-y-4 shadow-2xl animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-2">
+               <h3 className="text-xl font-bold text-foreground">
+                 {printAction === 'print' ? 'Print Format' : 'PDF Format'}
+               </h3>
+               <button onClick={() => setShowFormatPicker(false)} className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:bg-accent transition-colors">×</button>
+            </div>
 
             <button onClick={() => handlePrint('58mm')}
-              className="w-full flex items-center gap-4 p-4 rounded-xl bg-accent/50 hover:bg-accent transition-colors text-left">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <FileText size={20} className="text-primary" />
+              className="w-full flex items-center gap-4 p-5 rounded-2xl bg-card border border-border hover:border-primary/50 hover:shadow-md transition-all text-left group">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                <FileText size={24} className="text-primary group-hover:text-primary-foreground transition-colors" />
               </div>
               <div>
-                <p className="font-semibold text-foreground">58mm Thermal</p>
-                <p className="text-xs text-muted-foreground">Compact receipt for small printers</p>
+                <p className="font-bold text-foreground">58mm Thermal</p>
+                <p className="text-xs text-muted-foreground font-medium mt-0.5">Compact receipt for small printers</p>
               </div>
             </button>
 
             <button onClick={() => handlePrint('80mm')}
-              className="w-full flex items-center gap-4 p-4 rounded-xl bg-accent/50 hover:bg-accent transition-colors text-left">
-              <div className="w-10 h-10 rounded-lg bg-info/10 flex items-center justify-center">
-                <FileText size={20} className="text-info" />
+              className="w-full flex items-center gap-4 p-5 rounded-2xl bg-card border border-border hover:border-info/50 hover:shadow-md transition-all text-left group">
+              <div className="w-12 h-12 rounded-xl bg-info/10 flex items-center justify-center group-hover:bg-info group-hover:text-info-foreground transition-colors">
+                <FileText size={24} className="text-info group-hover:text-info-foreground transition-colors" />
               </div>
               <div>
-                <p className="font-semibold text-foreground">80mm Thermal</p>
-                <p className="text-xs text-muted-foreground">Standard thermal receipt format</p>
+                <p className="font-bold text-foreground">80mm Thermal</p>
+                <p className="text-xs text-muted-foreground font-medium mt-0.5">Standard thermal receipt format</p>
               </div>
             </button>
 
             <button onClick={() => handlePrint('a4')}
-              className="w-full flex items-center gap-4 p-4 rounded-xl bg-accent/50 hover:bg-accent transition-colors text-left">
-              <div className="w-10 h-10 rounded-lg bg-warning/10 flex items-center justify-center">
-                <FileText size={20} className="text-warning" />
+              className="w-full flex items-center gap-4 p-5 rounded-2xl bg-card border border-border hover:border-warning/50 hover:shadow-md transition-all text-left group">
+              <div className="w-12 h-12 rounded-xl bg-warning/10 flex items-center justify-center group-hover:bg-warning group-hover:text-warning-foreground transition-colors">
+                <FileText size={24} className="text-warning group-hover:text-warning-foreground transition-colors" />
               </div>
               <div>
-                <p className="font-semibold text-foreground">A4 Invoice</p>
-                <p className="text-xs text-muted-foreground">Full-page professional invoice</p>
+                <p className="font-bold text-foreground">A4 Invoice</p>
+                <p className="text-xs text-muted-foreground font-medium mt-0.5">Full-page professional invoice</p>
               </div>
             </button>
 
-            <button onClick={() => setShowFormatPicker(false)}
-              className="w-full py-3 rounded-xl bg-accent text-foreground font-medium mt-2">
-              Cancel
-            </button>
           </div>
         </div>
       )}

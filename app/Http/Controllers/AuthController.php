@@ -165,4 +165,25 @@ class AuthController extends Controller
             return response()->json(['user' => $user, 'staff' => $staff], 201);
         });
     }
+
+    public function updateStaffPassword(Request $request)
+    {
+        $request->validate([
+            'staff_id' => 'required',
+            'password' => 'required|min:6',
+        ]);
+
+        $staff = \App\Models\StaffAccount::find($request->staff_id);
+        if (!$staff) return response()->json(['message' => 'Staff not found'], 404);
+
+        $user = User::where('email', $staff->email)->orWhere('id', $staff->user_id)->first();
+        
+        if ($user) {
+            $user->password = Hash::make($request->password);
+            $user->save();
+            return response()->json(['message' => 'Password updated'], 200);
+        }
+
+        return response()->json(['message' => 'User not found'], 404);
+    }
 }

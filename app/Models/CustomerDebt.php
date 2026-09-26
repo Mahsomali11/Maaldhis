@@ -14,4 +14,14 @@ class CustomerDebt extends Model
         'original_amount' => 'float',
         'balance_amount' => 'float',
     ];
+
+    public function sale()
+    {
+        return $this->belongsTo(Sale::class, 'sale_id');
+    }
+
+    protected static function booted()
+    {
+        static::addGlobalScope(new \App\Models\Scopes\CustomerDebtScope());
+    }
 }

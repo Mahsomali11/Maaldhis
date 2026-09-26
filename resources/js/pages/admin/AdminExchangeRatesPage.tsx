@@ -1,3 +1,4 @@
+import PageHeader from '@/components/PageHeader';
 import { useEffect, useState } from 'react';
 import { api as apiClient } from '@/api';
 import { toast } from 'sonner';
@@ -58,17 +59,17 @@ export default function AdminExchangeRatesPage() {
     loadRates();
   };
 
-  if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-[hsl(145,63%,42%)] border-t-transparent rounded-full animate-spin" /></div>;
+  if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div>;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-[10px]">
+      <PageHeader title="Exchange Rates" />
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Exchange Rates</h1>
-          <p className="text-[hsl(220,10%,50%)] text-sm mt-1">Manage currency exchange rates to USD</p>
+                    <p className="text-muted-foreground text-sm mt-1">Manage currency exchange rates to USD</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => setShowAdd(true)} className="flex items-center gap-2 px-4 py-2 bg-[hsl(145,63%,42%)] text-white rounded-lg text-sm font-medium hover:opacity-90">
+          <button onClick={() => setShowAdd(true)} className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground text-foreground rounded-lg text-sm font-medium hover:opacity-90">
             <Plus size={16} /> Add Currency
           </button>
         </div>
@@ -79,75 +80,75 @@ export default function AdminExchangeRatesPage() {
         <DollarSign size={20} className="text-[hsl(210,80%,55%)] mt-0.5 shrink-0" />
         <div>
           <p className="text-sm text-[hsl(210,80%,55%)] font-medium">All platform revenue, license payments, and analytics are calculated in USD.</p>
-          <p className="text-xs text-[hsl(220,10%,50%)] mt-1">Store transactions are automatically converted using these rates.</p>
+          <p className="text-xs text-muted-foreground mt-1">Store transactions are automatically converted using these rates.</p>
         </div>
       </div>
 
       {/* Add form */}
       {showAdd && (
-        <div className="bg-[hsl(220,20%,14%)] rounded-xl p-5 border border-[hsl(220,15%,18%)] space-y-3">
-          <h3 className="text-white font-semibold">Add New Currency</h3>
+        <div className="bg-card rounded-xl p-5 border border-border space-y-3">
+          <h3 className="text-foreground font-semibold">Add New Currency</h3>
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <input value={newCurrency.currency_code} onChange={e => setNewCurrency(p => ({ ...p, currency_code: e.target.value }))}
-              placeholder="Code (e.g. NGN)" className="px-3 py-2 rounded-lg bg-[hsl(220,15%,18%)] border border-[hsl(220,15%,22%)] text-white text-sm" />
+              placeholder="Code (e.g. NGN)" className="px-3 py-2 rounded-lg bg-[hsl(220,15%,18%)] border border-[hsl(220,15%,22%)] text-foreground text-sm" />
             <input value={newCurrency.currency_name} onChange={e => setNewCurrency(p => ({ ...p, currency_name: e.target.value }))}
-              placeholder="Name (e.g. Nigerian Naira)" className="px-3 py-2 rounded-lg bg-[hsl(220,15%,18%)] border border-[hsl(220,15%,22%)] text-white text-sm" />
+              placeholder="Name (e.g. Nigerian Naira)" className="px-3 py-2 rounded-lg bg-[hsl(220,15%,18%)] border border-[hsl(220,15%,22%)] text-foreground text-sm" />
             <input value={newCurrency.currency_symbol} onChange={e => setNewCurrency(p => ({ ...p, currency_symbol: e.target.value }))}
-              placeholder="Symbol (e.g. ₦)" className="px-3 py-2 rounded-lg bg-[hsl(220,15%,18%)] border border-[hsl(220,15%,22%)] text-white text-sm" />
+              placeholder="Symbol (e.g. ₦)" className="px-3 py-2 rounded-lg bg-[hsl(220,15%,18%)] border border-[hsl(220,15%,22%)] text-foreground text-sm" />
             <input value={newCurrency.rate_to_usd} onChange={e => setNewCurrency(p => ({ ...p, rate_to_usd: e.target.value }))}
-              placeholder="Rate to USD" type="number" step="any" className="px-3 py-2 rounded-lg bg-[hsl(220,15%,18%)] border border-[hsl(220,15%,22%)] text-white text-sm" />
+              placeholder="Rate to USD" type="number" step="any" className="px-3 py-2 rounded-lg bg-[hsl(220,15%,18%)] border border-[hsl(220,15%,22%)] text-foreground text-sm" />
           </div>
           <div className="flex gap-2">
-            <button onClick={handleAddCurrency} className="px-4 py-2 bg-[hsl(145,63%,42%)] text-white rounded-lg text-sm font-medium">Save</button>
-            <button onClick={() => setShowAdd(false)} className="px-4 py-2 bg-[hsl(220,15%,18%)] text-[hsl(220,10%,60%)] rounded-lg text-sm">Cancel</button>
+            <button onClick={handleAddCurrency} className="px-4 py-2 bg-primary text-primary-foreground text-foreground rounded-lg text-sm font-medium">Save</button>
+            <button onClick={() => setShowAdd(false)} className="px-4 py-2 bg-[hsl(220,15%,18%)] text-muted-foreground rounded-lg text-sm">Cancel</button>
           </div>
         </div>
       )}
 
       {/* Rates table */}
-      <div className="bg-[hsl(220,20%,14%)] rounded-xl border border-[hsl(220,15%,18%)]">
+      <div className="bg-card rounded-xl border border-border">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="border-b border-[hsl(220,15%,18%)]">
-                <th className="text-left py-3 px-5 text-xs font-medium text-[hsl(220,10%,50%)] uppercase">Code</th>
-                <th className="text-left py-3 px-5 text-xs font-medium text-[hsl(220,10%,50%)] uppercase">Name</th>
-                <th className="text-left py-3 px-5 text-xs font-medium text-[hsl(220,10%,50%)] uppercase">Symbol</th>
-                <th className="text-left py-3 px-5 text-xs font-medium text-[hsl(220,10%,50%)] uppercase">Rate to USD</th>
-                <th className="text-left py-3 px-5 text-xs font-medium text-[hsl(220,10%,50%)] uppercase">1 USD =</th>
-                <th className="text-left py-3 px-5 text-xs font-medium text-[hsl(220,10%,50%)] uppercase">Updated</th>
-                <th className="text-right py-3 px-5 text-xs font-medium text-[hsl(220,10%,50%)] uppercase">Actions</th>
+              <tr className="border-b border-border">
+                <th className="text-left py-3 px-5 text-xs font-medium text-muted-foreground uppercase">Code</th>
+                <th className="text-left py-3 px-5 text-xs font-medium text-muted-foreground uppercase">Name</th>
+                <th className="text-left py-3 px-5 text-xs font-medium text-muted-foreground uppercase">Symbol</th>
+                <th className="text-left py-3 px-5 text-xs font-medium text-muted-foreground uppercase">Rate to USD</th>
+                <th className="text-left py-3 px-5 text-xs font-medium text-muted-foreground uppercase">1 USD =</th>
+                <th className="text-left py-3 px-5 text-xs font-medium text-muted-foreground uppercase">Updated</th>
+                <th className="text-right py-3 px-5 text-xs font-medium text-muted-foreground uppercase">Actions</th>
               </tr>
             </thead>
             <tbody>
               {rates.map(rate => (
-                <tr key={rate.id} className="border-b border-[hsl(220,15%,18%)] last:border-0 hover:bg-[hsl(220,15%,15%)]">
-                  <td className="py-3 px-5 text-sm text-white font-mono font-bold">{rate.currency_code}</td>
-                  <td className="py-3 px-5 text-sm text-[hsl(220,10%,60%)]">{rate.currency_name}</td>
-                  <td className="py-3 px-5 text-sm text-white">{rate.currency_symbol}</td>
+                <tr key={rate.id} className="border-b border-border last:border-0 hover:bg-muted/50">
+                  <td className="py-3 px-5 text-sm text-foreground font-mono font-bold">{rate.currency_code}</td>
+                  <td className="py-3 px-5 text-sm text-muted-foreground">{rate.currency_name}</td>
+                  <td className="py-3 px-5 text-sm text-foreground">{rate.currency_symbol}</td>
                   <td className="py-3 px-5 text-sm">
                     {editingId === rate.id ? (
                       <div className="flex items-center gap-2">
                         <input value={editRate} onChange={e => setEditRate(e.target.value)} type="number" step="any"
-                          className="w-32 px-2 py-1 rounded bg-[hsl(220,15%,18%)] border border-[hsl(220,15%,22%)] text-white text-sm" autoFocus />
-                        <button onClick={() => handleUpdateRate(rate.id)} className="text-[hsl(145,63%,42%)] text-xs font-medium">Save</button>
-                        <button onClick={() => setEditingId(null)} className="text-[hsl(220,10%,50%)] text-xs">Cancel</button>
+                          className="w-32 px-2 py-1 rounded bg-[hsl(220,15%,18%)] border border-[hsl(220,15%,22%)] text-foreground text-sm" autoFocus />
+                        <button onClick={() => handleUpdateRate(rate.id)} className="text-primary text-xs font-medium">Save</button>
+                        <button onClick={() => setEditingId(null)} className="text-muted-foreground text-xs">Cancel</button>
                       </div>
                     ) : (
-                      <span className="text-[hsl(145,63%,55%)] font-mono">{rate.rate_to_usd}</span>
+                      <span className="text-primary font-mono">{rate.rate_to_usd}</span>
                     )}
                   </td>
-                  <td className="py-3 px-5 text-sm text-[hsl(220,10%,60%)] font-mono">
+                  <td className="py-3 px-5 text-sm text-muted-foreground font-mono">
                     {rate.rate_to_usd > 0 ? `${(1 / rate.rate_to_usd).toFixed(2)} ${rate.currency_code}` : '—'}
                   </td>
-                  <td className="py-3 px-5 text-sm text-[hsl(220,10%,50%)]">{new Date(rate.updated_at).toLocaleDateString()}</td>
+                  <td className="py-3 px-5 text-sm text-muted-foreground">{new Date(rate.updated_at).toLocaleDateString()}</td>
                   <td className="py-3 px-5 text-right">
                     <div className="flex items-center justify-end gap-1">
                       <button onClick={() => { setEditingId(rate.id); setEditRate(String(rate.rate_to_usd)); }}
-                        className="p-1.5 rounded-lg hover:bg-[hsl(220,15%,20%)] text-[hsl(220,10%,50%)] hover:text-white"><Pencil size={14} /></button>
+                        className="p-1.5 rounded-lg hover:bg-muted/80 text-muted-foreground hover:text-foreground"><Pencil size={14} /></button>
                       {rate.currency_code !== 'USD' && (
                         <button onClick={() => handleDelete(rate.id, rate.currency_code)}
-                          className="p-1.5 rounded-lg hover:bg-red-500/10 text-[hsl(220,10%,50%)] hover:text-red-400"><Trash2 size={14} /></button>
+                          className="p-1.5 rounded-lg hover:bg-red-500/10 text-muted-foreground hover:text-red-400"><Trash2 size={14} /></button>
                       )}
                     </div>
                   </td>

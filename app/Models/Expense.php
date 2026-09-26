@@ -13,4 +13,10 @@ class Expense extends Model
     protected $casts = [
         'amount' => 'float',
     ];
+
+    protected static function booted()
+    {
+        static::addGlobalScope(new \App\Models\Scopes\StaffActivityScope('created_by'));
+    }
 }
+

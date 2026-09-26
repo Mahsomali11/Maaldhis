@@ -1,3 +1,4 @@
+import PageHeader from '@/components/PageHeader';
 import { useEffect, useState } from 'react';
 import { api as apiClient } from '@/api';
 import { toast } from 'sonner';
@@ -29,32 +30,32 @@ export default function AdminSettingsPage() {
     }
   };
 
-  if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-[hsl(145,63%,42%)] border-t-transparent rounded-full animate-spin" /></div>;
+  if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div>;
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-white">System Settings</h1>
-      <div className="bg-[hsl(220,20%,14%)] rounded-xl border border-[hsl(220,15%,18%)] divide-y divide-[hsl(220,15%,18%)]">
+    <div className="space-y-6 p-[10px]">
+      <PageHeader title="System Settings" />
+            <div className="bg-card rounded-xl border border-border divide-y divide-[hsl(220,15%,18%)]">
         {settings.map((s: any) => (
           <div key={s.id} className="p-5 flex items-center gap-4">
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white">{s.setting_key.replace(/_/g, ' ')}</p>
-              <p className="text-xs text-[hsl(220,10%,50%)]">{s.description}</p>
+              <p className="text-sm font-medium text-foreground">{s.setting_key.replace(/_/g, ' ')}</p>
+              <p className="text-xs text-muted-foreground">{s.description}</p>
             </div>
             <input
               type="text"
               value={s.setting_key in edited ? edited[s.setting_key] : s.setting_value}
               onChange={e => setEdited({ ...edited, [s.setting_key]: e.target.value })}
-              className="w-64 px-3 py-2 rounded-lg bg-[hsl(220,20%,18%)] border border-[hsl(220,15%,25%)] text-white text-sm focus:outline-none focus:ring-1 focus:ring-[hsl(145,63%,42%)]"
+              className="w-64 px-3 py-2 rounded-lg bg-background border border-input text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-[hsl(145,63%,42%)]"
             />
             {s.setting_key in edited && (
-              <button onClick={() => save(s.id, s.setting_key)} className="p-2 rounded-lg bg-[hsl(145,63%,42%)] text-white hover:opacity-90">
+              <button onClick={() => save(s.id, s.setting_key)} className="p-2 rounded-lg bg-primary text-primary-foreground text-foreground hover:opacity-90">
                 <Save size={16} />
               </button>
             )}
           </div>
         ))}
-        {settings.length === 0 && <div className="p-8 text-center text-[hsl(220,10%,40%)]">No settings configured</div>}
+        {settings.length === 0 && <div className="p-8 text-center text-muted-foreground">No settings configured</div>}
       </div>
     </div>
   );
