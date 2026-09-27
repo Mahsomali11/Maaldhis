@@ -17,6 +17,7 @@ export default function StoreEditPage() {
   const [showLogoOnReceipt, setShowLogoOnReceipt] = useState(currentStore?.show_logo_on_receipt ?? true);
   const [thankYouMessage, setThankYouMessage] = useState(currentStore?.receipt_thank_you_message || 'Thank you for your purchase!');
   const [receiptFooter, setReceiptFooter] = useState(currentStore?.receipt_footer_text || '');
+  const [receiptTemplate, setReceiptTemplate] = useState(currentStore?.receipt_template || 'classic');
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -35,9 +36,10 @@ export default function StoreEditPage() {
         show_logo_on_receipt: showLogoOnReceipt,
         receipt_thank_you_message: thankYouMessage,
         receipt_footer_text: receiptFooter,
+        receipt_template: receiptTemplate,
       });
       toast.success('Store settings saved');
-      navigate(-1);
+      window.history.back();
     }
     setSaving(false);
   };
@@ -148,6 +150,26 @@ export default function StoreEditPage() {
           <div className="w-full md:w-2/3">
             <div className="bg-card rounded-md border border-border shadow-sm overflow-hidden">
                <div className="p-6 space-y-6">
+                 
+                 <div className="space-y-2">
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Receipt Design Template</label>
+                    <div className="relative">
+                      <select 
+                        value={receiptTemplate} 
+                        onChange={e => setReceiptTemplate(e.target.value)}
+                        className="w-full px-4 h-11 rounded-md border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all shadow-sm appearance-none"
+                      >
+                        <option value="classic">Classic (Side-by-Side)</option>
+                        <option value="modern">Modern (Centered Thermal)</option>
+                        <option value="compact">Compact (Minimal)</option>
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-muted-foreground">
+                        <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                      </div>
+                    </div>
+                 </div>
+
+                 <hr className="border-border" />
                  
                  {/* Toggle Switch */}
                  <div className="flex items-center justify-between">

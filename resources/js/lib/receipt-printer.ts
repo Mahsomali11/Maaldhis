@@ -74,18 +74,41 @@ export function generateThermalReceiptHTML(data: ReceiptData, width: '58mm' | '8
 </head>
 <body>
   ${logoHtml(store, logoSize)}
+  ${(!store.receipt_template || store.receipt_template === 'classic') ? `
+  <table style="margin-bottom:4px;">
+    <tr>
+      <td style="text-align:left; vertical-align:top; width:50%;">
+        <div class="bold" style="font-size:14px;margin-bottom:2px">${escapeHtml(store.store_name)}</div>
+        ${store.location ? `<div class="small">${escapeHtml(store.location)}</div>` : ''}
+        ${store.phone ? `<div class="small">Tel: ${escapeHtml(store.phone)}</div>` : ''}
+        <div class="small">Store ID: ${escapeHtml(store.store_code)}</div>
+      </td>
+      <td style="text-align:right; vertical-align:top; width:50%;">
+        <div class="bold" style="font-size:12px;margin-bottom:2px">RECEIPT</div>
+        <div class="small">#${escapeHtml(sale.receipt_no)}</div>
+        <div class="small">${new Date(sale.sold_at).toLocaleString()}</div>
+        <div class="small">Cashier: ${escapeHtml(cashierName)}</div>
+      </td>
+    </tr>
+  </table>
+  ` : store.receipt_template === 'modern' ? `
   <div class="center bold" style="font-size:16px;margin-bottom:2px">${escapeHtml(store.store_name)}</div>
   ${store.location ? `<div class="center small">${escapeHtml(store.location)}</div>` : ''}
   ${store.phone ? `<div class="center small">Tel: ${escapeHtml(store.phone)}</div>` : ''}
   <div class="center small">Store ID: ${escapeHtml(store.store_code)}</div>
-
-  <div class="dashed"></div>
-
-  <div class="center bold">RECEIPT</div>
-  <div class="center small">#${escapeHtml(sale.receipt_no)}</div>
+  <div class="dashed" style="width:30px; margin: 4px auto; border-top: 1px solid #333;"></div>
   <div class="center small">${new Date(sale.sold_at).toLocaleString()}</div>
   <div class="center small">Cashier: ${escapeHtml(cashierName)}</div>
+  ` : `
+  <div class="bold" style="font-size:14px;margin-bottom:2px">${escapeHtml(store.store_name)}</div>
+  <div class="small">${store.location ? escapeHtml(store.location) : ''}${store.location && store.phone ? ' | ' : ''}${store.phone ? `Tel: ${escapeHtml(store.phone)}` : ''}</div>
+  <div class="small">Store ID: ${escapeHtml(store.store_code)}</div>
+  <div class="small" style="margin-top:4px;">Date: ${new Date(sale.sold_at).toLocaleString()}</div>
+  <div class="small">Cashier: ${escapeHtml(cashierName)}</div>
+  `}
+
   ${customer ? `
+    <div class="dashed"></div>
     <div class="center small">Customer: ${escapeHtml(customer.name)}</div>
     ${customer.phone ? `<div class="center small">Phone: ${escapeHtml(customer.phone)}</div>` : ''}
   ` : ''}

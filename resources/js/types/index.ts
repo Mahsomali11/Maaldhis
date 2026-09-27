@@ -27,6 +27,7 @@ export interface Store {
   show_logo_on_receipt: boolean;
   receipt_thank_you_message: string;
   receipt_footer_text: string;
+  receipt_template?: string;
   country?: string;
   tax_enabled?: boolean;
   tax_rate?: number;

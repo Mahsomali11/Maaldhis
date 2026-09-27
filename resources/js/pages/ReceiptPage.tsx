@@ -48,11 +48,14 @@ export default function ReceiptPage({ saleId }: { saleId?: string }) {
 
   const storeLogo = currentStore?.logo_url && currentStore?.show_logo_on_receipt ? currentStore.logo_url : '';
   const storeInitials = (currentStore?.store_name || 'S').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  const template = currentStore?.receipt_template || 'classic';
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] dark:bg-background flex flex-col items-center py-10 px-4">
-      {/* Receipt Preview */}
-      <div className="w-full max-w-[380px] bg-card rounded-2xl p-8 shadow-xl border border-border relative overflow-hidden">
+    <div className="min-h-screen bg-[#F8F9FA] dark:bg-background py-10 px-4 flex justify-center">
+      <div className="w-full max-w-4xl flex flex-col lg:flex-row gap-8 items-center lg:items-start justify-center">
+        
+        {/* LEFT SIDE: Receipt Preview */}
+        <div className="w-full max-w-[380px] bg-card rounded-2xl p-8 shadow-xl border border-border relative overflow-hidden shrink-0">
         
         {/* Receipt Zig-Zag Top (Purely CSS) */}
         <div className="absolute top-0 left-0 right-0 h-2 w-full" style={{ background: 'radial-gradient(circle at 10px 0, transparent 0, transparent 10px, var(--card) 10px) repeat-x', backgroundSize: '20px 20px', backgroundPosition: '-10px -10px', display: 'none' }}></div>
@@ -66,31 +69,77 @@ export default function ReceiptPage({ saleId }: { saleId?: string }) {
         <h2 className="text-center text-2xl font-black tracking-tight text-foreground mb-1">Sale Complete</h2>
         <p className="text-center text-sm font-medium text-muted-foreground mb-6 bg-muted/50 py-1 px-3 rounded-full inline-block mx-auto max-w-fit flex items-center justify-center self-center">Receipt #{sale.receipt_no}</p>
 
-        <div className="border-t-2 border-dashed border-border/60 pt-5 space-y-1.5">
+        <div className="border-t-2 border-dashed border-border/60 pt-5">
           {/* Store Logo */}
           {storeLogo ? (
-            <div className="flex justify-center mb-3">
+            <div className="flex justify-center mb-4">
               <img src={storeLogo} alt={currentStore?.store_name} className="w-16 h-16 object-contain rounded-xl" />
             </div>
           ) : (
-            <div className="flex justify-center mb-3">
+            <div className="flex justify-center mb-4">
               <div className="w-16 h-16 rounded-xl bg-primary/10 flex items-center justify-center">
                 <span className="text-xl font-black text-primary">{storeInitials}</span>
               </div>
             </div>
           )}
-          <div className="text-center text-base font-bold text-foreground">{currentStore?.store_name}</div>
-          {currentStore?.location && <div className="text-center text-sm font-medium text-muted-foreground">{currentStore.location}</div>}
-          {currentStore?.phone && <div className="text-center text-sm font-medium text-muted-foreground">Tel: {currentStore.phone}</div>}
-          <div className="text-center text-xs font-semibold text-muted-foreground/60 mt-2">ID: {currentStore?.store_code}</div>
-          <div className="text-center text-xs font-semibold text-muted-foreground/60">{new Date(sale.sold_at).toLocaleString()}</div>
+
+          {template === 'classic' && (
+            <div className="flex justify-between items-start w-full gap-2">
+              {/* LEFT COLUMN: Store Details */}
+              <div className="flex flex-col text-left space-y-0.5 max-w-[55%]">
+                <div className="text-base font-bold text-foreground leading-tight">{currentStore?.store_name}</div>
+                {currentStore?.location && <div className="text-sm font-medium text-muted-foreground">{currentStore.location}</div>}
+                {currentStore?.phone && <div className="text-sm font-medium text-muted-foreground">Tel: {currentStore.phone}</div>}
+              </div>
+
+              {/* RIGHT COLUMN: Transaction Meta */}
+              <div className="flex flex-col text-right space-y-0.5 max-w-[45%]">
+                {currentStore?.store_code && <div className="text-xs font-semibold text-muted-foreground/80">ID: {currentStore.store_code}</div>}
+                <div className="text-xs font-semibold text-muted-foreground/80">{new Date(sale.sold_at).toLocaleString()}</div>
+                <div className="text-xs font-medium text-muted-foreground">Cashier: {user?.full_name}</div>
+              </div>
+            </div>
+          )}
+
+          {template === 'modern' && (
+            <div className="flex flex-col items-center justify-center text-center space-y-1">
+              <div className="text-lg font-black text-foreground uppercase tracking-wider">{currentStore?.store_name}</div>
+              <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                {currentStore?.location && <span>{currentStore.location}</span>}
+                {currentStore?.location && currentStore?.phone && <span>&bull;</span>}
+                {currentStore?.phone && <span>Tel: {currentStore.phone}</span>}
+              </div>
+              {currentStore?.store_code && <div className="text-xs font-medium text-muted-foreground">ID: {currentStore.store_code}</div>}
+              
+              <div className="w-8 h-[2px] bg-border my-2"></div>
+              
+              <div className="text-xs font-bold text-muted-foreground">{new Date(sale.sold_at).toLocaleString()}</div>
+              <div className="text-xs font-medium text-muted-foreground">Cashier: {user?.full_name}</div>
+            </div>
+          )}
+
+          {template === 'compact' && (
+            <div className="flex flex-col text-left space-y-0.5">
+              <div className="text-base font-bold text-foreground">{currentStore?.store_name}</div>
+              <div className="text-xs text-muted-foreground">
+                {currentStore?.location}{currentStore?.location && currentStore?.phone ? ' | ' : ''}{currentStore?.phone ? `Tel: ${currentStore.phone}` : ''}
+              </div>
+              {currentStore?.store_code && <div className="text-xs text-muted-foreground">ID: {currentStore.store_code}</div>}
+              
+              <div className="text-xs font-medium text-muted-foreground mt-3">
+                Date: {new Date(sale.sold_at).toLocaleString()}
+              </div>
+              <div className="text-xs font-medium text-muted-foreground">
+                Cashier: {user?.full_name}
+              </div>
+            </div>
+          )}
           
           {customer && (
-            <div className="text-center text-sm font-semibold text-foreground mt-3 bg-muted/30 py-1.5 rounded-lg">
+            <div className="text-center text-sm font-semibold text-foreground mt-4 bg-muted/30 py-1.5 rounded-lg">
               Customer: {customer.name}{customer.phone ? ` (${customer.phone})` : ''}
             </div>
           )}
-          <div className="text-center text-xs font-medium text-muted-foreground mt-2">Cashier: {user?.full_name}</div>
         </div>
 
         <div className="border-t-2 border-dashed border-border/60 mt-5 pt-5 space-y-3">
@@ -162,43 +211,46 @@ export default function ReceiptPage({ saleId }: { saleId?: string }) {
           )}
           <p className="text-center text-[10px] font-bold tracking-widest text-muted-foreground/40 uppercase mt-4">Powered by Maaldhis</p>
         </div>
+        </div>
+
+        {/* RIGHT SIDE: Action Buttons */}
+        <div className="w-full max-w-[380px] flex flex-col shrink-0">
+          <div className="w-full grid grid-cols-3 gap-3 lg:mt-0 mt-6">
+            <button onClick={() => openFormatPicker('print')}
+              className="py-4 rounded-2xl bg-info/10 text-info font-bold flex flex-col items-center justify-center gap-1.5 hover:bg-info/20 active:scale-[0.98] transition-all">
+              <Printer size={22} />
+              <span className="text-[11px] uppercase tracking-wider">Print</span>
+            </button>
+            <button onClick={() => openFormatPicker('download')}
+              className="py-4 rounded-2xl bg-primary/10 text-primary font-bold flex flex-col items-center justify-center gap-1.5 hover:bg-primary/20 active:scale-[0.98] transition-all">
+              <Download size={22} />
+              <span className="text-[11px] uppercase tracking-wider">PDF</span>
+            </button>
+            <button onClick={handleShare}
+              className="py-4 rounded-2xl bg-muted text-foreground font-bold flex flex-col items-center justify-center gap-1.5 hover:bg-accent active:scale-[0.98] transition-all">
+              <Share2 size={22} />
+              <span className="text-[11px] uppercase tracking-wider">Share</span>
+            </button>
+          </div>
+
+          <div className="w-full mt-4 space-y-3">
+            <button onClick={() => navigate('/start-sale')}
+              className="w-full py-4 rounded-2xl bg-foreground text-background font-bold text-sm hover:opacity-90 active:scale-[0.98] transition-all shadow-md flex items-center justify-center gap-2">
+              <Plus size={18} /> New Sale
+            </button>
+
+            <button onClick={() => navigate('/dashboard')}
+              className="w-full py-4 rounded-2xl bg-card border border-border text-foreground font-bold text-sm hover:bg-accent active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-sm">
+              <ArrowLeft size={18} /> Back to Dashboard
+            </button>
+          </div>
+
+          <button onClick={() => navigate('/receipt-history')}
+            className="mt-6 text-sm font-bold text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center gap-2 mx-auto lg:mx-0">
+            <RotateCcw size={16} /> View Receipt History
+          </button>
+        </div>
       </div>
-
-      {/* Action Buttons */}
-      <div className="w-full max-w-[380px] mt-6 grid grid-cols-3 gap-3">
-        <button onClick={() => openFormatPicker('print')}
-          className="py-4 rounded-2xl bg-info/10 text-info font-bold flex flex-col items-center justify-center gap-1.5 hover:bg-info/20 active:scale-[0.98] transition-all">
-          <Printer size={22} />
-          <span className="text-[11px] uppercase tracking-wider">Print</span>
-        </button>
-        <button onClick={() => openFormatPicker('download')}
-          className="py-4 rounded-2xl bg-primary/10 text-primary font-bold flex flex-col items-center justify-center gap-1.5 hover:bg-primary/20 active:scale-[0.98] transition-all">
-          <Download size={22} />
-          <span className="text-[11px] uppercase tracking-wider">PDF</span>
-        </button>
-        <button onClick={handleShare}
-          className="py-4 rounded-2xl bg-muted text-foreground font-bold flex flex-col items-center justify-center gap-1.5 hover:bg-accent active:scale-[0.98] transition-all">
-          <Share2 size={22} />
-          <span className="text-[11px] uppercase tracking-wider">Share</span>
-        </button>
-      </div>
-
-      <div className="w-full max-w-[380px] mt-4 space-y-3">
-        <button onClick={() => navigate('/start-sale')}
-          className="w-full py-4 rounded-2xl bg-foreground text-background font-bold text-sm hover:opacity-90 active:scale-[0.98] transition-all shadow-md flex items-center justify-center gap-2">
-          <Plus size={18} /> New Sale
-        </button>
-
-        <button onClick={() => navigate('/dashboard')}
-          className="w-full py-4 rounded-2xl bg-card border border-border text-foreground font-bold text-sm hover:bg-accent active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-sm">
-          <ArrowLeft size={18} /> Back to Dashboard
-        </button>
-      </div>
-
-      <button onClick={() => navigate('/receipt-history')}
-        className="mt-6 text-sm font-bold text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2">
-        <RotateCcw size={16} /> View Receipt History
-      </button>
 
       {/* Format Picker Modal */}
       {showFormatPicker && (
