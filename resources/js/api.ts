@@ -252,7 +252,40 @@ class LaravelAuthMock {
   }
 
   async resetPasswordForEmail(email: string, options: any) {
-    return { data: null, error: null };
+    try {
+      const res = await fetch('/forgot-password', {
+        method: 'POST',
+        headers: getHeaders(),
+        credentials: 'same-origin',
+        body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to send reset link');
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error };
+    }
+  }
+
+  async resetPassword(payload: any) {
+    try {
+      const res = await fetch('/reset-password', {
+        method: 'POST',
+        headers: getHeaders(),
+        credentials: 'same-origin',
+        body: JSON.stringify({
+           email: payload.email,
+           token: payload.token,
+           password: payload.password,
+           password_confirmation: payload.password // Laravel requires confirmation
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to reset password');
+      return { data, error: null };
+    } catch (error) {
+      return { data: null, error };
+    }
   }
 }
 

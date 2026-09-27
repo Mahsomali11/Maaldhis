@@ -38,7 +38,9 @@ Route::post('/signup', [\App\Http\Controllers\WebAuthController::class, 'signup'
 Route::post('/signup-with-store', [\App\Http\Controllers\WebAuthController::class, 'signupWithStore']);
 
 // Other public pages
-Route::get('/reset-password', fn() => Inertia::render('ResetPasswordPage'));
+Route::post('/forgot-password', [\App\Http\Controllers\WebAuthController::class, 'forgotPassword']);
+Route::post('/reset-password', [\App\Http\Controllers\WebAuthController::class, 'resetPassword']);
+Route::get('/reset-password', fn() => Inertia::render('ResetPasswordPage'))->name('password.reset');
 Route::get('/license-blocked', fn() => Inertia::render('LicenseBlockPage'));
 
 // Logout (works for both, clears session)

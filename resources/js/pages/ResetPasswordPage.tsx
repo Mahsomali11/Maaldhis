@@ -11,13 +11,18 @@ export default function ResetPasswordPage() {
   const [isRecovery, setIsRecovery] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [token, setToken] = useState('');
   const navigate = (url, options) => router.visit(url, options);
 
   useEffect(() => {
-    // Check if this is a recovery redirect
-    const hash = window.location.hash;
-    if (hash.includes('type=recovery')) {
+    // Check if this is a password reset link with token
+    const params = new URLSearchParams(window.location.search);
+    const urlToken = params.get('token');
+    const urlEmail = params.get('email');
+    if (urlToken && urlEmail) {
       setIsRecovery(true);
+      setToken(urlToken);
+      setEmail(urlEmail);
     }
   }, []);
 
@@ -39,7 +44,7 @@ export default function ResetPasswordPage() {
     e.preventDefault();
     if (newPassword.length < 6) { setMessage('Password must be at least 6 characters'); return; }
     setLoading(true);
-    const { error } = await apiClient.auth.updateUser({ password: newPassword });
+    const { error } = await apiClient.auth.resetPassword({ email, token, password: newPassword });
     setLoading(false);
     if (error) {
       setMessage(error.message);
