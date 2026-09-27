@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { router } from '@inertiajs/react';
 import { useApp } from '@/context/AppContext';
 import PageHeader from '@/components/PageHeader';
@@ -7,8 +7,17 @@ import { toast } from 'sonner';
 import { Save, Store, MapPin, Phone, Receipt, Info } from 'lucide-react';
 
 export default function StoreEditPage() {
-  const { currentStore, updateStore } = useApp();
+  const { currentStore, updateStore, user } = useApp();
   const navigate = (url, options) => router.visit(url, options);
+  
+  const userRole = user?.role || 'owner';
+
+  useEffect(() => {
+    if (userRole !== 'owner' && userRole !== 'admin') {
+      toast.error('Forbidden: You do not have permission to access Store Settings.');
+      navigate('/dashboard');
+    }
+  }, [userRole]);
   
   const [name, setName] = useState(currentStore?.store_name || '');
   const [location, setLocation] = useState(currentStore?.location || '');
@@ -18,6 +27,8 @@ export default function StoreEditPage() {
   const [thankYouMessage, setThankYouMessage] = useState(currentStore?.receipt_thank_you_message || 'Thank you for your purchase!');
   const [receiptFooter, setReceiptFooter] = useState(currentStore?.receipt_footer_text || '');
   const [receiptTemplate, setReceiptTemplate] = useState(currentStore?.receipt_template || 'classic');
+  const [primaryColor, setPrimaryColor] = useState(currentStore?.primary_color || '#2d7d46');
+  const [secondaryColor, setSecondaryColor] = useState(currentStore?.secondary_color || '#1e5c32');
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -37,6 +48,8 @@ export default function StoreEditPage() {
         receipt_thank_you_message: thankYouMessage,
         receipt_footer_text: receiptFooter,
         receipt_template: receiptTemplate,
+        primary_color: primaryColor,
+        secondary_color: secondaryColor,
       });
       toast.success('Store settings saved');
       window.history.back();
@@ -132,6 +145,59 @@ export default function StoreEditPage() {
                       className="w-full px-4 h-11 rounded-md border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all shadow-sm" 
                       required 
                     />
+                  </div>
+                  
+               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 2.5: Store Theme */}
+        <div className="flex flex-col md:flex-row gap-8 pb-10 border-b border-border">
+          <div className="w-full md:w-1/3 shrink-0">
+            <h2 className="text-base font-semibold text-foreground mb-2">Store Theme</h2>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Customize the colors of your POS and dashboard. These colors apply automatically to buttons, links, and accents.
+            </p>
+          </div>
+          <div className="w-full md:w-2/3">
+            <div className="bg-card rounded-md border border-border shadow-sm overflow-hidden">
+               <div className="p-6 space-y-6">
+                 
+                 <div className="space-y-2">
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Primary Color</label>
+                    <div className="flex items-center gap-3">
+                      <input 
+                        type="color"
+                        value={primaryColor} 
+                        onChange={e => setPrimaryColor(e.target.value)}
+                        className="w-12 h-12 p-1 rounded-md border border-input cursor-pointer" 
+                      />
+                      <input 
+                        type="text"
+                        value={primaryColor} 
+                        onChange={e => setPrimaryColor(e.target.value)}
+                        className="w-32 px-3 h-10 rounded-md border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary uppercase" 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Secondary Color</label>
+                    <div className="flex items-center gap-3">
+                      <input 
+                        type="color"
+                        value={secondaryColor} 
+                        onChange={e => setSecondaryColor(e.target.value)}
+                        className="w-12 h-12 p-1 rounded-md border border-input cursor-pointer" 
+                      />
+                      <input 
+                        type="text"
+                        value={secondaryColor} 
+                        onChange={e => setSecondaryColor(e.target.value)}
+                        className="w-32 px-3 h-10 rounded-md border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary uppercase" 
+                      />
+                    </div>
                   </div>
                   
                </div>

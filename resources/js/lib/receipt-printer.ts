@@ -16,7 +16,7 @@ function escapeHtml(str: string) {
 }
 
 function logoHtml(store: Store, size: number): string {
-  if (!store.logo_url || !store.show_logo_on_receipt) return '';
+  if (!store.logo_url) return '';
   return `<div class="center" style="margin-bottom:6px"><img src="${escapeHtml(store.logo_url)}" alt="${escapeHtml(store.store_name)}" style="width:${size}px;height:${size}px;object-fit:contain;border-radius:8px" /></div>`;
 }
 
@@ -195,7 +195,7 @@ export function generateA4InvoiceHTML(data: ReceiptData): string {
     </tr>
   `).join('');
 
-  const logoSection = store.logo_url && store.show_logo_on_receipt
+  const logoSection = store.logo_url
     ? `<img src="${escapeHtml(store.logo_url)}" alt="${escapeHtml(store.store_name)}" style="width:80px;height:80px;object-fit:contain;border-radius:8px;margin-bottom:8px" />`
     : '';
 

@@ -46,7 +46,7 @@ export default function ReceiptPage({ saleId }: { saleId?: string }) {
     setShowFormatPicker(true);
   };
 
-  const storeLogo = currentStore?.logo_url && currentStore?.show_logo_on_receipt ? currentStore.logo_url : '';
+  const storeLogo = currentStore?.logo_url || '';
   const storeInitials = (currentStore?.store_name || 'S').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
   const template = currentStore?.receipt_template || 'classic';
 

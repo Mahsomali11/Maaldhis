@@ -28,6 +28,8 @@ export interface Store {
   receipt_thank_you_message: string;
   receipt_footer_text: string;
   receipt_template?: string;
+  primary_color?: string;
+  secondary_color?: string;
   country?: string;
   tax_enabled?: boolean;
   tax_rate?: number;
@@ -76,6 +78,7 @@ export interface Item {
   quantity: number;
   low_stock_threshold: number;
   is_active: boolean;
+  image_path?: string;
   created_at: string;
 }
 

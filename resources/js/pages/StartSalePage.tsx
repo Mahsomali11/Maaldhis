@@ -380,7 +380,7 @@ export default function StartSalePage() {
               {filtered.map((item) => {
                 const inCart = cart.find((c) => c.item.id === item.id);
                 // Placeholder image generator based on product name
-                const defaultImage = "https://ui-avatars.com/api/?name=" + encodeURIComponent(item.name) + "&background=random&color=fff&size=200&bold=true";
+                const defaultImage = item.image_path || ("https://ui-avatars.com/api/?name=" + encodeURIComponent(item.name) + "&background=random&color=fff&size=200&bold=true");
                 
                 return (
                   <button 

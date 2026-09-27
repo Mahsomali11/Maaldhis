@@ -56,7 +56,7 @@ export default function InventoryPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [showScanner, setShowScanner] = useState(false);
-  const [form, setForm] = useState({ name: '', category: '', barcode: '', cost_price: '', sell_price: '', quantity: '', low_stock_threshold: '5' });
+  const [form, setForm] = useState({ name: '', category: '', barcode: '', cost_price: '', sell_price: '', quantity: '', low_stock_threshold: '5', image_path: '' });
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
 
   const storeItems = items.filter(i => i.store_id === currentStore?.id && i.type === tab && i.is_active);
@@ -92,6 +92,7 @@ export default function InventoryPage() {
       sell_price: String(item.sell_price),
       quantity: String(item.quantity),
       low_stock_threshold: String(item.low_stock_threshold),
+      image_path: item.image_path || '',
     });
     setShowForm(true);
   };
@@ -108,6 +109,7 @@ export default function InventoryPage() {
           sell_price: Number(form.sell_price),
           quantity: tab === 'product' ? Number(form.quantity) : 0,
           low_stock_threshold: Number(form.low_stock_threshold),
+          image_path: form.image_path,
         });
         toast.success('Item updated successfully');
         setEditingItem(null);
@@ -124,10 +126,11 @@ export default function InventoryPage() {
           quantity: tab === 'product' ? Number(form.quantity) : 0,
           low_stock_threshold: Number(form.low_stock_threshold),
           is_active: true,
+          image_path: form.image_path,
         });
         toast.success('Item added successfully');
       }
-      setForm({ name: '', category: '', barcode: '', cost_price: '', sell_price: '', quantity: '', low_stock_threshold: '5' });
+      setForm({ name: '', category: '', barcode: '', cost_price: '', sell_price: '', quantity: '', low_stock_threshold: '5', image_path: '' });
       setShowForm(false);
       setEditingItem(null);
     } catch (err: any) {
@@ -381,7 +384,16 @@ export default function InventoryPage() {
                         className="hover:bg-muted/30 transition-colors group"
                       >
                         <td className="px-6 py-4 text-sm text-muted-foreground font-mono">{item.item_code}</td>
-                        <td className="px-6 py-4 text-sm font-semibold text-foreground">{item.name}</td>
+                        <td className="px-6 py-4 text-sm font-semibold text-foreground flex items-center gap-3">
+                          {item.image_path ? (
+                            <img src={item.image_path} alt={item.name} className="w-8 h-8 rounded-md object-cover bg-muted" />
+                          ) : (
+                            <div className="w-8 h-8 rounded-md bg-muted/50 flex items-center justify-center">
+                              <Package size={14} className="text-muted-foreground/50" />
+                            </div>
+                          )}
+                          {item.name}
+                        </td>
                         <td className="px-6 py-4 text-sm text-muted-foreground">{item.category || '—'}</td>
                         <td className="px-6 py-4 text-sm text-muted-foreground text-right">{formatCurrency(item.cost_price)}</td>
                         <td className="px-6 py-4 text-sm font-bold text-foreground text-right">{formatCurrency(item.sell_price)}</td>
@@ -429,6 +441,44 @@ export default function InventoryPage() {
                   <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Item Name <span className="text-destructive">*</span></label>
                   <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Wireless Mouse"
                     className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all" required />
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Product Image (Max 2MB)</label>
+                  <input type="file" accept="image/png, image/jpeg, image/jpg, image/webp, image/svg+xml" 
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      if (file.size > 2 * 1024 * 1024) { toast.error('Image must be under 2MB.'); return; }
+                      
+                      const toastId = toast.loading('Uploading image...');
+                      try {
+                        const formData = new FormData();
+                        formData.append('image', file);
+                        formData.append('folder', 'product-images');
+                        const csrfToken = document.cookie.split('; ').find(row => row.startsWith('XSRF-TOKEN='))?.split('=')[1] || '';
+                        
+                        const response = await fetch('/api/upload-image', {
+                          method: 'POST',
+                          headers: { 'X-XSRF-TOKEN': decodeURIComponent(csrfToken), 'Accept': 'application/json' },
+                          body: formData
+                        });
+                        
+                        if (!response.ok) throw new Error('Upload failed');
+                        const { url } = await response.json();
+                        setForm(f => ({ ...f, image_path: url }));
+                        toast.success('Image uploaded', { id: toastId });
+                      } catch (err) {
+                        toast.error('Upload failed', { id: toastId });
+                      }
+                    }}
+                    className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20" />
+                    {form.image_path && (
+                      <div className="mt-2 relative inline-block">
+                        <img src={form.image_path} alt="Preview" className="w-16 h-16 object-cover rounded-md border border-border" />
+                        <button type="button" onClick={() => setForm(f => ({ ...f, image_path: '' }))} className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1"><X size={12} /></button>
+                      </div>
+                    )}
                 </div>
                 
                 <div>
@@ -483,7 +533,7 @@ export default function InventoryPage() {
                 )}
 
                 <div className="flex gap-3 pt-6 border-t border-border mt-6">
-                  <button type="button" onClick={() => { setShowForm(false); setEditingItem(null); setForm({ name: '', category: '', barcode: '', cost_price: '', sell_price: '', quantity: '', low_stock_threshold: '5' }); }} className="flex-1 py-3 rounded-xl bg-muted text-foreground text-sm font-bold hover:bg-accent transition-colors">Cancel</button>
+                  <button type="button" onClick={() => { setShowForm(false); setEditingItem(null); setForm({ name: '', category: '', barcode: '', cost_price: '', sell_price: '', quantity: '', low_stock_threshold: '5', image_path: '' }); }} className="flex-1 py-3 rounded-xl bg-muted text-foreground text-sm font-bold hover:bg-accent transition-colors">Cancel</button>
                   <button type="submit" className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:opacity-90 transition-opacity shadow-sm">{editingItem ? 'Save Changes' : 'Add Item'}</button>
                 </div>
                </form>

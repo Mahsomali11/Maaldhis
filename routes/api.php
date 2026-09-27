@@ -107,6 +107,23 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/rest/v1/{table}', [DynamicApiController::class, 'store']);
         Route::patch('/rest/v1/{table}', [DynamicApiController::class, 'update']);
         Route::delete('/rest/v1/{table}', [DynamicApiController::class, 'destroy']);
+        
+        Route::post('/upload-image', function (Request $request) {
+            $request->validate([
+                'image' => 'required|file|mimes:jpeg,png,jpg,svg,webp|max:2048',
+                'folder' => 'required|string|in:store-logos,product-images',
+            ]);
+            
+            $file = $request->file('image');
+            $folder = $request->input('folder');
+            
+            $path = $file->store($folder, 'public');
+            
+            return response()->json([
+                'path' => $path,
+                'url' => asset('storage/' . $path)
+            ]);
+        });
     });
 
     // Diagnostic route

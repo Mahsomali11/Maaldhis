@@ -51,9 +51,9 @@ export default function StoreLogoUpload({ storeId, currentLogoUrl, storeName, on
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const allowed = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml'];
+    const allowed = ['image/png', 'image/jpeg', 'image/jpg', 'image/svg+xml', 'image/webp'];
     if (!allowed.includes(file.type)) {
-      toast.error('Only PNG, JPG, JPEG, or SVG files are allowed.');
+      toast.error('Only PNG, JPG, JPEG, WEBP, or SVG files are allowed.');
       return;
     }
 
@@ -70,22 +70,32 @@ export default function StoreLogoUpload({ storeId, currentLogoUrl, storeName, on
 
     setUploading(true);
     try {
-      const ext = file.name.split('.').pop();
-      const path = `${storeId}/logo.${ext}`;
+      const formData = new FormData();
+      formData.append('image', file);
+      formData.append('folder', 'store-logos');
 
-      // Delete old file if exists
-      await apiClient.storage.from('store-logos').remove([`${storeId}/logo.png`, `${storeId}/logo.jpg`, `${storeId}/logo.jpeg`, `${storeId}/logo.svg`]);
+      const csrfToken = document.cookie.split('; ').find(row => row.startsWith('XSRF-TOKEN='))?.split('=')[1] || '';
+      
+      const response = await fetch('/api/upload-image', {
+        method: 'POST',
+        headers: {
+          'X-XSRF-TOKEN': decodeURIComponent(csrfToken),
+          'Accept': 'application/json'
+        },
+        body: formData
+      });
 
-      const { error } = await apiClient.storage.from('store-logos').upload(path, file, { upsert: true });
-      if (error) throw error;
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.message || 'Failed to upload logo');
+      }
 
-      const { data: urlData } = apiClient.storage.from('store-logos').getPublicUrl(path);
-      const publicUrl = `${urlData.publicUrl}?t=${Date.now()}`;
+      const { url } = await response.json();
 
       // Update store record
-      await apiClient.from('stores').update({ logo_url: publicUrl } as any).eq('id', storeId);
+      await apiClient.from('stores').update({ logo_url: url } as any).eq('id', storeId);
 
-      onLogoUploaded(publicUrl);
+      onLogoUploaded(url);
       toast.success('Logo uploaded successfully!');
     } catch (err: any) {
       toast.error(err.message || 'Failed to upload logo');
@@ -98,7 +108,7 @@ export default function StoreLogoUpload({ storeId, currentLogoUrl, storeName, on
   const handleRemove = async () => {
     setUploading(true);
     try {
-      await apiClient.storage.from('store-logos').remove([`${storeId}/logo.png`, `${storeId}/logo.jpg`, `${storeId}/logo.jpeg`, `${storeId}/logo.svg`]);
+      // Just update the database record, we can safely orphan the old file or clean it up via CRON
       await apiClient.from('stores').update({ logo_url: '' } as any).eq('id', storeId);
       onLogoUploaded('');
       toast.success('Logo removed');

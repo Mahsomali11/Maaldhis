@@ -140,7 +140,7 @@ export default function DesktopSidebar({ isMobile = false }: { isMobile?: boolea
                   onClick={() => navigate(subItem.path)}
                   className={`w-full text-left px-3 py-2 rounded-lg text-sm font-semibold transition-all relative ${
                     subActive
-                      ? 'text-primary bg-primary/10'
+                      ? 'text-primary bg-secondary shadow-sm border border-border/50'
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                   }`}
                 >
@@ -210,7 +210,7 @@ export default function DesktopSidebar({ isMobile = false }: { isMobile?: boolea
                       }}
                       className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-bold transition-all ${
                         store.id === currentStore?.id
-                          ? 'bg-primary/10 text-primary'
+                          ? 'bg-secondary text-primary shadow-sm border border-border/50'
                           : 'hover:bg-muted text-foreground'
                       }`}
                     >
@@ -270,7 +270,7 @@ export default function DesktopSidebar({ isMobile = false }: { isMobile?: boolea
         <div className="p-4 shrink-0 border-t border-border bg-card">
            <div className="bg-muted/30 border border-border/50 rounded-2xl p-2 flex flex-col gap-1">
               <button onClick={() => navigate(isAdmin ? '/admin/settings' : '/profile')} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-card hover:shadow-sm transition-all border border-transparent hover:border-border">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 text-primary">
+                <div className="w-8 h-8 rounded-lg bg-secondary border border-border/50 flex items-center justify-center shrink-0 text-primary shadow-sm">
                   {isAdmin ? <ShieldCheck size={16} /> : <User size={16} />}
                 </div>
                 <div className="flex-1 flex flex-col items-start min-w-0">
@@ -279,7 +279,7 @@ export default function DesktopSidebar({ isMobile = false }: { isMobile?: boolea
                 </div>
               </button>
               <div className="h-px bg-border/50 my-1 mx-2"></div>
-              <button onClick={isAdmin ? adminLogout : logout} className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl hover:bg-destructive/10 text-destructive transition-colors text-sm font-bold">
+              <button onClick={isAdmin ? adminLogout : logout} className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl hover:bg-primary/10 text-primary transition-colors text-sm font-bold">
                 <LogOut size={16} />
                 <span>Sign Out</span>
               </button>

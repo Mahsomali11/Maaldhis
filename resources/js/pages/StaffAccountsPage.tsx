@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import PageHeader from '@/components/PageHeader';
 import { useApp } from '@/context/AppContext';
 import { Trash2, UserPlus, X, Pencil, Plus, Search, ShieldAlert, BadgeCheck, LayoutGrid } from 'lucide-react';
@@ -15,7 +15,16 @@ import {
 } from '@/components/ui/alert-dialog';
 
 export default function StaffAccountsPage() {
-  const { staffAccounts, addStaffAccount, deleteStaffAccount, updateStaffAccount, currentStore, stores } = useApp();
+  const { staffAccounts, addStaffAccount, deleteStaffAccount, updateStaffAccount, currentStore, stores, user } = useApp();
+  const navigate = (url: string) => router.visit(url);
+  const userRole = user?.role || 'owner';
+
+  useEffect(() => {
+    if (userRole !== 'owner' && userRole !== 'admin') {
+      toast.error('Forbidden: You do not have permission to manage Staff Accounts.');
+      navigate('/dashboard');
+    }
+  }, [userRole]);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');

@@ -960,6 +960,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
       currency, formatCurrency,
       addCategory, updateCategory, deleteCategory,
     }}>
+      {state.currentStore?.primary_color && (
+        <style dangerouslySetInnerHTML={{__html: `
+          :root {
+            --color-primary: ${state.currentStore.primary_color};
+            --color-secondary: ${state.currentStore.secondary_color || state.currentStore.primary_color};
+          }
+          
+          /* Utility classes to enforce dynamic theme mapping if standard variables differ */
+          .bg-primary { background-color: var(--color-primary) !important; }
+          .text-primary { color: var(--color-primary) !important; }
+          .border-primary { border-color: var(--color-primary) !important; }
+          .ring-primary { --tw-ring-color: var(--color-primary) !important; }
+          
+          .bg-secondary { background-color: var(--color-secondary) !important; }
+          .text-secondary { color: var(--color-secondary) !important; }
+          .border-secondary { border-color: var(--color-secondary) !important; }
+          
+          .bg-primary-foreground { background-color: var(--color-secondary) !important; }
+          .text-primary-foreground { color: var(--color-secondary) !important; }
+          
+          .bg-secondary-foreground { background-color: var(--color-primary) !important; }
+          .text-secondary-foreground { color: var(--color-primary) !important; }
+        `}} />
+      )}
       {children}
     </AppContext.Provider>
   );

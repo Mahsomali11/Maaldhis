@@ -5,8 +5,8 @@ $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
 try {
-    Illuminate\Support\Facades\DB::statement("ALTER TABLE stores ADD COLUMN receipt_template VARCHAR(255) DEFAULT 'classic'");
-    echo "Column added.\n";
+    Illuminate\Support\Facades\DB::statement("ALTER TABLE items ADD COLUMN image_path VARCHAR(255) NULL");
+    echo "Columns added.\n";
 } catch (\Exception $e) {
     echo "Error: " . $e->getMessage() . "\n";
 }

@@ -32,10 +32,11 @@ class CheckStoreAccess
             $requestedStoreId = $request->query('id') ?? $request->input('id') ?? $request->query('eq.id') ?? $request->input('eq.id');
         }
 
-        if (!$requestedStoreId || in_array($request->route('table'), ['profiles', 'stores', 'staff_accounts'])) {
+        if (!$requestedStoreId || in_array($request->route('table'), ['profiles'])) {
             // If the endpoint doesn't specify a store_id, we either pass it through or 
             // the endpoint must handle authorization itself. 
             // For now, let it pass (e.g. GET /api/user).
+            $request->attributes->set('store_role', 'guest');
             return $next($request);
         }
 
@@ -50,6 +51,7 @@ class CheckStoreAccess
             ->exists();
             
         if ($isOwner) {
+            $request->attributes->set('store_role', 'owner');
             return $next($request);
         }
 
@@ -60,9 +62,16 @@ class CheckStoreAccess
             ->first();
 
         if ($staff) {
-            // Rule #18 & #19: Enforce some basic role restrictions here if needed,
-            // or let the frontend + specific controller logic handle fine-grained rules.
-            // For now, if they are staff for THIS store, they can access it.
+            $request->attributes->set('store_role', $staff->role);
+            
+            // Check basic role restrictions for the entire store
+            if (in_array($request->route('table'), ['stores', 'staff_accounts']) && $request->method() !== 'GET') {
+                if ($staff->role !== 'admin') {
+                    \Illuminate\Support\Facades\Log::warning("CheckStoreAccess 403: Role restriction. User: " . $user->id . " Role: " . $staff->role . " Table: " . $request->route('table'));
+                    return response()->json(['error' => 'Forbidden: You do not have permission to modify store settings or staff.'], 403);
+                }
+            }
+            
             return $next($request);
         }
 
@@ -75,6 +84,13 @@ class CheckStoreAccess
         if ($staffByEmail) {
             // Auto-heal the missing user_id
             $staffByEmail->update(['user_id' => $user->id]);
+            $request->attributes->set('store_role', $staffByEmail->role);
+            
+            if (in_array($request->route('table'), ['stores', 'staff_accounts']) && $request->method() !== 'GET') {
+                if ($staffByEmail->role !== 'admin') {
+                    return response()->json(['error' => 'Forbidden: You do not have permission to modify store settings or staff.'], 403);
+                }
+            }
             return $next($request);
         }
 
