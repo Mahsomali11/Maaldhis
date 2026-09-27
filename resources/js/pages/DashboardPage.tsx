@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { router } from '@inertiajs/react';
+import { useState, useEffect, useRef } from 'react';
+import { router, usePage } from '@inertiajs/react';
 import { ShoppingCart, Receipt, TrendingUp, CreditCard, Package, Clock, MapPin, Wallet, ArrowUpRight, ArrowDownRight, Store, Plus, Bell, ChevronRight, Activity, Calendar } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { useFeatureAccess } from '@/hooks/useFeatureAccess';
@@ -9,8 +9,21 @@ import { toast } from 'sonner';
 
 export default function DashboardPage() {
   const navigate = (url, options) => router.visit(url, options);
-  const { currentStore, items, sales, customerDebts, expenses, formatCurrency } = useApp();
+  const { currentStore, items, sales, customers, payments, customerDebts, expenses, formatCurrency } = useApp();
   const { hasFeature } = useFeatureAccess();
+
+  const recentSales = [...sales]
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, 10)
+    .map(sale => {
+      const customer = customers?.find(c => c.id === sale.customer_id);
+      const payment = payments?.find(p => p.sale_id === sale.id);
+      return {
+        ...sale,
+        customer_name: customer ? customer.name : 'Walk-in Customer',
+        payment_method: payment ? (payment.method || 'Cash') : 'Cash'
+      };
+    });
 
   const totalStock = items.reduce((sum, i) => sum + i.quantity, 0);
   const lowStockItems = items.filter(i => i.type === 'product' && i.quantity > 0 && i.quantity <= i.low_stock_threshold);
@@ -168,13 +181,35 @@ export default function DashboardPage() {
                 <h3 className="font-semibold text-foreground text-sm">Activity Feed</h3>
                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Live</span>
               </div>
-              <div className="p-12 flex flex-col items-center justify-center text-center bg-muted/10">
-                <div className="w-12 h-12 rounded bg-muted flex items-center justify-center mb-4 border border-border">
-                  <Clock size={20} className="text-muted-foreground" />
+              {recentSales && recentSales.length > 0 ? (
+                <div className="divide-y divide-border">
+                  {recentSales.map((sale: any) => (
+                    <div key={sale.id} className="p-4 hover:bg-muted/30 transition-colors flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
+                          <Receipt size={16} className="text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-foreground">{sale.customer_name}</p>
+                          <p className="text-xs text-muted-foreground">Receipt: {sale.receipt_no} &bull; {new Date(sale.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-foreground">{formatCurrency(sale.total)}</p>
+                        <p className="text-xs text-muted-foreground capitalize">{sale.payment_method}</p>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <p className="text-sm font-medium text-foreground mb-1">No recent activity</p>
-                <p className="text-xs text-muted-foreground max-w-xs">Your latest transactions, updates, and events will appear here chronologically.</p>
-              </div>
+              ) : (
+                <div className="p-12 flex flex-col items-center justify-center text-center bg-muted/10">
+                  <div className="w-12 h-12 rounded bg-muted flex items-center justify-center mb-4 border border-border">
+                    <Clock size={20} className="text-muted-foreground" />
+                  </div>
+                  <p className="text-sm font-medium text-foreground mb-1">No recent activity</p>
+                  <p className="text-xs text-muted-foreground max-w-xs">Your latest transactions, updates, and events will appear here chronologically.</p>
+                </div>
+              )}
             </div>
 
           </div>
