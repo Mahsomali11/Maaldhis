@@ -80,8 +80,6 @@ export default function DesktopLayout({ children }: DesktopLayoutProps) {
       {/* Main Content Area */}
       <main className="flex-1 min-w-0 flex flex-col overflow-y-auto relative z-10">
         
-        {/* Subtle background abstract element */}
-        <div className="absolute top-0 right-0 w-[40vw] h-[40vw] max-w-[500px] max-h-[500px] bg-primary/5 rounded-full blur-3xl pointer-events-none -translate-y-1/2 translate-x-1/4"></div>
 
         {licenseStatus?.status === 'active' && daysRemaining <= 7 && (
           <div className="px-4 lg:px-8 pt-4 lg:pt-6 pb-2 shrink-0 relative z-20">

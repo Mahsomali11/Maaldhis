@@ -66,7 +66,11 @@ export default function StartSalePage() {
     };
   }, [cart, currentStore]);
 
-  const storeItems = items.filter((i) => i.store_id === currentStore?.id && i.is_active);
+  const storeItems = items.filter((i) => 
+    i.store_id === currentStore?.id && 
+    i.is_active && 
+    (i.is_service || i.quantity > 0)
+  );
   const filtered = storeItems.filter((i) =>
     (activeCategory === 'All' || i.category === activeCategory) && 
     (i.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -91,8 +95,13 @@ export default function StartSalePage() {
         .maybeSingle();
 
       if (found) {
-        addToCart(found, 1);
-        toast.success(`Added ${found.name}`);
+        if (found.is_service || found.quantity > 0) {
+          addToCart(found, 1);
+          toast.success(`Added ${found.name}`);
+        } else {
+          setSearch(barcode);
+          toast.error('Item is out of stock');
+        }
       } else {
         setSearch(barcode);
         toast.error('Item not found');
