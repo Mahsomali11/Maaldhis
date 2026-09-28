@@ -117,11 +117,18 @@ Route::middleware(['auth:sanctum'])->group(function () {
             $file = $request->file('image');
             $folder = $request->input('folder');
             
-            $path = $file->store($folder, 'public');
+            // Create a unique filename
+            $filename = uniqid() . '_' . time() . '.' . $file->getClientOriginalExtension();
+            
+            // Move directly to public/uploads folder to avoid storage symlink issues on shared hosting
+            $file->move(public_path('uploads/' . $folder), $filename);
+            
+            // Use relative path for URL so it works regardless of APP_URL config
+            $path = 'uploads/' . $folder . '/' . $filename;
             
             return response()->json([
                 'path' => $path,
-                'url' => asset('storage/' . $path)
+                'url' => '/' . $path
             ]);
         });
     });
