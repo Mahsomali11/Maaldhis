@@ -19,7 +19,7 @@ export default function StartSalePage() {
   const [search, setSearch] = useState('');
   const [showCheckoutMobile, setShowCheckoutMobile] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [paymentAccountId, setPaymentAccountId] = useState<string | null>(null);
   const [saleType, setSaleType] = useState<'cash' | 'credit' | 'mixed'>('cash');
   const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
   const [paidAmount, setPaidAmount] = useState('');
@@ -45,7 +45,7 @@ export default function StartSalePage() {
       .then(({ data }) => {
         if (data && data.length > 0) {
           setPaymentAccounts(data);
-          setPaymentMethod(data[0].account_name);
+          setPaymentAccountId(data[0].id);
         }
       });
   }, [currentStore?.id]);
@@ -126,7 +126,7 @@ export default function StartSalePage() {
     setIsSubmitting(true);
     try {
       const paid = saleType === 'cash' ? cartTotal : Number(paidAmount) || 0;
-      const sale = await completeSale(saleType, selectedCustomer, paid, paymentMethod);
+      const sale = await completeSale(saleType, selectedCustomer, paid, paymentAccountId);
       if (sale) {
         toast.success('Sale completed!');
         navigate('/receipt/' + sale.id);
@@ -247,6 +247,14 @@ export default function StartSalePage() {
                      className="w-full px-4 py-3 h-12 rounded-xl border border-input text-sm font-bold bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm appearance-none">
                      <option value="">Select customer for credit...</option>
                      {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                   </select>
+                </div>
+             )}
+             {saleType !== 'credit' && paymentAccounts.length > 0 && (
+                <div className="relative mt-3">
+                   <select value={paymentAccountId || ''} onChange={(e) => setPaymentAccountId(e.target.value)}
+                     className="w-full px-4 py-3 h-12 rounded-xl border border-input text-sm font-bold bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm appearance-none">
+                     {paymentAccounts.map((pa) => <option key={pa.id} value={pa.id}>{pa.account_name}</option>)}
                    </select>
                 </div>
              )}

@@ -81,7 +81,7 @@ interface AppContextType extends Omit<AppState, 'session'> {
   removeFromCart: (itemId: string) => void;
   updateCartPrice: (itemId: string, newPrice: number) => void;
   clearCart: () => void;
-  completeSale: (saleType: 'cash' | 'credit' | 'mixed', customerId: string | null, paidAmount: number, paymentMethod: string) => Promise<Sale | null>;
+  completeSale: (saleType: 'cash' | 'credit' | 'mixed', customerId: string | null, paidAmount: number, paymentAccountId: string | null) => Promise<Sale | null>;
   recordPayment: (payment: Omit<Payment, 'id' | 'created_at'>) => Promise<void>;
   recordReturn: (saleId: string, items: { item_id: string; sale_item_id: string; quantity: number; amount: number }[], refundMethod: string) => Promise<void>;
   addStore: (store: Omit<Store, 'id' | 'created_at'>) => Promise<Store | null>;
@@ -516,7 +516,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
-  const completeSale = useCallback(async (saleType: 'cash' | 'credit' | 'mixed', customerId: string | null, paidAmount: number, paymentMethod: string) => {
+  const completeSale = useCallback(async (saleType: 'cash' | 'credit' | 'mixed', customerId: string | null, paidAmount: number, paymentAccountId: string | null) => {
     const subtotal = state.cart.reduce((sum, c) => sum + c.line_total, 0);
     if (subtotal === 0) return null;
     
@@ -543,6 +543,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       paid_amount: paidAmount,
       outstanding_amount: outstanding,
       status: 'completed',
+      payment_account_id: paymentAccountId,
     } as any).select().single();
 
     if (saleError || !saleData) return null;
@@ -571,7 +572,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       customer_id: customerId,
       payment_type: 'sale',
       direction: 'in',
-      method: paymentMethod,
+      method: 'cash',
+      payment_account_id: paymentAccountId,
       amount: paidAmount,
       reference: receiptNo,
       created_by: userId,

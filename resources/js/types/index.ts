@@ -97,6 +97,7 @@ export interface Sale {
   paid_amount: number;
   outstanding_amount: number;
   status: 'completed' | 'voided' | 'returned';
+  payment_account_id?: string | null;
   sold_at: string;
 }
 
@@ -120,6 +121,7 @@ export interface Payment {
   payment_type: string;
   direction: 'in' | 'out';
   method: 'cash' | 'mpesa' | 'card' | 'bank' | 'other';
+  payment_account_id?: string | null;
   amount: number;
   reference: string;
   created_by: string;
@@ -135,6 +137,7 @@ export interface Expense {
   employee_user_id: string | null;
   employee_name?: string;
   payment_method: string;
+  payment_account_id?: string | null;
   created_by: string;
   created_at: string;
 }

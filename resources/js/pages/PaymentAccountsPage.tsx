@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, Wallet, X, Building2, CreditCard, Landmark, Smartphone } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import PaymentAccountLedger from '@/components/PaymentAccountLedger';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,6 +38,7 @@ export default function PaymentAccountsPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [viewingAccount, setViewingAccount] = useState<PaymentAccount | null>(null);
   const [form, setForm] = useState({
     account_name: '',
     account_type: 'Cash',
@@ -300,6 +302,13 @@ export default function PaymentAccountsPage() {
                           >
                             <Pencil size={14} />
                           </button>
+                          <button 
+                            onClick={() => setViewingAccount(account)} 
+                            className="p-2 rounded-lg bg-background border border-border text-primary hover:bg-primary/10 transition-colors shadow-sm"
+                            title="View Ledger"
+                          >
+                            <Wallet size={14} />
+                          </button>
                           {account.is_active && (
                             <button 
                               onClick={() => setDeleteId(account.id)} 
@@ -461,6 +470,10 @@ export default function PaymentAccountsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {viewingAccount && (
+        <PaymentAccountLedger account={viewingAccount} onClose={() => setViewingAccount(null)} />
+      )}
     </div>
   );
 }

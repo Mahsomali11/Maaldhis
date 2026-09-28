@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
+import { api as apiClient } from '@/api';
 import PageHeader from '@/components/PageHeader';
 import { Plus, X, Receipt, Wallet, User, Clock } from 'lucide-react';
 
@@ -9,7 +10,24 @@ export default function ExpensesPage() {
   const [type, setType] = useState('');
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
-  const [method, setMethod] = useState('cash');
+  const [method, setMethod] = useState('cash'); // Keeps legacy method string
+  const [paymentAccountId, setPaymentAccountId] = useState<string | null>(null);
+  const [paymentAccounts, setPaymentAccounts] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!currentStore) return;
+    apiClient
+      .from('payment_accounts')
+      .select('id, account_name, account_type, is_active')
+      .eq('store_id', currentStore.id)
+      .eq('is_active', true)
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          setPaymentAccounts(data);
+          setPaymentAccountId(data[0].id);
+        }
+      });
+  }, [currentStore?.id]);
 
   const today = new Date().toDateString();
   const todayExpenses = expenses.filter(e => e.store_id === currentStore?.id && new Date(e.created_at).toDateString() === today);
@@ -25,6 +43,7 @@ export default function ExpensesPage() {
       employee_user_id: user?.id || null,
       employee_name: user?.full_name,
       payment_method: method,
+      payment_account_id: paymentAccountId,
       created_by: user?.id || '',
     });
     setType(''); setAmount(''); setNote(''); setShowForm(false);
@@ -185,18 +204,33 @@ export default function ExpensesPage() {
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Payment Method</label>
-                <select 
-                  value={method} 
-                  onChange={e => setMethod(e.target.value)}
-                  className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all appearance-none"
-                >
-                  <option value="cash">Cash</option>
-                  <option value="mpesa">M-Pesa</option>
-                  <option value="card">Card / Bank</option>
-                </select>
-              </div>
+              {paymentAccounts.length > 0 ? (
+                <div>
+                  <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Payment Account</label>
+                  <select 
+                    value={paymentAccountId || ''} 
+                    onChange={e => setPaymentAccountId(e.target.value)}
+                    className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all appearance-none"
+                  >
+                    {paymentAccounts.map(pa => (
+                      <option key={pa.id} value={pa.id}>{pa.account_name}</option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Payment Method</label>
+                  <select 
+                    value={method} 
+                    onChange={e => setMethod(e.target.value)}
+                    className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all appearance-none"
+                  >
+                    <option value="cash">Cash</option>
+                    <option value="mpesa">M-Pesa</option>
+                    <option value="card">Card / Bank</option>
+                  </select>
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Note <span className="lowercase font-medium">(optional)</span></label>

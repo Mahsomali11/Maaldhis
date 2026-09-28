@@ -14,6 +14,7 @@ interface PaymentAccount {
 export default function SalesReportPage() {
   const { sales, saleItems, expenses, payments, currentStore, formatCurrency } = useApp();
   const [tab, setTab] = useState<'today' | 'month' | 'all'>('today');
+  const [selectedAccountId, setSelectedAccountId] = useState<string | 'all'>('all');
   const [paymentAccounts, setPaymentAccounts] = useState<PaymentAccount[]>([]);
 
   useEffect(() => {
@@ -36,6 +37,7 @@ export default function SalesReportPage() {
 
   const filterSales = (s: typeof sales[0]) => {
     if (s.store_id !== currentStore?.id || s.status === 'voided') return false;
+    if (selectedAccountId !== 'all' && s.payment_account_id !== selectedAccountId) return false;
     const d = new Date(s.sold_at);
     if (tab === 'today') return d.toDateString() === today;
     if (tab === 'month') return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
@@ -60,15 +62,15 @@ export default function SalesReportPage() {
   });
 
   const salePaymentsByMethod = paymentAccounts.map(acc => {
-    const total = filteredPayments
-      .filter(p => p.payment_type === 'sale' && p.method === acc.account_name)
-      .reduce((s, p) => s + p.amount, 0);
+    const total = filteredSales
+      .filter(s => s.payment_account_id === acc.id)
+      .reduce((s, sale) => s + sale.paid_amount, 0);
     return { account: acc, total };
   }).filter(item => item.total > 0 || paymentAccounts.length <= 6);
 
   const creditPaymentsByMethod = paymentAccounts.map(acc => {
     const total = filteredPayments
-      .filter(p => p.payment_type === 'debt_collection' && p.method === acc.account_name)
+      .filter(p => p.payment_type === 'debt_collection' && p.payment_account_id === acc.id)
       .reduce((s, p) => s + p.amount, 0);
     return { account: acc, total };
   }).filter(item => item.total > 0 || paymentAccounts.length <= 6);
@@ -121,16 +123,28 @@ export default function SalesReportPage() {
       <PageHeader 
         title="Sales Report" 
         rightAction={
-          <div className="flex bg-muted/50 p-1.5 rounded-xl border border-border">
-            {(['today', 'month', 'all'] as const).map(t => (
-              <button 
-                key={t} 
-                onClick={() => setTab(t)}
-                className={`px-6 py-2 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 capitalize ${tab === t ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'}`}
-              >
-                {t === 'month' ? 'This Month' : t === 'all' ? 'All Time' : 'Today'}
-              </button>
-            ))}
+          <div className="flex items-center gap-4">
+            <select 
+              value={selectedAccountId} 
+              onChange={e => setSelectedAccountId(e.target.value)}
+              className="px-4 py-2 h-10 rounded-xl border border-border bg-card text-sm font-bold shadow-sm focus:outline-none focus:border-primary transition-colors appearance-none"
+            >
+              <option value="all">All Payment Accounts</option>
+              {paymentAccounts.map(pa => (
+                <option key={pa.id} value={pa.id}>{pa.account_name}</option>
+              ))}
+            </select>
+            <div className="flex bg-muted/50 p-1.5 rounded-xl border border-border">
+              {(['today', 'month', 'all'] as const).map(t => (
+                <button 
+                  key={t} 
+                  onClick={() => setTab(t)}
+                  className={`px-6 py-2 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 capitalize ${tab === t ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground hover:bg-black/5 dark:hover:bg-white/5'}`}
+                >
+                  {t === 'month' ? 'This Month' : t === 'all' ? 'All Time' : 'Today'}
+                </button>
+              ))}
+            </div>
           </div>
         }
       />
@@ -231,6 +245,55 @@ export default function SalesReportPage() {
               </div>
             </div>
             
+            
+            {/* Filtered Transactions List */}
+            <div className="bg-card rounded-3xl border border-border shadow-sm overflow-hidden mt-8">
+               <div className="p-6 border-b border-border/50 bg-muted/10">
+                 <h3 className="font-black text-foreground text-xl">Transactions List</h3>
+                 <p className="text-sm text-muted-foreground mt-1">Filtered by your selected date and payment account.</p>
+               </div>
+               <table className="w-full text-left border-collapse">
+                 <thead className="bg-muted/30 border-b border-border">
+                   <tr>
+                     <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Time</th>
+                     <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Receipt</th>
+                     <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Type</th>
+                     <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Account</th>
+                     <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-right">Amount</th>
+                   </tr>
+                 </thead>
+                 <tbody className="divide-y divide-border/50">
+                   {filteredSales.map(sale => {
+                     const acc = paymentAccounts.find(pa => pa.id === sale.payment_account_id);
+                     return (
+                       <tr key={sale.id} className="hover:bg-muted/30 transition-colors">
+                         <td className="px-6 py-4 text-sm font-medium text-foreground">
+                            {new Date(sale.sold_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}
+                         </td>
+                         <td className="px-6 py-4 text-sm font-mono text-muted-foreground">{sale.receipt_no}</td>
+                         <td className="px-6 py-4">
+                           <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-success/10 text-success">
+                             {sale.sale_type} sale
+                           </span>
+                         </td>
+                         <td className="px-6 py-4 text-sm font-bold text-foreground">
+                           {acc ? acc.account_name : 'Cash'}
+                         </td>
+                         <td className="px-6 py-4 text-right font-black text-base text-success">
+                           +{formatCurrency(sale.paid_amount)}
+                         </td>
+                       </tr>
+                     );
+                   })}
+                   {filteredSales.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="px-6 py-8 text-center text-muted-foreground text-sm font-medium">No sales found matching these filters.</td>
+                      </tr>
+                   )}
+                 </tbody>
+               </table>
+            </div>
+
           </div>
         )}
       </div>

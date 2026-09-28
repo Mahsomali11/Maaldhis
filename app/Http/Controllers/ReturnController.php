@@ -114,6 +114,7 @@ class ReturnController extends Controller
                     'payment_type' => 'sale', // Must be 'sale' to offset sale payments
                     'direction' => 'out', // Outgoing refund
                     'method' => $request->refundMethod,
+                    'payment_account_id' => $sale->payment_account_id,
                     'amount' => -$totalRefund, // Negative amount to subtract from totals
                     'reference' => 'REFUND-' . substr($returnId, 0, 8),
                     'created_by' => $userId,
