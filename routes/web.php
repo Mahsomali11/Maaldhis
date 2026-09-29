@@ -22,25 +22,28 @@ Route::get('/test-login', function () {
     return "Login Failed";
 });
 
-// Normal User Login
-Route::get('/login', function () {
-    return Inertia::render('LoginPage');
-})->name('login');
+Route::middleware('guest')->group(function () {
+    // Normal User Login
+    Route::get('/login', function () {
+        return Inertia::render('LoginPage');
+    })->name('login');
 
-Route::post('/login', [\App\Http\Controllers\WebAuthController::class, 'login']);
+    Route::post('/login', [\App\Http\Controllers\WebAuthController::class, 'login']);
 
-// Normal User Signup
-Route::get('/signup', function () {
-    return Inertia::render('SignupPage');
-})->name('signup');
+    // Normal User Signup
+    Route::get('/signup', function () {
+        return Inertia::render('SignupPage');
+    })->name('signup');
 
-Route::post('/signup', [\App\Http\Controllers\WebAuthController::class, 'signup']);
-Route::post('/signup-with-store', [\App\Http\Controllers\WebAuthController::class, 'signupWithStore']);
+    Route::post('/signup', [\App\Http\Controllers\WebAuthController::class, 'signup']);
+    Route::post('/signup-with-store', [\App\Http\Controllers\WebAuthController::class, 'signupWithStore']);
 
-// Other public pages
-Route::post('/forgot-password', [\App\Http\Controllers\WebAuthController::class, 'forgotPassword']);
-Route::post('/reset-password', [\App\Http\Controllers\WebAuthController::class, 'resetPassword']);
-Route::get('/reset-password', fn() => Inertia::render('ResetPasswordPage'))->name('password.reset');
+    // Other public pages
+    Route::post('/forgot-password', [\App\Http\Controllers\WebAuthController::class, 'forgotPassword']);
+    Route::post('/reset-password', [\App\Http\Controllers\WebAuthController::class, 'resetPassword']);
+    Route::get('/reset-password', fn() => Inertia::render('ResetPasswordPage'))->name('password.reset');
+});
+
 Route::get('/license-blocked', fn() => Inertia::render('LicenseBlockPage'));
 
 // Logout (works for both, clears session)
@@ -50,13 +53,15 @@ Route::post('/logout', [\App\Http\Controllers\WebAuthController::class, 'logout'
 // ADMIN ROUTES — Requires auth + admin_roles entry
 // ============================================================
 
-// Admin Login page (public — not protected)
-Route::get('/admin/login', function () {
-    return Inertia::render('admin/AdminLoginPage');
-})->name('admin.login');
+Route::middleware('guest')->group(function () {
+    // Admin Login page (public — not protected)
+    Route::get('/admin/login', function () {
+        return Inertia::render('admin/AdminLoginPage');
+    })->name('admin.login');
 
-// Admin Login POST — handled by WebAuthController
-Route::post('/admin/login', [\App\Http\Controllers\WebAuthController::class, 'adminLogin'])->name('admin.login.post');
+    // Admin Login POST — handled by WebAuthController
+    Route::post('/admin/login', [\App\Http\Controllers\WebAuthController::class, 'adminLogin'])->name('admin.login.post');
+});
 
 // Admin Logout
 Route::post('/admin/logout', [\App\Http\Controllers\WebAuthController::class, 'adminLogout'])->name('admin.logout');

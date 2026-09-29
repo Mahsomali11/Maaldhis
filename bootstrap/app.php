@@ -23,6 +23,10 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\HandleInertiaRequests::class,
         ]);
 
+        $middleware->redirectUsersTo('/dashboard');
+
+        $middleware->redirectGuestsTo('/login');
+
         // Named middleware aliases
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
