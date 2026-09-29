@@ -84,21 +84,25 @@ Route::middleware(['auth:sanctum'])->group(function () {
             $storeId = $request->input('_store_id') ?? $request->input('store_id');
             if (!$storeId) return response()->json(['error' => 'Store ID is required'], 400);
 
+            // Fetch only lightweight or necessary historical data (limit to recent 500 to prevent bloat)
+            $recentSales = \App\Models\Sale::where('store_id', $storeId)->orderBy('sold_at', 'desc')->take(500)->get();
+            $recentSalesIds = $recentSales->pluck('id');
+
             return response()->json([
                 'items' => \App\Models\Item::where('store_id', $storeId)->get(),
                 'customers' => \App\Models\Customer::where('store_id', $storeId)->get(),
                 'suppliers' => \App\Models\Supplier::where('store_id', $storeId)->get(),
-                'expenses' => \App\Models\Expense::where('store_id', $storeId)->orderBy('created_at', 'desc')->get(),
-                'sales' => \App\Models\Sale::where('store_id', $storeId)->orderBy('sold_at', 'desc')->get(),
+                'expenses' => \App\Models\Expense::where('store_id', $storeId)->orderBy('created_at', 'desc')->take(500)->get(),
+                'sales' => $recentSales,
                 // sale_items doesn't have store_id directly, get via sales
-                'saleItems' => \App\Models\SaleItem::whereIn('sale_id', \App\Models\Sale::where('store_id', $storeId)->pluck('id'))->get(),
+                'saleItems' => \App\Models\SaleItem::whereIn('sale_id', $recentSalesIds)->get(),
                 'customerDebts' => \App\Models\CustomerDebt::where('store_id', $storeId)->get(),
-                'payments' => \App\Models\Payment::where('store_id', $storeId)->orderBy('created_at', 'desc')->get(),
-                'returns' => \App\Models\ReturnModel::where('store_id', $storeId)->get(),
+                'payments' => \App\Models\Payment::where('store_id', $storeId)->orderBy('created_at', 'desc')->take(500)->get(),
+                'returns' => \App\Models\ReturnModel::where('store_id', $storeId)->orderBy('created_at', 'desc')->take(200)->get(),
                 'staffAccounts' => \App\Models\StaffAccount::where('store_id', $storeId)->get(),
                 'stockTransfers' => \App\Models\StockTransfer::where(function($q) use ($storeId) {
                     $q->where('source_store_id', $storeId)->orWhere('destination_store_id', $storeId);
-                })->orderBy('created_at', 'desc')->get(),
+                })->orderBy('created_at', 'desc')->take(200)->get(),
                 'categories' => \App\Models\Category::where('store_id', $storeId)->orderBy('created_at', 'asc')->get(),
             ]);
         });
