@@ -12,12 +12,18 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('stores', function (Blueprint $table) {
-            $table->string('primary_color')->nullable();
-            $table->string('secondary_color')->nullable();
+            if (!Schema::hasColumn('stores', 'primary_color')) {
+                $table->string('primary_color')->nullable();
+            }
+            if (!Schema::hasColumn('stores', 'secondary_color')) {
+                $table->string('secondary_color')->nullable();
+            }
         });
 
         Schema::table('items', function (Blueprint $table) {
-            $table->string('image_path')->nullable();
+            if (!Schema::hasColumn('items', 'image_path')) {
+                $table->string('image_path')->nullable();
+            }
         });
     }
 

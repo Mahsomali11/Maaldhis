@@ -11,15 +11,17 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('categories', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->uuid('store_id')->nullable();
-            $table->string('name');
-            $table->text('description')->nullable();
-            $table->timestamps();
+        if (!Schema::hasTable('categories')) {
+            Schema::create('categories', function (Blueprint $table) {
+                $table->uuid('id')->primary();
+                $table->uuid('store_id')->nullable();
+                $table->string('name');
+                $table->text('description')->nullable();
+                $table->timestamps();
             
-            $table->foreign('store_id')->references('id')->on('stores')->onDelete('cascade');
-        });
+                $table->foreign('store_id')->references('id')->on('stores')->onDelete('cascade');
+            });
+        }
     }
 
     /**

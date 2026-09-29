@@ -12,11 +12,15 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('sales', function (Blueprint $table) {
-            $table->foreignUuid('payment_account_id')->nullable()->constrained('payment_accounts')->nullOnDelete();
+            if (!Schema::hasColumn('sales', 'payment_account_id')) {
+                $table->foreignUuid('payment_account_id')->nullable()->constrained('payment_accounts')->nullOnDelete();
+            }
         });
 
         Schema::table('expenses', function (Blueprint $table) {
-            $table->foreignUuid('payment_account_id')->nullable()->constrained('payment_accounts')->nullOnDelete();
+            if (!Schema::hasColumn('expenses', 'payment_account_id')) {
+                $table->foreignUuid('payment_account_id')->nullable()->constrained('payment_accounts')->nullOnDelete();
+            }
         });
     }
 

@@ -24,8 +24,12 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('items', function (Blueprint $table) {
-            $table->string('category')->nullable(false)->change();
-            $table->string('barcode')->nullable(false)->change();
+            if (!Schema::hasColumn('items', 'category')) {
+                $table->string('category')->nullable(false)->change();
+            }
+            if (!Schema::hasColumn('items', 'barcode')) {
+                $table->string('barcode')->nullable(false)->change();
+            }
         });
     }
 };

@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('stores', function (Blueprint $table) {
-            $table->string('receipt_template')->default('classic');
+            if (!Schema::hasColumn('stores', 'receipt_template')) {
+                $table->string('receipt_template')->default('classic');
+            }
         });
     }
 

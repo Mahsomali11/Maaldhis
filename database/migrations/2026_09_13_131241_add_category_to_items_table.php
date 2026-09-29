@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('items', function (Blueprint $table) {
-            $table->string('category')->default('');
+            if (!Schema::hasColumn('items', 'category')) {
+                $table->string('category')->default('');
+            }
         });
     }
 

@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('staff_accounts', function (Blueprint $table) {
-            $table->string('email')->nullable()->change();
+            if (!Schema::hasColumn('staff_accounts', 'email')) {
+                $table->string('email')->nullable()->change();
+            }
         });
     }
 

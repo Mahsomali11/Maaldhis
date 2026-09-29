@@ -12,10 +12,18 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('stores', function (Blueprint $table) {
-            $table->string('logo_url')->nullable();
-            $table->boolean('show_logo_on_receipt')->default(false);
-            $table->string('receipt_thank_you_message')->nullable();
-            $table->string('country')->nullable();
+            if (!Schema::hasColumn('stores', 'logo_url')) {
+                $table->string('logo_url')->nullable();
+            }
+            if (!Schema::hasColumn('stores', 'show_logo_on_receipt')) {
+                $table->boolean('show_logo_on_receipt')->default(false);
+            }
+            if (!Schema::hasColumn('stores', 'receipt_thank_you_message')) {
+                $table->string('receipt_thank_you_message')->nullable();
+            }
+            if (!Schema::hasColumn('stores', 'country')) {
+                $table->string('country')->nullable();
+            }
         });
     }
 

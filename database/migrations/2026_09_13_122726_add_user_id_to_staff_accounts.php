@@ -13,7 +13,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('staff_accounts', function (Blueprint $table) {
-            $table->foreignUuid('user_id')->nullable()->constrained('users')->nullOnDelete()->after('id');
+            if (!Schema::hasColumn('staff_accounts', 'user_id')) {
+                $table->foreignUuid('user_id')->nullable()->constrained('users')->nullOnDelete()->after('id');
+            }
         });
 
         // Backfill user_id based on email match

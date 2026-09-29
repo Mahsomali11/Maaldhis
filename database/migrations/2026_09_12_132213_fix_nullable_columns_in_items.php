@@ -12,8 +12,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('items', function (Blueprint $table) {
-            $table->string('barcode')->nullable()->change();
-            $table->string('item_code')->nullable()->change();
+            if (!Schema::hasColumn('items', 'barcode')) {
+                $table->string('barcode')->nullable()->change();
+            }
+            if (!Schema::hasColumn('items', 'item_code')) {
+                $table->string('item_code')->nullable()->change();
+            }
         });
     }
 
@@ -23,8 +27,12 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('items', function (Blueprint $table) {
-            $table->string('barcode')->default('')->change();
-            $table->string('item_code')->default('')->change();
+            if (!Schema::hasColumn('items', 'barcode')) {
+                $table->string('barcode')->default('')->change();
+            }
+            if (!Schema::hasColumn('items', 'item_code')) {
+                $table->string('item_code')->default('')->change();
+            }
         });
     }
 };
