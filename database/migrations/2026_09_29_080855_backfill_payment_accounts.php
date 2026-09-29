@@ -12,6 +12,13 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Add payment_account_id to payments table first
+        Schema::table('payments', function (Blueprint $table) {
+            if (!Schema::hasColumn('payments', 'payment_account_id')) {
+                $table->foreignUuid('payment_account_id')->nullable()->constrained('payment_accounts')->nullOnDelete();
+            }
+        });
+
         // Fetch all payment accounts
         $accounts = DB::table('payment_accounts')->get();
 
