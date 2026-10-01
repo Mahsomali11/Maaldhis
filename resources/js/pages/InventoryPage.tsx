@@ -150,6 +150,7 @@ export default function InventoryPage() {
       Type: item.type,
       Name: item.name,
       Category: item.category || '',
+      SubCategory: item.sub_category_id ? (storeCategories.find(c => c.id === item.sub_category_id)?.name || item.sub_category?.name || '') : (item.sub_category?.name || ''),
       Barcode: item.barcode || '',
       CostPrice: item.cost_price,
       SellPrice: item.sell_price,
@@ -181,18 +182,27 @@ export default function InventoryPage() {
           return;
         }
 
-        const newItems = data.map((row: any) => ({
-          store_id: currentStore?.id || '',
-          type: (row.Type || 'product').toLowerCase(),
-          name: String(row.Name || ''),
-          category: String(row.Category || '').trim(),
-          barcode: String(row.Barcode || ''),
-          cost_price: Number(row.CostPrice) || 0,
-          sell_price: Number(row.SellPrice) || 0,
-          quantity: Number(row.Quantity) || 0,
-          low_stock_threshold: Number(row.LowStockThreshold) || 5,
-          is_active: true
-        })).filter((item: any) => item.name); 
+        const newItems = data.map((row: any) => {
+          let subCategoryId = null;
+          if (row.SubCategory) {
+            const subCat = storeCategories.find(c => c.name.toLowerCase() === String(row.SubCategory).toLowerCase() && c.parent_id);
+            if (subCat) subCategoryId = subCat.id;
+          }
+          
+          return {
+            store_id: currentStore?.id || '',
+            type: (row.Type || 'product').toLowerCase(),
+            name: String(row.Name || ''),
+            category: String(row.Category || '').trim(),
+            sub_category_id: subCategoryId,
+            barcode: String(row.Barcode || ''),
+            cost_price: Number(row.CostPrice) || 0,
+            sell_price: Number(row.SellPrice) || 0,
+            quantity: Number(row.Quantity) || 0,
+            low_stock_threshold: Number(row.LowStockThreshold) || 5,
+            is_active: true
+          };
+        }).filter((item: any) => item.name); 
         
         if (newItems.length === 0) {
           toast.error('No valid items found to import');
@@ -208,6 +218,34 @@ export default function InventoryPage() {
       e.target.value = '';
     };
     reader.readAsBinaryString(file);
+  };
+
+  const handleDownloadSample = () => {
+    const sampleData = [{
+      Type: 'product',
+      Name: 'Sample Product Name',
+      Category: 'Electronics',
+      SubCategory: 'Phones',
+      Barcode: '1234567890',
+      CostPrice: 50,
+      SellPrice: 100,
+      Quantity: 20,
+      LowStockThreshold: 5,
+    }, {
+      Type: 'service',
+      Name: 'Repair Service',
+      Category: 'Services',
+      SubCategory: '',
+      Barcode: '',
+      CostPrice: 0,
+      SellPrice: 30,
+      Quantity: 0,
+      LowStockThreshold: 0,
+    }];
+    const ws = XLSX.utils.json_to_sheet(sampleData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Template");
+    XLSX.writeFile(wb, `inventory_import_template.xlsx`);
   };
 
   return (
@@ -330,6 +368,9 @@ export default function InventoryPage() {
                 </button>
               )}
               
+              <button onClick={handleDownloadSample} className="hidden lg:flex h-11 items-center gap-2 px-4 rounded-xl bg-background text-foreground hover:bg-accent border border-input text-sm font-bold cursor-pointer transition-colors shadow-sm capitalize">
+                <Download size={16} /> Sample
+              </button>
               <label className="hidden lg:flex h-11 items-center gap-2 px-4 rounded-xl bg-background text-foreground hover:bg-accent border border-input text-sm font-bold cursor-pointer transition-colors shadow-sm capitalize">
                 <Upload size={16} /> Import Excel
                 <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleUploadExcel} />
