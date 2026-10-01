@@ -5,6 +5,8 @@ import PageHeader from '@/components/PageHeader';
 import { Printer, Eye, Share2, Download, FileText, Calendar, Receipt, X, CircleDollarSign, CheckCircle2, RotateCcw, Box, ArrowUpRight, TrendingUp } from 'lucide-react';
 import { printReceipt, shareReceipt, type ReceiptFormat } from '@/lib/receipt-printer';
 import { toast } from 'sonner';
+import { api as apiClient } from '@/api';
+import { useEffect } from 'react';
 
 export default function ReceiptHistoryPage() {
   const { sales, saleItems, currentStore, formatCurrency, customers, payments, user } = useApp();
@@ -12,6 +14,14 @@ export default function ReceiptHistoryPage() {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [showFormatPicker, setShowFormatPicker] = useState(false);
   const [selectedSaleId, setSelectedSaleId] = useState<string | null>(null);
+  const [paymentAccounts, setPaymentAccounts] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (currentStore?.id) {
+      apiClient.from('payment_accounts').select('*').eq('store_id', currentStore.id)
+        .then(({ data }) => { if (data) setPaymentAccounts(data); });
+    }
+  }, [currentStore?.id]);
 
   // Parse selectedDate as local date (not UTC) to avoid timezone shift
   const [year, month, day] = selectedDate.split('-').map(Number);
@@ -25,7 +35,11 @@ export default function ReceiptHistoryPage() {
     const items = saleItems.filter(si => si.sale_id === sale.id);
     const customer = sale.customer_id ? customers.find(c => c.id === sale.customer_id) || null : null;
     const salePayment = payments.find(p => p.sale_id === sale.id && p.payment_type === 'sale');
-    const paymentMethod = salePayment ? salePayment.method : sale.sale_type;
+    const usedAccountId = sale.payment_account_id || salePayment?.payment_account_id;
+    const paymentMethod = usedAccountId 
+      ? (paymentAccounts.find(p => p.id === usedAccountId)?.account_name || 'Card/Transfer')
+      : (salePayment ? salePayment.method : sale.sale_type);
+      
     return { sale, items, customer, store: currentStore, cashierName: user?.full_name || '', formatCurrency, paymentMethod };
   };
 
@@ -105,7 +119,10 @@ export default function ReceiptHistoryPage() {
                       const items = saleItems.filter(si => si.sale_id === sale.id);
                       const customer = sale.customer_id ? customers.find(c => c.id === sale.customer_id) : null;
                       const salePayment = payments.find(p => p.sale_id === sale.id && p.payment_type === 'sale');
-                      const paymentMethod = salePayment ? salePayment.method : sale.sale_type;
+                      const usedAccountId = sale.payment_account_id || salePayment?.payment_account_id;
+                      const paymentMethod = usedAccountId 
+                        ? (paymentAccounts.find(p => p.id === usedAccountId)?.account_name || 'Card/Transfer')
+                        : (salePayment ? salePayment.method : sale.sale_type);
 
                       return (
                         <tr key={sale.id} className="hover:bg-muted/30 transition-colors group">
@@ -120,9 +137,9 @@ export default function ReceiptHistoryPage() {
                           </td>
                           <td className="px-6 py-5 text-center">
                             <span className={`inline-flex items-center gap-1 text-[10px] uppercase font-bold tracking-widest px-2.5 py-1 rounded-lg border ${
-                              sale.sale_type === 'cash' ? 'bg-primary/10 text-primary border-primary/20' :
+                              !sale.payment_account_id && sale.sale_type === 'cash' ? 'bg-primary/10 text-primary border-primary/20' :
                               sale.sale_type === 'credit' ? 'bg-warning/10 text-warning border-warning/20' :
-                              'bg-info/10 text-info border-info/20'
+                              'bg-blue-500/10 text-blue-500 border-blue-500/20'
                             }`}>
                               {paymentMethod}
                             </span>
@@ -174,7 +191,10 @@ export default function ReceiptHistoryPage() {
                     const items = saleItems.filter(si => si.sale_id === sale.id);
                     const customer = sale.customer_id ? customers.find(c => c.id === sale.customer_id) : null;
                     const salePayment = payments.find(p => p.sale_id === sale.id && p.payment_type === 'sale');
-                    const paymentMethod = salePayment ? salePayment.method : sale.sale_type;
+                    const usedAccountId = sale.payment_account_id || salePayment?.payment_account_id;
+                    const paymentMethod = usedAccountId 
+                      ? (paymentAccounts.find(p => p.id === usedAccountId)?.account_name || 'Card/Transfer')
+                      : (salePayment ? salePayment.method : sale.sale_type);
 
                     return (
                        <div key={sale.id} className="bg-card rounded-2xl border border-border p-5 shadow-sm">
@@ -193,7 +213,11 @@ export default function ReceiptHistoryPage() {
                              </div>
                              <div className="flex justify-between items-center pt-2 border-t border-border/50">
                                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Payment</span>
-                                <span className={`text-[10px] uppercase font-bold tracking-widest px-2.5 py-1 rounded-lg border ${sale.sale_type === 'cash' ? 'bg-primary/10 text-primary border-primary/20' : 'bg-warning/10 text-warning border-warning/20'}`}>
+                                <span className={`text-[10px] uppercase font-bold tracking-widest px-2.5 py-1 rounded-lg border ${
+                                  !sale.payment_account_id && sale.sale_type === 'cash' ? 'bg-primary/10 text-primary border-primary/20' : 
+                                  sale.sale_type === 'credit' ? 'bg-warning/10 text-warning border-warning/20' : 
+                                  'bg-blue-500/10 text-blue-500 border-blue-500/20'
+                                }`}>
                                    {paymentMethod}
                                 </span>
                              </div>

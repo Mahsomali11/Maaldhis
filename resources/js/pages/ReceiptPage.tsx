@@ -1,15 +1,25 @@
 import { router } from '@inertiajs/react';
 import { useApp } from '@/context/AppContext';
 import { Check, Printer, Share2, Download, FileText, ArrowLeft, RotateCcw, Plus } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { printReceipt, shareReceipt, type ReceiptFormat } from '@/lib/receipt-printer';
 import { toast } from 'sonner';
+import { api as apiClient } from '@/api';
 
 export default function ReceiptPage({ saleId }: { saleId?: string }) {
   const { sales, saleItems, customers, payments, currentStore, formatCurrency, user } = useApp();
   const navigate = (url: string) => router.visit(url);
   const [showFormatPicker, setShowFormatPicker] = useState(false);
   const [printAction, setPrintAction] = useState<'print' | 'download'>('print');
+  const [paymentAccounts, setPaymentAccounts] = useState<any[]>([]);
+
+  // Fetch payment accounts to correctly map the payment method name
+  useEffect(() => {
+    if (currentStore?.id) {
+      apiClient.from('payment_accounts').select('*').eq('store_id', currentStore.id)
+        .then(({ data }) => { if (data) setPaymentAccounts(data); });
+    }
+  }, [currentStore?.id]);
 
   const sale = sales.find(s => s.id === saleId);
   if (!sale) return <div className="min-h-screen bg-background flex flex-col items-center justify-center text-muted-foreground"><p className="text-lg font-semibold">Receipt not found</p><button onClick={() => navigate('/dashboard')} className="mt-4 px-6 py-2 rounded-xl bg-primary text-primary-foreground font-bold">Go to Dashboard</button></div>;
@@ -18,7 +28,10 @@ export default function ReceiptPage({ saleId }: { saleId?: string }) {
   const customer = sale.customer_id ? customers.find(c => c.id === sale.customer_id) : null;
 
   const salePayment = payments.find(p => p.sale_id === sale.id && p.payment_type === 'sale');
-  const paymentMethod = salePayment ? salePayment.method : sale.sale_type;
+  const usedAccountId = sale.payment_account_id || salePayment?.payment_account_id;
+  const paymentMethod = usedAccountId 
+    ? (paymentAccounts.find(p => p.id === usedAccountId)?.account_name || 'Card/Transfer')
+    : (salePayment ? salePayment.method : sale.sale_type);
 
   const receiptData = {
     sale,
