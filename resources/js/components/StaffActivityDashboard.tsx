@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '@/context/AppContext';
 import { api as apiClient } from '@/api';
-import { ArrowLeft, Download, FileText, Calendar, DollarSign, Activity, TrendingUp, TrendingDown, Clock, ShieldCheck, Calculator } from 'lucide-react';
+import { ArrowLeft, Download, FileText, Calendar, DollarSign, Activity, TrendingUp, TrendingDown, Clock, ShieldCheck, Calculator, Receipt } from 'lucide-react';
 import { format, startOfWeek, startOfMonth } from 'date-fns';
 
 interface Props {
@@ -209,7 +209,7 @@ export default function StaffActivityDashboard({ staff, onClose }: Props) {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           <div className="bg-card border border-border p-6 rounded-3xl shadow-sm">
             <div className="flex items-center gap-3 mb-4 text-primary">
-              <div className="p-2.5 bg-primary/10 rounded-xl"><DollarSign size={20} /></div>
+              <div className="p-2.5 bg-primary/10 rounded-xl"><Receipt size={20} /></div>
               <h3 className="font-bold text-sm  capitalize tracking-wider text-muted-foreground">Total Sales</h3>
             </div>
             <p className="text-3xl font-black text-foreground">{totalSalesCount}</p>
