@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import PageHeader from '@/components/PageHeader';
 import { useApp } from '@/context/AppContext';
-import { Trash2, UserPlus, X, Pencil, Plus, Search, ShieldAlert, BadgeCheck, LayoutGrid } from 'lucide-react';
+import { Trash2, UserPlus, X, Pencil, Plus, Search, ShieldAlert, BadgeCheck, LayoutGrid, Eye } from 'lucide-react';
+import StaffActivityDashboard from '@/components/StaffActivityDashboard';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -34,6 +35,7 @@ export default function StaffAccountsPage() {
   const [role, setRole] = useState<'admin' | 'cashier' | 'inventory_manager'>('cashier');
   const [storeId, setStoreId] = useState<string>(currentStore?.id || '');
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [viewingStaffId, setViewingStaffId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
 
   const storeStaff = staffAccounts.filter(s => 
@@ -112,8 +114,11 @@ export default function StaffAccountsPage() {
      return <span className="inline-flex items-center gap-1 bg-success/10 text-success border border-success/20 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest"><BadgeCheck size={10} /> Cashier</span>;
   };
 
+  const viewingStaff = viewingStaffId ? staffAccounts.find(s => s.id === viewingStaffId) : null;
+
   return (
     <div className="min-h-screen bg-[#F8F9FA] dark:bg-background pb-12">
+      {viewingStaff && <StaffActivityDashboard staff={viewingStaff} onClose={() => setViewingStaffId(null)} />}
       <PageHeader 
         title="Staff Accounts" 
         rightAction={
@@ -189,6 +194,13 @@ export default function StaffAccountsPage() {
                         <td className="px-6 py-5 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <button 
+                              onClick={() => setViewingStaffId(staff.id)} 
+                              className="w-10 h-10 rounded-xl bg-muted text-muted-foreground hover:text-primary hover:bg-primary/10 flex items-center justify-center transition-colors"
+                              title="View Activity"
+                            >
+                              <Eye size={16} />
+                            </button>
+                            <button 
                               onClick={() => openEdit(staff)} 
                               className="w-10 h-10 rounded-xl bg-muted text-muted-foreground hover:text-primary hover:bg-primary/10 flex items-center justify-center transition-colors"
                               title="Edit Staff"
@@ -237,6 +249,12 @@ export default function StaffAccountsPage() {
                         </div>
                      </div>
                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => setViewingStaffId(staff.id)} 
+                          className="flex-1 py-2.5 rounded-xl bg-muted text-foreground hover:bg-accent text-xs font-bold flex items-center justify-center gap-2 transition-colors"
+                        >
+                          <Eye size={14} /> View
+                        </button>
                         <button 
                           onClick={() => openEdit(staff)} 
                           className="flex-1 py-2.5 rounded-xl bg-muted text-foreground hover:bg-accent text-xs font-bold flex items-center justify-center gap-2 transition-colors"

@@ -56,13 +56,13 @@ export default function InventoryPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [showScanner, setShowScanner] = useState(false);
-  const [form, setForm] = useState({ name: '', category: '', barcode: '', cost_price: '', sell_price: '', quantity: '', low_stock_threshold: '5', image_path: '' });
+  const [form, setForm] = useState({ name: '', category: '', sub_category_id: '', barcode: '', cost_price: '', sell_price: '', quantity: '', low_stock_threshold: '5', image_path: '' });
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
 
   const storeItems = items.filter(i => i.store_id === currentStore?.id && i.type === tab && i.is_active);
   const storeCategories = categories.filter(c => c.store_id === currentStore?.id);
   const existingItemCategories = Array.from(new Set(storeItems.map(i => i.category).filter(Boolean)));
-  const allCategoryNames = Array.from(new Set([...storeCategories.map(c => c.name), ...existingItemCategories]));
+  const allCategoryNames = Array.from(new Set([...storeCategories.filter(c => !c.parent_id).map(c => c.name), ...existingItemCategories]));
 
   let filtered = storeItems.filter(i => 
     i.name.toLowerCase().includes(search.toLowerCase()) || 
@@ -87,6 +87,7 @@ export default function InventoryPage() {
     setForm({
       name: item.name,
       category: item.category || '',
+      sub_category_id: item.sub_category_id || '',
       barcode: item.barcode || '',
       cost_price: String(item.cost_price),
       sell_price: String(item.sell_price),
@@ -104,6 +105,7 @@ export default function InventoryPage() {
         await updateItem(editingItem, {
           name: form.name,
           category: form.category.trim(),
+          sub_category_id: form.sub_category_id || null,
           barcode: form.barcode,
           cost_price: Number(form.cost_price),
           sell_price: Number(form.sell_price),
@@ -119,6 +121,7 @@ export default function InventoryPage() {
           item_code: `#${String(items.length + 1).padStart(3, '0')}`,
           name: form.name,
           category: form.category.trim(),
+          sub_category_id: form.sub_category_id || null,
           type: tab,
           barcode: form.barcode,
           cost_price: Number(form.cost_price),
@@ -130,7 +133,7 @@ export default function InventoryPage() {
         });
         toast.success('Item added successfully');
       }
-      setForm({ name: '', category: '', barcode: '', cost_price: '', sell_price: '', quantity: '', low_stock_threshold: '5', image_path: '' });
+      setForm({ name: '', category: '', sub_category_id: '', barcode: '', cost_price: '', sell_price: '', quantity: '', low_stock_threshold: '5', image_path: '' });
       setShowForm(false);
       setEditingItem(null);
     } catch (err: any) {
@@ -483,14 +486,41 @@ export default function InventoryPage() {
                 
                 <div>
                   <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Category</label>
-                  <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
-                    className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all appearance-none">
+                  <select 
+                    value={form.category} 
+                    onChange={e => setForm(f => ({ ...f, category: e.target.value, sub_category_id: '' }))}
+                    className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all appearance-none"
+                  >
                     <option value="">Select Category (Optional)</option>
                     {allCategoryNames.map(c => (
                       <option key={c} value={c}>{c}</option>
                     ))}
                   </select>
                 </div>
+
+                {/* Sub-Category dynamic rendering */}
+                {(() => {
+                  const selectedCatObj = storeCategories.find(c => c.name === form.category && !c.parent_id);
+                  if (!selectedCatObj) return null;
+                  const availableSubcategories = storeCategories.filter(c => c.parent_id === selectedCatObj.id);
+                  if (availableSubcategories.length === 0) return null;
+                  
+                  return (
+                    <div>
+                      <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Sub-Category</label>
+                      <select 
+                        value={form.sub_category_id} 
+                        onChange={e => setForm(f => ({ ...f, sub_category_id: e.target.value }))}
+                        className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all appearance-none"
+                      >
+                        <option value="">Select Sub-Category (Optional)</option>
+                        {availableSubcategories.map(sub => (
+                          <option key={sub.id} value={sub.id}>{sub.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  );
+                })()}
 
                 <div>
                   <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Barcode</label>
@@ -533,7 +563,7 @@ export default function InventoryPage() {
                 )}
 
                 <div className="flex gap-3 pt-6 border-t border-border mt-6">
-                  <button type="button" onClick={() => { setShowForm(false); setEditingItem(null); setForm({ name: '', category: '', barcode: '', cost_price: '', sell_price: '', quantity: '', low_stock_threshold: '5', image_path: '' }); }} className="flex-1 py-3 rounded-xl bg-muted text-foreground text-sm font-bold hover:bg-accent transition-colors">Cancel</button>
+                  <button type="button" onClick={() => { setShowForm(false); setEditingItem(null); setForm({ name: '', category: '', sub_category_id: '', barcode: '', cost_price: '', sell_price: '', quantity: '', low_stock_threshold: '5', image_path: '' }); }} className="flex-1 py-3 rounded-xl bg-muted text-foreground text-sm font-bold hover:bg-accent transition-colors">Cancel</button>
                   <button type="submit" className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:opacity-90 transition-opacity shadow-sm">{editingItem ? 'Save Changes' : 'Add Item'}</button>
                 </div>
                </form>

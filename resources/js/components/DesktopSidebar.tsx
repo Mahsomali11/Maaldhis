@@ -77,7 +77,7 @@ export default function DesktopSidebar({ isMobile = false }: { isMobile?: boolea
     if (role === 'superadmin') return true;
     if (role === 'owner' || role === 'admin') return true;
     if (role === 'cashier') {
-      const allowedPaths = ['/dashboard', '/start-sale', '/receipt-history', '/returns', '/customers', '/profile', '/help'];
+      const allowedPaths = ['/dashboard', '/start-sale', '/receipt-history', '/returns', '/customers', '/profile', '/help', '/expenses'];
       return allowedPaths.includes(path);
     }
     if (role === 'inventory_manager') {

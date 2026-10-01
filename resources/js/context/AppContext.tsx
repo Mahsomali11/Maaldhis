@@ -519,6 +519,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const completeSale = useCallback(async (saleType: 'cash' | 'credit' | 'mixed', customerId: string | null, paidAmount: number, paymentAccountId: string | null) => {
     const subtotal = state.cart.reduce((sum, c) => sum + c.line_total, 0);
     if (subtotal === 0) return null;
+
+    // Backend constraint: Prevent checkout if any item's selling price is less than its cost price
+    const invalidItem = state.cart.find(c => c.item.sell_price < c.item.cost_price);
+    if (invalidItem) {
+      throw new Error(`Transaction rejected: Selling price for ${invalidItem.item.name} is less than its cost price.`);
+    }
     
     const storeTaxRate = state.currentStore?.tax_enabled ? (state.currentStore.tax_rate || 0) : 0;
     const tax = subtotal * (storeTaxRate / 100);

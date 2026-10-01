@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import PageHeader from '@/components/PageHeader';
-import { Search, Trash2, Edit, Plus, X, FolderTree, FileText } from 'lucide-react';
+import { Search, Trash2, Edit, Plus, X, FolderTree, FileText, Eye, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -18,21 +18,27 @@ export default function CategoriesPage() {
   const { categories, addCategory, updateCategory, deleteCategory, currentStore } = useApp();
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ name: '', description: '' });
+  const [form, setForm] = useState({ name: '', description: '', parent_id: '' });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [viewingCategoryId, setViewingCategoryId] = useState<string | null>(null);
 
   const storeCategories = categories.filter(c => c.store_id === currentStore?.id);
-  const filtered = storeCategories.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
+  const viewingCategory = viewingCategoryId ? storeCategories.find(c => c.id === viewingCategoryId) : null;
+  const categoriesToDisplay = viewingCategory 
+    ? storeCategories.filter(c => c.parent_id === viewingCategoryId)
+    : storeCategories.filter(c => !c.parent_id);
+
+  const filtered = categoriesToDisplay.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
   const categoryToDelete = deleteId ? categories.find(c => c.id === deleteId) : null;
 
   const handleOpenForm = (category?: any) => {
     if (category) {
       setEditingId(category.id);
-      setForm({ name: category.name, description: category.description || '' });
+      setForm({ name: category.name, description: category.description || '', parent_id: category.parent_id || '' });
     } else {
       setEditingId(null);
-      setForm({ name: '', description: '' });
+      setForm({ name: '', description: '', parent_id: viewingCategoryId || '' });
     }
     setShowForm(true);
   };
@@ -45,6 +51,7 @@ export default function CategoriesPage() {
       await updateCategory(editingId, {
         name: form.name,
         description: form.description,
+        parent_id: form.parent_id || null,
       });
       toast.success('Category updated');
     } else {
@@ -52,6 +59,7 @@ export default function CategoriesPage() {
         store_id: currentStore.id,
         name: form.name,
         description: form.description,
+        parent_id: form.parent_id || null,
       });
       toast.success('Category added');
     }
@@ -68,15 +76,26 @@ export default function CategoriesPage() {
   return (
     <div className="min-h-screen bg-[#F8F9FA] dark:bg-background pb-12">
       <PageHeader 
-        title="Categories" 
+        title={viewingCategory ? viewingCategory.name : "Categories"} 
         rightAction={
-          <button 
-            onClick={() => handleOpenForm()}
-            className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-bold hover:bg-primary/90 transition-all shadow-sm"
-          >
-            <Plus size={18} />
-            <span className="hidden sm:inline">Add Category</span>
-          </button>
+          <div className="flex items-center gap-3">
+            {viewingCategory && (
+              <button 
+                onClick={() => setViewingCategoryId(null)}
+                className="flex items-center gap-2 px-4 py-2.5 bg-background border border-border text-foreground rounded-xl text-sm font-bold hover:bg-muted transition-all shadow-sm"
+              >
+                <ArrowLeft size={18} />
+                <span className="hidden sm:inline">Back</span>
+              </button>
+            )}
+            <button 
+              onClick={() => handleOpenForm()}
+              className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-bold hover:bg-primary/90 transition-all shadow-sm"
+            >
+              <Plus size={18} />
+              <span className="hidden sm:inline">Add {viewingCategory ? 'Sub-Category' : 'Category'}</span>
+            </button>
+          </div>
         }
       />
       
@@ -136,12 +155,20 @@ export default function CategoriesPage() {
                           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
                             <FolderTree size={18} />
                           </div>
-                          <span className="font-bold text-foreground text-sm">{c.name}</span>
+                          <div className="flex flex-col">
+                            <span className="font-bold text-foreground text-sm">{c.name}</span>
+                            {c.parent_id && (
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                Sub-category of <span className="font-semibold">{storeCategories.find(p => p.id === c.parent_id)?.name || 'Unknown'}</span>
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-muted-foreground max-w-xl truncate">{c.description || '—'}</td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => setViewingCategoryId(c.id)} className="p-2 rounded-lg bg-background border border-border text-muted-foreground hover:bg-accent hover:text-foreground transition-colors shadow-sm" title="View Sub-Categories"><Eye size={14} /></button>
                           <button onClick={() => handleOpenForm(c)} className="p-2 rounded-lg bg-background border border-border text-muted-foreground hover:bg-accent hover:text-foreground transition-colors shadow-sm" title="Edit Category"><Edit size={14} /></button>
                           <button onClick={() => setDeleteId(c.id)} className="p-2 rounded-lg bg-background border border-border text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20 transition-colors shadow-sm" title="Delete Category"><Trash2 size={14} /></button>
                         </div>
@@ -161,9 +188,17 @@ export default function CategoriesPage() {
                       <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
                         <FolderTree size={20} />
                       </div>
-                      <h4 className="font-bold text-foreground text-base">{c.name}</h4>
+                      <div className="flex flex-col">
+                        <h4 className="font-bold text-foreground text-base">{c.name}</h4>
+                        {c.parent_id && (
+                          <span className="text-xs text-muted-foreground flex items-center gap-1">
+                            Sub of <span className="font-semibold">{storeCategories.find(p => p.id === c.parent_id)?.name || 'Unknown'}</span>
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-1">
+                      <button onClick={() => setViewingCategoryId(c.id)} className="p-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"><Eye size={16} /></button>
                       <button onClick={() => handleOpenForm(c)} className="p-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"><Edit size={16} /></button>
                       <button onClick={() => setDeleteId(c.id)} className="p-2 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><Trash2 size={16} /></button>
                     </div>
@@ -208,6 +243,22 @@ export default function CategoriesPage() {
                   className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all" 
                   required 
                 />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Parent Category (Optional)</label>
+                <select 
+                  value={form.parent_id} 
+                  onChange={e => setForm(f => ({ ...f, parent_id: e.target.value }))} 
+                  className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all"
+                >
+                  <option value="">None (Top-Level Category)</option>
+                  {storeCategories
+                    .filter(c => c.id !== editingId && !c.parent_id) // Only allow top-level categories as parents, prevent circular
+                    .map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
               </div>
               
               <div>

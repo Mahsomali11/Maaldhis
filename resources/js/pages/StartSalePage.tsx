@@ -29,9 +29,9 @@ export default function StartSalePage() {
   const [tempPrice, setTempPrice] = useState('');
   
   const [activeCategory, setActiveCategory] = useState<string>('All');
+  const [activeParentId, setActiveParentId] = useState<string | null>(null);
   
   const storeCategories = allCategories ? allCategories.filter(c => c.store_id === currentStore?.id) : [];
-  const categories = ['All', ...storeCategories.map(c => c.name)];
 
   const navigate = (url: string, options?: any) => router.visit(url, options);
 
@@ -71,12 +71,63 @@ export default function StartSalePage() {
     i.is_active && 
     (i.is_service || i.quantity > 0)
   );
-  const filtered = storeItems.filter((i) =>
-    (activeCategory === 'All' || i.category === activeCategory) && 
-    (i.name.toLowerCase().includes(search.toLowerCase()) ||
-    i.barcode?.includes(search) ||
-    i.item_code?.toLowerCase().includes(search.toLowerCase()))
-  );
+
+  const categoryHasItems = (categoryId: string, categoryName: string, isSub: boolean = false) => {
+    if (isSub) {
+      return storeItems.some(i => i.sub_category_id === categoryId);
+    }
+    return storeItems.some(i => i.category === categoryName);
+  };
+
+  const topLevelCategories = storeCategories.filter(c => !c.parent_id && categoryHasItems(c.id, c.name, false));
+
+  const currentLevelCategories = activeParentId 
+    ? storeCategories.filter(c => c.parent_id === activeParentId && categoryHasItems(c.id, c.name, true))
+    : topLevelCategories;
+
+  const filtered = storeItems.filter((i) => {
+    const matchesSearch = i.name.toLowerCase().includes(search.toLowerCase()) ||
+                          i.barcode?.includes(search) ||
+                          i.item_code?.toLowerCase().includes(search.toLowerCase());
+    if (!matchesSearch) return false;
+
+    if (activeParentId) {
+       const parentCat = storeCategories.find(c => c.id === activeParentId);
+       if (activeCategory === 'All') {
+          return i.category === parentCat?.name;
+       } else {
+          return i.sub_category_id === activeCategory;
+       }
+    } else {
+       if (activeCategory === 'All') return true;
+       return i.category === activeCategory;
+    }
+  });
+
+  const handleCategoryClick = (cat: any) => {
+    if (cat === 'All') {
+      setActiveCategory('All');
+      setActiveParentId(null);
+      return;
+    }
+    if (cat === 'Back') {
+      setActiveCategory('All');
+      setActiveParentId(null);
+      return;
+    }
+    
+    if (!activeParentId) {
+      const subs = storeCategories.filter(c => c.parent_id === cat.id && categoryHasItems(c.id, c.name, true));
+      if (subs.length > 0) {
+        setActiveParentId(cat.id);
+        setActiveCategory('All');
+      } else {
+        setActiveCategory(cat.name);
+      }
+    } else {
+      setActiveCategory(cat.id);
+    }
+  };
   
   const cartSubtotal = cart.reduce((sum, c) => sum + c.line_total, 0);
   const storeTaxRate = currentStore?.tax_enabled ? (currentStore.tax_rate || 0) : 0;
@@ -131,6 +182,8 @@ export default function StartSalePage() {
         toast.success('Sale completed!');
         navigate('/receipt/' + sale.id);
       }
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to complete sale.');
     } finally {
       setIsSubmitting(false);
     }
@@ -143,6 +196,13 @@ export default function StartSalePage() {
 
   const handleSavePrice = (itemId: string) => {
     const newPrice = Number(tempPrice);
+    const cartItem = cart.find(c => c.item.id === itemId);
+    
+    if (cartItem && newPrice < Number(cartItem.item.cost_price)) {
+      toast.error(`Selling price cannot be less than the item cost price of ${formatCurrency(cartItem.item.cost_price)}`);
+      return;
+    }
+
     if (newPrice > 0) {
       updateCartPrice(itemId, newPrice);
     }
@@ -368,18 +428,60 @@ export default function StartSalePage() {
 
         {/* Categories */}
         <div className="flex gap-2 overflow-x-auto pb-4 mb-2 scrollbar-hide shrink-0 snap-x">
-          {categories.map((cat) => (
-            <button 
-              key={cat} 
-              onClick={() => setActiveCategory(cat)}
-              className={`px-5 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-widest whitespace-nowrap transition-all shadow-sm snap-start ${
-                activeCategory === cat 
-                  ? 'bg-foreground text-background scale-105' 
-                  : 'bg-card border border-border text-muted-foreground hover:bg-muted hover:text-foreground'
-              }`}>
-              {cat}
-            </button>
-          ))}
+          {activeParentId ? (
+            <>
+              <button 
+                onClick={() => handleCategoryClick('Back')}
+                className="px-4 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-widest whitespace-nowrap transition-all shadow-sm snap-start bg-card border border-border text-muted-foreground hover:bg-muted hover:text-foreground flex items-center gap-1">
+                <ArrowLeft size={14} /> Back
+              </button>
+              <button 
+                onClick={() => setActiveCategory('All')}
+                className={`px-5 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-widest whitespace-nowrap transition-all shadow-sm snap-start ${
+                  activeCategory === 'All'
+                    ? 'bg-foreground text-background scale-105' 
+                    : 'bg-card border border-border text-muted-foreground hover:bg-muted hover:text-foreground'
+                }`}>
+                All in {storeCategories.find(c => c.id === activeParentId)?.name}
+              </button>
+              {currentLevelCategories.map((cat) => (
+                <button 
+                  key={cat.id} 
+                  onClick={() => handleCategoryClick(cat)}
+                  className={`px-5 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-widest whitespace-nowrap transition-all shadow-sm snap-start ${
+                    activeCategory === cat.id 
+                      ? 'bg-foreground text-background scale-105' 
+                      : 'bg-card border border-border text-muted-foreground hover:bg-muted hover:text-foreground'
+                  }`}>
+                  {cat.name}
+                </button>
+              ))}
+            </>
+          ) : (
+            <>
+              <button 
+                onClick={() => handleCategoryClick('All')}
+                className={`px-5 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-widest whitespace-nowrap transition-all shadow-sm snap-start ${
+                  activeCategory === 'All' 
+                    ? 'bg-foreground text-background scale-105' 
+                    : 'bg-card border border-border text-muted-foreground hover:bg-muted hover:text-foreground'
+                }`}>
+                All
+              </button>
+              {currentLevelCategories.map((cat) => (
+                <button 
+                  key={cat.id} 
+                  onClick={() => handleCategoryClick(cat)}
+                  className={`px-5 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-widest whitespace-nowrap transition-all shadow-sm snap-start ${
+                    activeCategory === cat.name 
+                      ? 'bg-foreground text-background scale-105' 
+                      : 'bg-card border border-border text-muted-foreground hover:bg-muted hover:text-foreground'
+                  }`}>
+                  {cat.name}
+                </button>
+              ))}
+            </>
+          )}
         </div>
 
         {/* Product Grid */}
@@ -393,7 +495,7 @@ export default function StartSalePage() {
               <p className="text-sm font-medium mt-2 max-w-sm text-center">Adjust your search query or select a different category to find products.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
+            <div className={`grid gap-4 ${cart.length === 0 ? 'grid-cols-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8' : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5'}`}>
               {filtered.map((item) => {
                 const inCart = cart.find((c) => c.item.id === item.id);
                 // Placeholder image generator based on product name
@@ -430,9 +532,11 @@ export default function StartSalePage() {
       </div>
 
       {/* Right Area (Checkout Panel - Desktop Only) */}
-      <div className="hidden lg:block w-[400px] xl:w-[450px] p-6 pl-0 h-full">
-         <CheckoutPanel />
-      </div>
+      {cart.length > 0 && (
+        <div className="hidden lg:block w-[400px] xl:w-[450px] p-6 pl-0 h-full animate-in fade-in slide-in-from-right-8 duration-300">
+           <CheckoutPanel />
+        </div>
+      )}
 
       {/* Mobile Cart Floating Button */}
       {cart.length > 0 && (
