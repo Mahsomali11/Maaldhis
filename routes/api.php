@@ -89,7 +89,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
             $recentSalesIds = $recentSales->pluck('id');
 
             return response()->json([
-                'items' => \App\Models\Item::where('store_id', $storeId)->get(),
+                'items' => \App\Models\Item::with(['subCategory'])->where('store_id', $storeId)->get(),
                 'customers' => \App\Models\Customer::where('store_id', $storeId)->get(),
                 'suppliers' => \App\Models\Supplier::where('store_id', $storeId)->get(),
                 'expenses' => \App\Models\Expense::where('store_id', $storeId)->orderBy('created_at', 'desc')->take(500)->get(),

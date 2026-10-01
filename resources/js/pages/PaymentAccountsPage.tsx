@@ -238,7 +238,7 @@ export default function PaymentAccountsPage() {
             <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center mb-6">
               <Wallet size={32} className="text-muted-foreground/50" />
             </div>
-            <h3 className="text-foreground font-semibold text-lg">No payment accounts found</h3>
+            <h3 className="text-foreground font-semibold text-lg capitalize">No payment accounts found</h3>
             <p className="text-sm text-muted-foreground mt-2 max-w-sm">
               Add a payment account to accept payments from customers during checkout.
             </p>
@@ -256,11 +256,11 @@ export default function PaymentAccountsPage() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-border/50 bg-muted/10">
-                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Account Details</th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Type</th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Provider</th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-center">Status</th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-right">Actions</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">Account Details</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">Type</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">Provider</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest text-center">Status</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/50">
@@ -283,7 +283,7 @@ export default function PaymentAccountsPage() {
                       </td>
                       <td className="px-6 py-4 text-center">
                         <div className="flex items-center justify-center gap-3">
-                          <span className={`text-[10px] font-bold uppercase tracking-wider w-12 text-left ${account.is_active ? 'text-success' : 'text-muted-foreground'}`}>
+                          <span className={`text-[10px] font-bold  capitalize tracking-wider w-12 text-left ${account.is_active ? 'text-success' : 'text-muted-foreground'}`}>
                             {account.is_active ? 'Active' : 'Hidden'}
                           </span>
                           <Switch
@@ -336,7 +336,7 @@ export default function PaymentAccountsPage() {
                         {getTypeIcon(account.account_type)}
                       </div>
                       <div>
-                        <h4 className="font-bold text-foreground text-base leading-tight">{account.account_name}</h4>
+                        <h4 className="font-bold text-foreground text-base leading-tight capitalize">{account.account_name}</h4>
                         {account.account_number && <span className="text-xs font-mono text-muted-foreground">{account.account_number}</span>}
                       </div>
                     </div>
@@ -351,7 +351,7 @@ export default function PaymentAccountsPage() {
                   <div className="space-y-3 pt-3 border-t border-border/50">
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-muted-foreground">Type</span>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${typeColor(account.account_type)}`}>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold  capitalize tracking-wider border ${typeColor(account.account_type)}`}>
                         {account.account_type}
                       </span>
                     </div>
@@ -380,10 +380,10 @@ export default function PaymentAccountsPage() {
         <div className="fixed inset-0 z-50 bg-foreground/20 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
           <div className="w-full sm:max-w-md bg-card rounded-t-3xl sm:rounded-3xl border border-border shadow-2xl overflow-hidden animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300">
             <div className="flex justify-between items-center px-6 py-5 border-b border-border bg-muted/10">
-              <h3 className="text-xl font-bold text-foreground">{editingId ? 'Edit Account' : 'New Account'}</h3>
+              <h3 className="text-xl font-bold text-foreground capitalize">{editingId ? 'Edit Account' : 'New Account'}</h3>
               <button 
                 onClick={resetForm}
-                className="w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                className="w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors capitalize"
               >
                 <X size={16} />
               </button>
@@ -391,7 +391,7 @@ export default function PaymentAccountsPage() {
             
             <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-5">
               <div>
-                <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Account Name <span className="text-destructive">*</span></label>
+                <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Account Name <span className="text-destructive">*</span></label>
                 <input
                   value={form.account_name}
                   onChange={(e) => setForm({ ...form, account_name: e.target.value })}
@@ -402,7 +402,7 @@ export default function PaymentAccountsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Account Type</label>
+                <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Account Type</label>
                 <select
                   value={form.account_type}
                   onChange={(e) => setForm({ ...form, account_type: e.target.value })}
@@ -415,7 +415,7 @@ export default function PaymentAccountsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Account Number <span className="lowercase font-medium">(optional)</span></label>
+                <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Account Number <span className="lowercase font-medium">(optional)</span></label>
                 <input
                   value={form.account_number}
                   onChange={(e) => setForm({ ...form, account_number: e.target.value })}
@@ -425,7 +425,7 @@ export default function PaymentAccountsPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Provider Name <span className="lowercase font-medium">(optional)</span></label>
+                <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Provider Name <span className="lowercase font-medium">(optional)</span></label>
                 <input
                   value={form.provider_name}
                   onChange={(e) => setForm({ ...form, provider_name: e.target.value })}
@@ -438,13 +438,13 @@ export default function PaymentAccountsPage() {
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="flex-1 py-3 rounded-xl bg-muted text-foreground text-sm font-bold hover:bg-accent transition-colors"
+                  className="flex-1 py-3 rounded-xl bg-muted text-foreground text-sm font-bold hover:bg-accent transition-colors capitalize"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-sm hover:opacity-90 transition-opacity"
+                  className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-sm hover:opacity-90 transition-opacity capitalize"
                 >
                   {editingId ? 'Save Changes' : 'Add Account'}
                 </button>

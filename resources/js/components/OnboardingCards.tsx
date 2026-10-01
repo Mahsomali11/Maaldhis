@@ -49,12 +49,12 @@ export default function OnboardingCards() {
     <div className="bg-card rounded-2xl ring-1 ring-border shadow-sm p-4 lg:p-5 animate-fade-in">
       <div className="flex items-center justify-between mb-3">
         <div>
-          <h3 className="font-bold text-foreground text-sm">Getting Started</h3>
+          <h3 className="font-bold text-foreground text-sm capitalize">Getting Started</h3>
           <p className="text-xs text-muted-foreground">{completedCount}/{steps.length} completed</p>
         </div>
         <div className="flex items-center gap-3">
           <span className="text-xs font-semibold text-primary">{Math.round(progress)}%</span>
-          <button onClick={handleDismiss} className="p-1 text-muted-foreground hover:text-foreground">
+          <button onClick={handleDismiss} className="p-1 text-muted-foreground hover:text-foreground capitalize">
             <X size={14} />
           </button>
         </div>

@@ -40,7 +40,7 @@ export default function PreferencesPage() {
         rightAction={
           <button 
             onClick={handleSave}
-            className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2 rounded-md text-sm font-bold shadow-sm hover:opacity-90 transition-opacity"
+            className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2 rounded-md text-sm font-bold shadow-sm hover:opacity-90 transition-opacity capitalize"
           >
             <Save size={16} />
             <span className="hidden sm:inline">Save Changes</span>
@@ -53,7 +53,7 @@ export default function PreferencesPage() {
         {/* Section 1: General Preferences */}
         <div className="flex flex-col md:flex-row gap-8 pb-10 border-b border-border">
           <div className="w-full md:w-1/3 shrink-0">
-            <h2 className="text-base font-semibold text-foreground mb-2">General Settings</h2>
+            <h2 className="text-base font-semibold text-foreground mb-2 capitalize">General Settings</h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Configure the primary currency and inventory thresholds for your store.
             </p>
@@ -63,7 +63,7 @@ export default function PreferencesPage() {
                 <div className="p-6 space-y-5">
                   
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Store Currency</label>
+                    <label className="text-xs font-bold text-muted-foreground  capitalize tracking-wider">Store Currency</label>
                     <select 
                       value={currency} 
                       onChange={e => setCurrency(e.target.value)}
@@ -88,7 +88,7 @@ export default function PreferencesPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Low Stock Threshold</label>
+                    <label className="text-xs font-bold text-muted-foreground  capitalize tracking-wider">Low Stock Threshold</label>
                     <input 
                       type="number" 
                       value={lowStockThreshold} 
@@ -108,7 +108,7 @@ export default function PreferencesPage() {
         {/* Section 2: Financial & Tax */}
         <div className="flex flex-col md:flex-row gap-8 pb-10 border-b border-border">
           <div className="w-full md:w-1/3 shrink-0">
-            <h2 className="text-base font-semibold text-foreground mb-2">Tax & VAT</h2>
+            <h2 className="text-base font-semibold text-foreground mb-2 capitalize">Tax & VAT</h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Enable automatic tax calculations on your receipts and sales reports.
             </p>
@@ -119,7 +119,7 @@ export default function PreferencesPage() {
                   
                   <div className="flex items-center justify-between">
                     <div>
-                      <label className="text-sm font-semibold text-foreground block">Enable Tax Calculation</label>
+                      <label className="text-sm font-semibold text-foreground block capitalize">Enable Tax Calculation</label>
                       <p className="text-xs text-muted-foreground mt-1">Apply tax automatically to all sales</p>
                     </div>
                     <button 
@@ -133,7 +133,7 @@ export default function PreferencesPage() {
 
                   {taxEnabled && (
                     <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                      <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Default Tax Rate (%)</label>
+                      <label className="text-xs font-bold text-muted-foreground  capitalize tracking-wider">Default Tax Rate (%)</label>
                       <input 
                         type="number" 
                         step="0.01" 
@@ -155,7 +155,7 @@ export default function PreferencesPage() {
         {/* Section 3: Device Management */}
         <div className="flex flex-col md:flex-row gap-8 pb-10">
           <div className="w-full md:w-1/3 shrink-0">
-            <h2 className="text-base font-semibold text-foreground mb-2">Linked Devices</h2>
+            <h2 className="text-base font-semibold text-foreground mb-2 capitalize">Linked Devices</h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Manage the physical devices (phones, tablets, laptops) that are authorized to access this store.
             </p>
@@ -167,7 +167,7 @@ export default function PreferencesPage() {
                     <Monitor size={20} className="text-primary" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold text-foreground">Device Management</h3>
+                    <h3 className="text-sm font-semibold text-foreground capitalize">Device Management</h3>
                     <p className="text-xs text-muted-foreground">View or revoke active device sessions</p>
                   </div>
                 </div>

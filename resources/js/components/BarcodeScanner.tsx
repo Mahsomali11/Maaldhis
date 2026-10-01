@@ -112,8 +112,8 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 bg-card border-b border-border">
-        <h2 className="text-lg font-bold text-foreground">Scan Barcode</h2>
-        <button onClick={handleClose} className="p-2">
+        <h2 className="text-lg font-bold text-foreground capitalize">Scan Barcode</h2>
+        <button onClick={handleClose} className="p-2 capitalize">
           <X size={24} className="text-foreground" />
         </button>
       </div>
@@ -141,7 +141,7 @@ export default function BarcodeScanner({ onScan, onClose }: BarcodeScannerProps)
             onKeyDown={e => e.key === 'Enter' && handleManualSubmit()}
           />
           <button onClick={handleManualSubmit}
-            className="px-6 py-3 rounded-xl bg-primary text-primary-foreground font-medium active:scale-[0.98] transition-transform">
+            className="px-6 py-3 rounded-xl bg-primary text-primary-foreground font-medium active:scale-[0.98] transition-transform capitalize">
             Search
           </button>
         </div>

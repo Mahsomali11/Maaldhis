@@ -155,7 +155,7 @@ export default function StoreLogoUpload({ storeId, currentLogoUrl, storeName, on
             type="button"
             onClick={handleRemove}
             disabled={uploading}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-destructive/10 text-destructive text-sm font-medium hover:bg-destructive/15 transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-destructive/10 text-destructive text-sm font-medium hover:bg-destructive/15 transition-colors disabled:opacity-50 capitalize"
           >
             <X size={16} />
             Remove

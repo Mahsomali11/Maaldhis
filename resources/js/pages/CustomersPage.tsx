@@ -88,7 +88,7 @@ export default function CustomersPage() {
             <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center mb-6">
               <Users size={32} className="text-muted-foreground/50" />
             </div>
-            <h3 className="text-foreground font-semibold text-lg">No customers found</h3>
+            <h3 className="text-foreground font-semibold text-lg capitalize">No customers found</h3>
             <p className="text-sm text-muted-foreground mt-2 max-w-sm">
               {search ? 'Try adjusting your search criteria.' : 'Add your first customer to get started.'}
             </p>
@@ -108,11 +108,11 @@ export default function CustomersPage() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-border/50 bg-muted/10">
-                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">ID</th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Customer Name</th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Contact Info</th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Address</th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-right">Actions</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">ID</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">Customer Name</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">Contact Info</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">Address</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/50">
@@ -151,7 +151,7 @@ export default function CustomersPage() {
                         {c.name.charAt(0).toUpperCase()}
                       </div>
                       <div>
-                        <h4 className="font-bold text-foreground">{c.name}</h4>
+                        <h4 className="font-bold text-foreground capitalize">{c.name}</h4>
                         <span className="text-xs font-mono text-muted-foreground">ID: {c.customer_code}</span>
                       </div>
                     </div>
@@ -190,7 +190,7 @@ export default function CustomersPage() {
         <div className="fixed inset-0 z-50 bg-foreground/20 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
           <div className="w-full sm:max-w-lg bg-card rounded-t-3xl sm:rounded-3xl border border-border shadow-2xl overflow-hidden animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300">
             <div className="flex justify-between items-center px-6 py-5 border-b border-border bg-muted/10">
-              <h3 className="text-xl font-bold text-foreground">{editingId ? 'Edit Customer' : 'Add Customer'}</h3>
+              <h3 className="text-xl font-bold text-foreground capitalize">{editingId ? 'Edit Customer' : 'Add Customer'}</h3>
               <button 
                 onClick={() => { setShowForm(false); setEditingId(null); }}
                 className="w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
@@ -201,7 +201,7 @@ export default function CustomersPage() {
             
             <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-5">
               <div>
-                <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Full Name <span className="text-destructive">*</span></label>
+                <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Full Name <span className="text-destructive">*</span></label>
                 <input 
                   value={form.name} 
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))} 
@@ -212,7 +212,7 @@ export default function CustomersPage() {
               </div>
               
               <div>
-                <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Phone Number</label>
+                <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Phone Number</label>
                 <input 
                   value={form.phone} 
                   onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} 
@@ -222,7 +222,7 @@ export default function CustomersPage() {
               </div>
               
               <div>
-                <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Address</label>
+                <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Address</label>
                 <input 
                   value={form.address} 
                   onChange={e => setForm(f => ({ ...f, address: e.target.value }))} 
@@ -241,7 +241,7 @@ export default function CustomersPage() {
                 </button>
                 <button 
                   type="submit" 
-                  className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-sm hover:opacity-90 transition-opacity"
+                  className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-sm hover:opacity-90 transition-opacity capitalize"
                 >
                   {editingId ? 'Save Changes' : 'Add Customer'}
                 </button>

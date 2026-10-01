@@ -67,7 +67,7 @@ export default function StoreEditPage() {
           <button 
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2 rounded-md text-sm font-bold shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+            className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2 rounded-md text-sm font-bold shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50 capitalize"
           >
             <Save size={16} />
             <span className="hidden sm:inline">{saving ? 'Saving...' : 'Save Changes'}</span>
@@ -80,7 +80,7 @@ export default function StoreEditPage() {
         {/* Section 1: Logo */}
         <div className="flex flex-col md:flex-row gap-8 pb-10 border-b border-border">
           <div className="w-full md:w-1/3 shrink-0">
-            <h2 className="text-base font-semibold text-foreground mb-2">Store Brand</h2>
+            <h2 className="text-base font-semibold text-foreground mb-2 capitalize">Store Brand</h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Upload your store logo. This will be displayed in the application header and optionally on customer receipts.
             </p>
@@ -101,7 +101,7 @@ export default function StoreEditPage() {
         {/* Section 2: General Information */}
         <div className="flex flex-col md:flex-row gap-8 pb-10 border-b border-border">
           <div className="w-full md:w-1/3 shrink-0">
-            <h2 className="text-base font-semibold text-foreground mb-2">General Information</h2>
+            <h2 className="text-base font-semibold text-foreground mb-2 capitalize">General Information</h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Basic details about your business. This information helps us identify your store and appears on your receipts.
             </p>
@@ -118,7 +118,7 @@ export default function StoreEditPage() {
                <div className="p-6 space-y-5">
                  
                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Store Name <span className="text-destructive">*</span></label>
+                    <label className="text-xs font-bold text-muted-foreground  capitalize tracking-wider">Store Name <span className="text-destructive">*</span></label>
                     <input 
                       value={name} 
                       onChange={e => setName(e.target.value)}
@@ -128,7 +128,7 @@ export default function StoreEditPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Business Location <span className="text-destructive">*</span></label>
+                    <label className="text-xs font-bold text-muted-foreground  capitalize tracking-wider">Business Location <span className="text-destructive">*</span></label>
                     <input 
                       value={location} 
                       onChange={e => setLocation(e.target.value)}
@@ -138,7 +138,7 @@ export default function StoreEditPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Contact Phone <span className="text-destructive">*</span></label>
+                    <label className="text-xs font-bold text-muted-foreground  capitalize tracking-wider">Contact Phone <span className="text-destructive">*</span></label>
                     <input 
                       value={phone} 
                       onChange={e => setPhone(e.target.value)}
@@ -155,7 +155,7 @@ export default function StoreEditPage() {
         {/* Section 2.5: Store Theme */}
         <div className="flex flex-col md:flex-row gap-8 pb-10 border-b border-border">
           <div className="w-full md:w-1/3 shrink-0">
-            <h2 className="text-base font-semibold text-foreground mb-2">Store Theme</h2>
+            <h2 className="text-base font-semibold text-foreground mb-2 capitalize">Store Theme</h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Customize the colors of your POS and dashboard. These colors apply automatically to buttons, links, and accents.
             </p>
@@ -165,7 +165,7 @@ export default function StoreEditPage() {
                <div className="p-6 space-y-6">
                  
                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Primary Color</label>
+                    <label className="text-xs font-bold text-muted-foreground  capitalize tracking-wider">Primary Color</label>
                     <div className="flex items-center gap-3">
                       <input 
                         type="color"
@@ -177,13 +177,13 @@ export default function StoreEditPage() {
                         type="text"
                         value={primaryColor} 
                         onChange={e => setPrimaryColor(e.target.value)}
-                        className="w-32 px-3 h-10 rounded-md border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary uppercase" 
+                        className="w-32 px-3 h-10 rounded-md border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary " 
                       />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Secondary Color</label>
+                    <label className="text-xs font-bold text-muted-foreground  capitalize tracking-wider">Secondary Color</label>
                     <div className="flex items-center gap-3">
                       <input 
                         type="color"
@@ -195,7 +195,7 @@ export default function StoreEditPage() {
                         type="text"
                         value={secondaryColor} 
                         onChange={e => setSecondaryColor(e.target.value)}
-                        className="w-32 px-3 h-10 rounded-md border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary uppercase" 
+                        className="w-32 px-3 h-10 rounded-md border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary " 
                       />
                     </div>
                   </div>
@@ -208,7 +208,7 @@ export default function StoreEditPage() {
         {/* Section 3: Receipt Branding */}
         <div className="flex flex-col md:flex-row gap-8 pb-10">
           <div className="w-full md:w-1/3 shrink-0">
-            <h2 className="text-base font-semibold text-foreground mb-2">Receipt Configuration</h2>
+            <h2 className="text-base font-semibold text-foreground mb-2 capitalize">Receipt Configuration</h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Customize how your receipts look. You can add a personalized thank you message and a custom footer for policies or Wi-Fi passwords.
             </p>
@@ -218,7 +218,7 @@ export default function StoreEditPage() {
                <div className="p-6 space-y-6">
                  
                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Receipt Design Template</label>
+                    <label className="text-xs font-bold text-muted-foreground  capitalize tracking-wider">Receipt Design Template</label>
                     <div className="relative">
                       <select 
                         value={receiptTemplate} 
@@ -240,7 +240,7 @@ export default function StoreEditPage() {
                  {/* Toggle Switch */}
                  <div className="flex items-center justify-between">
                     <div>
-                      <label className="text-sm font-semibold text-foreground block">Show Logo on Receipt</label>
+                      <label className="text-sm font-semibold text-foreground block capitalize">Show Logo on Receipt</label>
                       <p className="text-xs text-muted-foreground mt-1">Print your store brand at the top of receipts</p>
                     </div>
                     <button 
@@ -255,7 +255,7 @@ export default function StoreEditPage() {
                   <hr className="border-border" />
 
                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Thank You Message</label>
+                    <label className="text-xs font-bold text-muted-foreground  capitalize tracking-wider">Thank You Message</label>
                     <input 
                       value={thankYouMessage} 
                       onChange={e => setThankYouMessage(e.target.value)}
@@ -265,7 +265,7 @@ export default function StoreEditPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Custom Footer Text</label>
+                    <label className="text-xs font-bold text-muted-foreground  capitalize tracking-wider">Custom Footer Text</label>
                     <textarea 
                       value={receiptFooter} 
                       onChange={e => setReceiptFooter(e.target.value)}

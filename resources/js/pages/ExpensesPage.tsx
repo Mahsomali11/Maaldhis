@@ -73,7 +73,7 @@ export default function ExpensesPage() {
               <div className="w-12 h-12 rounded-full bg-destructive/10 text-destructive flex items-center justify-center mb-4">
                  <Wallet size={24} />
               </div>
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2">Today's Expenses</p>
+              <p className="text-xs font-bold text-muted-foreground  capitalize tracking-widest mb-2">Today's Expenses</p>
               <p className="text-4xl font-black text-foreground">{formatCurrency(todayTotal)}</p>
             </div>
           </div>
@@ -86,7 +86,7 @@ export default function ExpensesPage() {
                  <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center mb-6">
                    <Receipt size={32} className="text-muted-foreground/50" />
                  </div>
-                 <h3 className="text-xl font-bold text-foreground mb-2">No expenses today</h3>
+                 <h3 className="text-xl font-bold text-foreground mb-2 capitalize">No expenses today</h3>
                  <p className="text-muted-foreground text-sm max-w-sm">Keep track of your operational costs by recording expenses here.</p>
                  <button 
                     onClick={() => setShowForm(true)}
@@ -101,10 +101,10 @@ export default function ExpensesPage() {
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="border-b border-border/50 bg-muted/10">
-                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Type & Note</th>
-                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Time</th>
-                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Employee</th>
-                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-right">Amount</th>
+                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">Type & Note</th>
+                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">Time</th>
+                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">Employee</th>
+                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest text-right">Amount</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/50">
@@ -142,7 +142,7 @@ export default function ExpensesPage() {
                     <div key={exp.id} className="bg-card rounded-2xl border border-border p-5 shadow-sm">
                        <div className="flex justify-between items-start mb-3">
                          <div>
-                            <h4 className="font-bold text-foreground text-base leading-tight">{exp.expense_type}</h4>
+                            <h4 className="font-bold text-foreground text-base leading-tight capitalize">{exp.expense_type}</h4>
                             {exp.note && <span className="text-xs text-muted-foreground mt-1 inline-block">{exp.note}</span>}
                          </div>
                          <span className="font-black text-destructive">{formatCurrency(exp.amount)}</span>
@@ -171,7 +171,7 @@ export default function ExpensesPage() {
         <div className="fixed inset-0 z-50 bg-foreground/20 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
           <div className="w-full sm:max-w-md bg-card rounded-t-3xl sm:rounded-3xl border border-border shadow-2xl overflow-hidden animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300">
             <div className="flex justify-between items-center px-6 py-5 border-b border-border bg-muted/10">
-              <h3 className="text-xl font-bold text-foreground">Add Expense</h3>
+              <h3 className="text-xl font-bold text-foreground capitalize">Add Expense</h3>
               <button 
                 onClick={() => setShowForm(false)}
                 className="w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
@@ -182,7 +182,7 @@ export default function ExpensesPage() {
             
             <form onSubmit={handleAdd} className="p-6 sm:p-8 space-y-5">
               <div>
-                <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Expense Type <span className="text-destructive">*</span></label>
+                <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Expense Type <span className="text-destructive">*</span></label>
                 <input 
                   value={type} 
                   onChange={e => setType(e.target.value)} 
@@ -193,7 +193,7 @@ export default function ExpensesPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Amount <span className="text-destructive">*</span></label>
+                <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Amount <span className="text-destructive">*</span></label>
                 <input 
                   type="number" 
                   value={amount} 
@@ -206,7 +206,7 @@ export default function ExpensesPage() {
 
               {paymentAccounts.length > 0 ? (
                 <div>
-                  <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Payment Account</label>
+                  <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Payment Account</label>
                   <select 
                     value={paymentAccountId || ''} 
                     onChange={e => setPaymentAccountId(e.target.value)}
@@ -219,7 +219,7 @@ export default function ExpensesPage() {
                 </div>
               ) : (
                 <div>
-                  <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Payment Method</label>
+                  <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Payment Method</label>
                   <select 
                     value={method} 
                     onChange={e => setMethod(e.target.value)}
@@ -233,7 +233,7 @@ export default function ExpensesPage() {
               )}
 
               <div>
-                <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Note <span className="lowercase font-medium">(optional)</span></label>
+                <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Note <span className="lowercase font-medium">(optional)</span></label>
                 <input 
                   value={note} 
                   onChange={e => setNote(e.target.value)} 
@@ -252,7 +252,7 @@ export default function ExpensesPage() {
                 </button>
                 <button 
                   type="submit" 
-                  className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-sm hover:opacity-90 transition-opacity"
+                  className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-sm hover:opacity-90 transition-opacity capitalize"
                 >
                   Save Expense
                 </button>

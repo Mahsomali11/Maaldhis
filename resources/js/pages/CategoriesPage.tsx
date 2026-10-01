@@ -122,7 +122,7 @@ export default function CategoriesPage() {
             <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center mb-6">
               <FolderTree size={32} className="text-muted-foreground/50" />
             </div>
-            <h3 className="text-foreground font-semibold text-lg">No categories found</h3>
+            <h3 className="text-foreground font-semibold text-lg capitalize">No categories found</h3>
             <p className="text-sm text-muted-foreground mt-2 max-w-sm">
               {search ? 'Try adjusting your search query.' : 'Create categories to organize your items.'}
             </p>
@@ -142,9 +142,9 @@ export default function CategoriesPage() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-border/50 bg-muted/10">
-                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest w-1/3">Category Name</th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest w-1/2">Description</th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-right">Actions</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest w-1/3">Category Name</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest w-1/2">Description</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/50">
@@ -189,7 +189,7 @@ export default function CategoriesPage() {
                         <FolderTree size={20} />
                       </div>
                       <div className="flex flex-col">
-                        <h4 className="font-bold text-foreground text-base">{c.name}</h4>
+                        <h4 className="font-bold text-foreground text-base capitalize">{c.name}</h4>
                         {c.parent_id && (
                           <span className="text-xs text-muted-foreground flex items-center gap-1">
                             Sub of <span className="font-semibold">{storeCategories.find(p => p.id === c.parent_id)?.name || 'Unknown'}</span>
@@ -224,7 +224,7 @@ export default function CategoriesPage() {
         <div className="fixed inset-0 z-50 bg-foreground/20 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
           <div className="w-full sm:max-w-lg bg-card rounded-t-3xl sm:rounded-3xl border border-border shadow-2xl overflow-hidden animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300">
             <div className="flex justify-between items-center px-6 py-5 border-b border-border bg-muted/10">
-              <h3 className="text-xl font-bold text-foreground">{editingId ? 'Edit Category' : 'Add Category'}</h3>
+              <h3 className="text-xl font-bold text-foreground capitalize">{editingId ? 'Edit Category' : 'Add Category'}</h3>
               <button 
                 onClick={() => setShowForm(false)}
                 className="w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
@@ -235,7 +235,7 @@ export default function CategoriesPage() {
             
             <form onSubmit={handleSave} className="p-6 sm:p-8 space-y-5">
               <div>
-                <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Category Name <span className="text-destructive">*</span></label>
+                <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Category Name <span className="text-destructive">*</span></label>
                 <input 
                   value={form.name} 
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))} 
@@ -246,7 +246,7 @@ export default function CategoriesPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Parent Category (Optional)</label>
+                <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Parent Category (Optional)</label>
                 <select 
                   value={form.parent_id} 
                   onChange={e => setForm(f => ({ ...f, parent_id: e.target.value }))} 
@@ -262,7 +262,7 @@ export default function CategoriesPage() {
               </div>
               
               <div>
-                <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Description</label>
+                <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Description</label>
                 <textarea 
                   value={form.description} 
                   onChange={e => setForm(f => ({ ...f, description: e.target.value }))} 
@@ -282,7 +282,7 @@ export default function CategoriesPage() {
                 </button>
                 <button 
                   type="submit" 
-                  className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-sm hover:opacity-90 transition-opacity"
+                  className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-sm hover:opacity-90 transition-opacity capitalize"
                 >
                   Save Category
                 </button>

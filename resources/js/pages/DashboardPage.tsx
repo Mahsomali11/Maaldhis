@@ -61,9 +61,9 @@ export default function DashboardPage() {
           <div>
             <div className="flex items-center gap-2 text-muted-foreground mb-2">
               <Calendar size={14} />
-              <span className="text-xs font-semibold uppercase tracking-wider">{currentDate}</span>
+              <span className="text-xs font-semibold  capitalize tracking-wider">{currentDate}</span>
             </div>
-            <h1 className="text-3xl font-light text-foreground tracking-tight">
+            <h1 className="text-3xl font-light text-foreground tracking-tight capitalize">
               Welcome back, <span className="font-semibold">{currentStore?.store_name || 'Owner'}</span>
             </h1>
             <p className="text-sm text-muted-foreground mt-2 max-w-xl">
@@ -83,7 +83,7 @@ export default function DashboardPage() {
             {(userRole === 'owner' || userRole === 'admin' || userRole === 'cashier') && (
               <button
                 onClick={startSale}
-                className="flex-1 md:flex-none h-10 px-6 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm flex items-center justify-center gap-2"
+                className="flex-1 md:flex-none h-10 px-6 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm flex items-center justify-center gap-2 capitalize"
               >
                 <Plus size={16} />
                 New Sale
@@ -105,7 +105,7 @@ export default function DashboardPage() {
             
             {/* Primary Metrics Grid - Restructured */}
             <div>
-              <h2 className="text-sm font-bold text-foreground uppercase tracking-wider mb-4 flex items-center gap-2">
+              <h2 className="text-sm font-bold text-foreground  capitalize tracking-wider mb-4 flex items-center gap-2">
                 <Activity size={16} className="text-muted-foreground" />
                 Today's Performance
               </h2>
@@ -117,8 +117,8 @@ export default function DashboardPage() {
                     <TrendingUp size={120} />
                   </div>
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-primary-foreground/70 mb-2">Net Revenue</p>
-                    <h3 className="text-4xl font-light tracking-tight">{formatCurrency(todayRevenue)}</h3>
+                    <p className="text-xs font-semibold  capitalize tracking-wider text-primary-foreground/70 mb-2">Net Revenue</p>
+                    <h3 className="text-4xl font-light tracking-tight capitalize">{formatCurrency(todayRevenue)}</h3>
                   </div>
                   <div className="mt-8 flex items-center gap-2 text-sm text-primary-foreground/80">
                     <span className="flex items-center gap-1 bg-primary-foreground/20 px-2 py-0.5 rounded text-xs font-medium">
@@ -132,13 +132,13 @@ export default function DashboardPage() {
                   {/* Expenses Card */}
                   <div className="bg-card rounded-md p-5 border border-border shadow-sm flex flex-col justify-between hover:border-primary/50 transition-colors">
                     <div className="flex justify-between items-start mb-2">
-                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Operating Expenses</p>
+                      <p className="text-xs font-bold text-muted-foreground  capitalize tracking-wider">Operating Expenses</p>
                       <div className="w-8 h-8 rounded bg-secondary flex items-center justify-center shrink-0 border border-border/50 shadow-sm">
                         <ArrowDownRight size={14} className="text-primary" />
                       </div>
                     </div>
                     <div>
-                      <h3 className="text-2xl font-semibold text-foreground tracking-tight">{formatCurrency(todayExpenses)}</h3>
+                      <h3 className="text-2xl font-semibold text-foreground tracking-tight capitalize">{formatCurrency(todayExpenses)}</h3>
                       <p className="text-xs text-muted-foreground mt-1">Recorded today</p>
                     </div>
                   </div>
@@ -146,13 +146,13 @@ export default function DashboardPage() {
                   {/* Open Debts Card */}
                   <div className="bg-card rounded-md p-5 border border-border shadow-sm flex flex-col justify-between hover:border-primary/50 transition-colors">
                     <div className="flex justify-between items-start mb-2">
-                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Outstanding Debts</p>
+                      <p className="text-xs font-bold text-muted-foreground  capitalize tracking-wider">Outstanding Debts</p>
                       <div className="w-8 h-8 rounded bg-secondary flex items-center justify-center shrink-0 border border-border/50 shadow-sm">
                         <Wallet size={14} className="text-primary" />
                       </div>
                     </div>
                     <div>
-                      <h3 className="text-2xl font-semibold text-foreground tracking-tight">{formatCurrency(openDebts)}</h3>
+                      <h3 className="text-2xl font-semibold text-foreground tracking-tight capitalize">{formatCurrency(openDebts)}</h3>
                       <p className="text-xs text-muted-foreground mt-1">Total unpaid customer credit</p>
                     </div>
                   </div>
@@ -165,25 +165,25 @@ export default function DashboardPage() {
               {(userRole === 'owner' || userRole === 'admin') && (
                 <button onClick={() => navigate('/sales-report')} className="flex flex-col items-center justify-center gap-2 p-4 bg-muted/30 rounded-md border border-border hover:bg-muted/50 hover:border-primary/50 transition-all group">
                   <TrendingUp size={20} className="text-muted-foreground group-hover:text-primary transition-colors" />
-                  <span className="text-xs font-semibold text-foreground uppercase tracking-wider">Reports</span>
+                  <span className="text-xs font-semibold text-foreground  capitalize tracking-wider">Reports</span>
                 </button>
               )}
               {(userRole === 'owner' || userRole === 'admin' || userRole === 'inventory_manager') && (
                 <button onClick={() => navigate('/inventory')} className="flex flex-col items-center justify-center gap-2 p-4 bg-muted/30 rounded-md border border-border hover:bg-muted/50 hover:border-primary/50 transition-all group">
                   <Package size={20} className="text-muted-foreground group-hover:text-primary transition-colors" />
-                  <span className="text-xs font-semibold text-foreground uppercase tracking-wider">Inventory</span>
+                  <span className="text-xs font-semibold text-foreground  capitalize tracking-wider">Inventory</span>
                 </button>
               )}
               {(userRole === 'owner' || userRole === 'admin' || userRole === 'cashier') && (
                 <button onClick={() => navigate('/customers')} className="flex flex-col items-center justify-center gap-2 p-4 bg-muted/30 rounded-md border border-border hover:bg-muted/50 hover:border-primary/50 transition-all group">
                   <CreditCard size={20} className="text-muted-foreground group-hover:text-primary transition-colors" />
-                  <span className="text-xs font-semibold text-foreground uppercase tracking-wider">Customers</span>
+                  <span className="text-xs font-semibold text-foreground  capitalize tracking-wider">Customers</span>
                 </button>
               )}
               {(userRole === 'owner' || userRole === 'admin') && (
                 <button onClick={() => navigate('/expenses')} className="flex flex-col items-center justify-center gap-2 p-4 bg-muted/30 rounded-md border border-border hover:bg-muted/50 hover:border-primary/50 transition-all group">
                   <Receipt size={20} className="text-muted-foreground group-hover:text-primary transition-colors" />
-                  <span className="text-xs font-semibold text-foreground uppercase tracking-wider">Expenses</span>
+                  <span className="text-xs font-semibold text-foreground  capitalize tracking-wider">Expenses</span>
                 </button>
               )}
             </div>
@@ -191,8 +191,8 @@ export default function DashboardPage() {
             {/* Recent Activity / Feed */}
             <div className="bg-card rounded-md border border-border shadow-sm overflow-hidden">
               <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-                <h3 className="font-semibold text-foreground text-sm">Activity Feed</h3>
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Live</span>
+                <h3 className="font-semibold text-foreground text-sm capitalize">Activity Feed</h3>
+                <span className="text-xs font-medium text-muted-foreground  capitalize tracking-wider">Live</span>
               </div>
               {recentSales && recentSales.length > 0 ? (
                 <div className="divide-y divide-border">
@@ -242,7 +242,7 @@ export default function DashboardPage() {
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-xl font-black text-foreground mb-2 break-words leading-tight truncate">{currentStore?.store_name || 'My Store'}</h3>
+                <h3 className="text-xl font-black text-foreground mb-2 break-words leading-tight truncate capitalize">{currentStore?.store_name || 'My Store'}</h3>
                 <div className="space-y-1.5 mt-2">
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <MapPin size={14} className="text-muted-foreground/70 shrink-0" />
@@ -259,12 +259,12 @@ export default function DashboardPage() {
             {/* Inventory Status Widget */}
             <div className="bg-card rounded-md border border-border shadow-sm flex flex-col">
               <div className="px-5 py-4 border-b border-border flex items-center justify-between">
-                <h3 className="font-semibold text-foreground text-sm flex items-center gap-2">
+                <h3 className="font-semibold text-foreground text-sm flex items-center gap-2 capitalize">
                   <Bell size={16} className="text-muted-foreground" />
                   Stock Alerts
                 </h3>
                 {lowStockCount > 0 && (
-                  <span className="bg-secondary text-primary border border-border/50 shadow-sm text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">
+                  <span className="bg-secondary text-primary border border-border/50 shadow-sm text-[10px] px-2 py-0.5 rounded font-bold  capitalize tracking-wider">
                     {lowStockCount} Issues
                   </span>
                 )}
@@ -272,11 +272,11 @@ export default function DashboardPage() {
               
               <div className="p-5 flex items-center justify-between bg-muted/10 border-b border-border">
                 <div>
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Total Inventory</p>
+                  <p className="text-xs font-bold text-muted-foreground  capitalize tracking-wider">Total Inventory</p>
                   <p className="text-xl font-semibold text-foreground mt-1">{items.length} <span className="text-sm font-normal text-muted-foreground">items</span></p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Stock Units</p>
+                  <p className="text-xs font-bold text-muted-foreground  capitalize tracking-wider">Stock Units</p>
                   <p className="text-xl font-semibold text-foreground mt-1">{totalStock}</p>
                 </div>
               </div>

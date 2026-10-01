@@ -33,7 +33,7 @@ export default function AdminLoginPage() {
             )}
 
             <div>
-              <label className="text-sm font-medium text-[hsl(220,10%,70%)] mb-1.5 block">
+              <label className="text-sm font-medium text-[hsl(220,10%,70%)] mb-1.5 block capitalize">
                 Email Address
               </label>
               <input
@@ -48,7 +48,7 @@ export default function AdminLoginPage() {
             </div>
 
             <div>
-              <label className="text-sm font-medium text-[hsl(220,10%,70%)] mb-1.5 block">
+              <label className="text-sm font-medium text-[hsl(220,10%,70%)] mb-1.5 block capitalize">
                 Password
               </label>
               <input
@@ -65,7 +65,7 @@ export default function AdminLoginPage() {
             <button
               type="submit"
               disabled={processing}
-              className="w-full py-3 rounded-lg bg-gradient-to-r from-[hsl(145,63%,42%)] to-[hsl(160,60%,38%)] text-foreground font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 mt-2"
+              className="w-full py-3 rounded-lg bg-gradient-to-r from-[hsl(145,63%,42%)] to-[hsl(160,60%,38%)] text-foreground font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 mt-2 capitalize"
             >
               {processing ? 'Authenticating...' : 'Sign In to Admin Panel'}
             </button>

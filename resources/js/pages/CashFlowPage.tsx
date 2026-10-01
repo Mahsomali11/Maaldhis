@@ -100,7 +100,7 @@ export default function CashFlowPage() {
         <Icon size={20} className={color} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 truncate">{label}</p>
+        <p className="text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-1 truncate">{label}</p>
         <p className={`text-xl font-black ${color} truncate`}>{value}</p>
       </div>
     </div>
@@ -135,13 +135,13 @@ export default function CashFlowPage() {
         <div className="bg-card rounded-3xl border border-border p-8 shadow-sm relative overflow-hidden">
           <div className="absolute top-0 w-full h-2 bg-primary"></div>
           
-          <p className="text-sm font-bold text-primary uppercase tracking-widest mb-6">
+          <p className="text-sm font-bold text-primary  capitalize tracking-widest mb-6">
             {new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </p>
           
           <div className="flex flex-col md:flex-row gap-8 md:gap-16 items-start md:items-center">
             <div className="flex-1 w-full bg-muted/30 rounded-2xl p-6 border border-border/50">
-              <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-3">Opening Cash Drawer</p>
+              <p className="text-sm font-bold text-muted-foreground  capitalize tracking-wider mb-3">Opening Cash Drawer</p>
               <div className="relative flex items-center">
                 <span className="absolute left-4 text-muted-foreground font-black text-2xl">$</span>
                 <input 
@@ -161,7 +161,7 @@ export default function CashFlowPage() {
             </div>
             
             <div className="flex-1 w-full bg-primary/5 rounded-2xl p-6 border border-primary/20">
-              <p className="text-sm font-bold text-primary uppercase tracking-wider mb-3">Expected Closing Cash</p>
+              <p className="text-sm font-bold text-primary  capitalize tracking-wider mb-3">Expected Closing Cash</p>
               <p className="text-5xl font-black text-primary">{formatCurrency(closingCash)}</p>
             </div>
           </div>
@@ -174,7 +174,7 @@ export default function CashFlowPage() {
               <div className="w-8 h-8 rounded-full bg-success/20 text-success flex items-center justify-center">
                 <Plus size={16} className="font-bold" />
               </div>
-              <h3 className="text-lg font-black text-foreground">Inflows</h3>
+              <h3 className="text-lg font-black text-foreground capitalize">Inflows</h3>
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -213,7 +213,7 @@ export default function CashFlowPage() {
               <div className="w-8 h-8 rounded-full bg-destructive/20 text-destructive flex items-center justify-center">
                 <Minus size={16} className="font-bold" />
               </div>
-              <h3 className="text-lg font-black text-foreground">Outflows</h3>
+              <h3 className="text-lg font-black text-foreground capitalize">Outflows</h3>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -269,7 +269,7 @@ export default function CashFlowPage() {
 
             <form onSubmit={(e) => handleCashMove(showCashIn ? 'in' : 'out', e)} className="p-6 sm:p-8 space-y-5">
               <div>
-                <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Amount <span className="text-destructive">*</span></label>
+                <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Amount <span className="text-destructive">*</span></label>
                 <div className="relative">
                   <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-black">$</span>
                   <input 
@@ -284,7 +284,7 @@ export default function CashFlowPage() {
               </div>
               
               <div>
-                <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Note <span className="lowercase font-medium">(optional)</span></label>
+                <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Note <span className="lowercase font-medium">(optional)</span></label>
                 <input 
                   value={moveNote} 
                   onChange={e => setMoveNote(e.target.value)} 

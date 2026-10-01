@@ -91,7 +91,7 @@ export default function ReturnsPage() {
           </div>
           <button 
             onClick={handleSearch} 
-            className="px-6 h-12 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-sm hover:opacity-90 transition-opacity whitespace-nowrap flex items-center justify-center gap-2"
+            className="px-6 h-12 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-sm hover:opacity-90 transition-opacity whitespace-nowrap flex items-center justify-center gap-2 capitalize"
           >
             <Search size={16} /> Find Receipt
           </button>
@@ -109,12 +109,12 @@ export default function ReturnsPage() {
                       <QrCode size={20} />
                    </div>
                    <div>
-                     <h3 className="font-black text-foreground text-lg mb-1">{sale.receipt_no}</h3>
+                     <h3 className="font-black text-foreground text-lg mb-1 capitalize">{sale.receipt_no}</h3>
                      <p className="text-sm font-medium text-muted-foreground">{new Date(sale.sold_at).toLocaleString()}</p>
                    </div>
                 </div>
                 {sale.status === 'returned' && (
-                  <span className="px-3 py-1.5 rounded-lg text-xs uppercase tracking-widest font-black bg-destructive/10 text-destructive border border-destructive/20 self-start sm:self-auto">
+                  <span className="px-3 py-1.5 rounded-lg text-xs  capitalize tracking-widest font-black bg-destructive/10 text-destructive border border-destructive/20 self-start sm:self-auto">
                     Already Returned
                   </span>
                 )}
@@ -134,11 +134,11 @@ export default function ReturnsPage() {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-border/50 bg-muted/10">
-                      <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest w-20 text-center">Select</th>
-                      <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Item Details</th>
-                      <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-right">Unit Price</th>
-                      <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-center w-40">Return Qty</th>
-                      <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-right">Refund Value</th>
+                      <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest w-20 text-center">Select</th>
+                      <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">Item Details</th>
+                      <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest text-right">Unit Price</th>
+                      <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest text-center w-40">Return Qty</th>
+                      <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest text-right">Refund Value</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/50">
@@ -222,7 +222,7 @@ export default function ReturnsPage() {
                                 {isSelected && <Check size={14} strokeWidth={3} />}
                               </button>
                               <div>
-                                 <h4 className="font-bold text-foreground text-base leading-tight">{si.item_name}</h4>
+                                 <h4 className="font-bold text-foreground text-base leading-tight capitalize">{si.item_name}</h4>
                                  <p className="text-sm font-medium text-muted-foreground mt-1">{formatCurrency(si.sell_price)} each &middot; Bought {si.quantity}</p>
                               </div>
                           </div>
@@ -245,7 +245,7 @@ export default function ReturnsPage() {
                                   </button>
                                 </div>
                                 <div className="text-right">
-                                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Refund</p>
+                                   <p className="text-[10px] font-bold text-muted-foreground  capitalize tracking-widest mb-1">Refund</p>
                                    <p className="font-black text-destructive">{formatCurrency(si.sell_price * qty)}</p>
                                 </div>
                              </div>
@@ -266,7 +266,7 @@ export default function ReturnsPage() {
                       <RefreshCw size={18} className="text-foreground" />
                    </div>
                    <div>
-                     <h4 className="font-black text-foreground text-lg leading-tight">Return Summary</h4>
+                     <h4 className="font-black text-foreground text-lg leading-tight capitalize">Return Summary</h4>
                      <p className="text-xs font-medium text-muted-foreground mt-0.5">
                        {Object.keys(selectedItems).length} item(s) selected
                      </p>
@@ -275,7 +275,7 @@ export default function ReturnsPage() {
 
                 <div className="bg-destructive/5 rounded-2xl p-5 border border-destructive/20 relative overflow-hidden text-center">
                   <div className="absolute top-0 w-full h-1 bg-destructive"></div>
-                  <p className="text-xs font-bold text-destructive uppercase tracking-widest mb-2">Total Refund</p>
+                  <p className="text-xs font-bold text-destructive  capitalize tracking-widest mb-2">Total Refund</p>
                   <p className="text-4xl font-black text-destructive">{formatCurrency(totalRefund)}</p>
                 </div>
 
@@ -296,7 +296,7 @@ export default function ReturnsPage() {
             <div className="w-24 h-24 rounded-full bg-muted/50 flex items-center justify-center mb-6">
                <QrCode size={40} className="text-muted-foreground/50" />
             </div>
-            <h3 className="text-xl font-bold text-foreground mb-2">No receipt found</h3>
+            <h3 className="text-xl font-bold text-foreground mb-2 capitalize">No receipt found</h3>
             <p className="text-muted-foreground">Double check the Receipt ID and try again.</p>
           </div>
         ) : (
@@ -304,7 +304,7 @@ export default function ReturnsPage() {
             <div className="w-24 h-24 rounded-full bg-muted/50 flex items-center justify-center mb-6">
                <Search size={40} className="text-muted-foreground/50" />
             </div>
-            <h3 className="text-xl font-bold text-foreground mb-2">Search for a receipt</h3>
+            <h3 className="text-xl font-bold text-foreground mb-2 capitalize">Search for a receipt</h3>
             <p className="text-muted-foreground">Enter a receipt ID above to begin processing a return.</p>
           </div>
         )}

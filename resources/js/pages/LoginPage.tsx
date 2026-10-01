@@ -25,7 +25,7 @@ export default function LoginPage() {
             <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-6">
                <StoreIcon size={24} className="text-primary" />
             </div>
-            <h1 className="text-3xl font-light text-foreground tracking-tight">Welcome <span className="font-semibold">Back</span></h1>
+            <h1 className="text-3xl font-light text-foreground tracking-tight capitalize">Welcome <span className="font-semibold">Back</span></h1>
             <p className="text-sm text-muted-foreground mt-2">Sign in to your point of sale system.</p>
           </div>
 
@@ -37,7 +37,7 @@ export default function LoginPage() {
             )}
             
             <div className="space-y-2">
-              <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Email Address</label>
+              <label className="text-xs font-bold text-muted-foreground  capitalize tracking-wider">Email Address</label>
               <input
                 type="email"
                 value={data.email}
@@ -50,7 +50,7 @@ export default function LoginPage() {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Password</label>
+                <label className="text-xs font-bold text-muted-foreground  capitalize tracking-wider">Password</label>
                 <Link href="/reset-password" className="text-xs text-primary hover:underline font-medium transition-colors">
                   Forgot password?
                 </Link>
@@ -66,7 +66,7 @@ export default function LoginPage() {
             </div>
 
             <div className="flex items-center pt-1">
-              <label className="flex items-center gap-3 cursor-pointer group">
+              <label className="flex items-center gap-3 cursor-pointer group capitalize">
                 <div className="relative flex items-center justify-center">
                   <input
                     type="checkbox"
@@ -87,7 +87,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={processing}
-              className="w-full h-11 rounded-md bg-primary text-primary-foreground text-sm font-bold shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50 mt-4"
+              className="w-full h-11 rounded-md bg-primary text-primary-foreground text-sm font-bold shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50 mt-4 capitalize"
             >
               {processing ? 'Signing in...' : 'Sign in'}
             </button>
@@ -117,7 +117,7 @@ export default function LoginPage() {
         <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, black 1px, transparent 0)', backgroundSize: '32px 32px' }}></div>
         
         <div className="relative z-10 max-w-lg p-12">
-          <h2 className="text-4xl font-light text-foreground leading-tight tracking-tight mb-6">
+          <h2 className="text-4xl font-light text-foreground leading-tight tracking-tight mb-6 capitalize">
             Empower your <span className="font-semibold">business</span> with modern point of sale.
           </h2>
           <p className="text-lg text-muted-foreground">

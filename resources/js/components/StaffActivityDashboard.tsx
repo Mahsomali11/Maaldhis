@@ -166,17 +166,17 @@ export default function StaffActivityDashboard({ staff, onClose }: Props) {
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border p-4 sm:px-8 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <button onClick={onClose} className="p-2 rounded-xl bg-muted text-muted-foreground hover:text-foreground transition-colors">
+          <button onClick={onClose} className="p-2 rounded-xl bg-muted text-muted-foreground hover:text-foreground transition-colors capitalize">
             <ArrowLeft size={18} />
           </button>
           <div>
-            <h2 className="text-xl font-bold text-foreground">{staff.full_name}</h2>
-            <p className="text-xs text-muted-foreground flex items-center gap-1 uppercase tracking-widest font-bold">
+            <h2 className="text-xl font-bold text-foreground capitalize">{staff.full_name}</h2>
+            <p className="text-xs text-muted-foreground flex items-center gap-1  capitalize tracking-widest font-bold">
               <ShieldCheck size={12} /> {staff.role}
             </p>
           </div>
         </div>
-        <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-bold shadow-sm hover:bg-primary/90 transition-all">
+        <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-xl text-sm font-bold shadow-sm hover:bg-primary/90 transition-all capitalize">
           <Download size={16} /> Export Report
         </button>
       </div>
@@ -190,7 +190,7 @@ export default function StaffActivityDashboard({ staff, onClose }: Props) {
               <button 
                 key={mode} 
                 onClick={() => setDateRange(mode)}
-                className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors ${dateRange === mode ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold  capitalize tracking-wider transition-colors ${dateRange === mode ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
               >
                 {mode}
               </button>
@@ -210,7 +210,7 @@ export default function StaffActivityDashboard({ staff, onClose }: Props) {
           <div className="bg-card border border-border p-6 rounded-3xl shadow-sm">
             <div className="flex items-center gap-3 mb-4 text-primary">
               <div className="p-2.5 bg-primary/10 rounded-xl"><DollarSign size={20} /></div>
-              <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Total Sales</h3>
+              <h3 className="font-bold text-sm  capitalize tracking-wider text-muted-foreground">Total Sales</h3>
             </div>
             <p className="text-3xl font-black text-foreground">{totalSalesCount}</p>
             <p className="text-sm text-muted-foreground mt-2 font-medium">{totalSalesCount} Receipts Issued</p>
@@ -218,7 +218,7 @@ export default function StaffActivityDashboard({ staff, onClose }: Props) {
           <div className="bg-card border border-border p-6 rounded-3xl shadow-sm">
             <div className="flex items-center gap-3 mb-4 text-success">
               <div className="p-2.5 bg-success/10 rounded-xl"><TrendingUp size={20} /></div>
-              <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Total Collected (In)</h3>
+              <h3 className="font-bold text-sm  capitalize tracking-wider text-muted-foreground">Total Collected (In)</h3>
             </div>
             <p className="text-3xl font-black text-foreground">
               {formatCurrency(Object.values(inflowByAccount).reduce((a,b)=>a+b,0))}
@@ -226,7 +226,7 @@ export default function StaffActivityDashboard({ staff, onClose }: Props) {
             <div className="mt-3 space-y-1">
               {Object.entries(inflowByAccount).map(([acc, amt]) => (
                 <div key={acc} className="flex justify-between text-xs font-medium">
-                  <span className="text-muted-foreground uppercase">{getAccountName(acc)}</span>
+                  <span className="text-muted-foreground ">{getAccountName(acc)}</span>
                   <span className="text-foreground">{formatCurrency(amt)}</span>
                 </div>
               ))}
@@ -235,7 +235,7 @@ export default function StaffActivityDashboard({ staff, onClose }: Props) {
           <div className="bg-card border border-border p-6 rounded-3xl shadow-sm">
             <div className="flex items-center gap-3 mb-4 text-destructive">
               <div className="p-2.5 bg-destructive/10 rounded-xl"><TrendingDown size={20} /></div>
-              <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Total Disbursed (Out)</h3>
+              <h3 className="font-bold text-sm  capitalize tracking-wider text-muted-foreground">Total Disbursed (Out)</h3>
             </div>
             <p className="text-3xl font-black text-foreground">
               {formatCurrency(Object.values(outflowByAccount).reduce((a,b)=>a+b,0))}
@@ -243,7 +243,7 @@ export default function StaffActivityDashboard({ staff, onClose }: Props) {
             <div className="mt-3 space-y-1">
               {Object.entries(outflowByAccount).map(([acc, amt]) => (
                 <div key={acc} className="flex justify-between text-xs font-medium">
-                  <span className="text-muted-foreground uppercase">{getAccountName(acc)}</span>
+                  <span className="text-muted-foreground ">{getAccountName(acc)}</span>
                   <span className="text-foreground">{formatCurrency(amt)}</span>
                 </div>
               ))}
@@ -252,7 +252,7 @@ export default function StaffActivityDashboard({ staff, onClose }: Props) {
           <div className="bg-card border border-border p-6 rounded-3xl shadow-sm">
             <div className="flex items-center gap-3 mb-4 text-primary">
               <div className="p-2.5 bg-primary/10 rounded-xl"><Calculator size={20} /></div>
-              <h3 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Net Profit</h3>
+              <h3 className="font-bold text-sm  capitalize tracking-wider text-muted-foreground">Net Profit</h3>
             </div>
             <p className="text-3xl font-black text-foreground">{formatCurrency(netProfitAmount)}</p>
             <p className="text-sm text-muted-foreground mt-2 font-medium">After Costs & Expenses</p>
@@ -263,17 +263,17 @@ export default function StaffActivityDashboard({ staff, onClose }: Props) {
         <div className="bg-card border border-border rounded-3xl shadow-sm overflow-hidden flex flex-col">
           <div className="p-6 border-b border-border/50 flex items-center gap-3">
             <Activity className="text-muted-foreground" size={20} />
-            <h3 className="font-bold text-foreground">Activity Log & History</h3>
+            <h3 className="font-bold text-foreground capitalize">Activity Log & History</h3>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-muted/10 border-b border-border/50">
-                  <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Time</th>
-                  <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Action / Type</th>
-                  <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Reference No.</th>
-                  <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Account / Method</th>
-                  <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-right">Amount</th>
+                  <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">Time</th>
+                  <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">Action / Type</th>
+                  <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">Reference No.</th>
+                  <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">Account / Method</th>
+                  <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest text-right">Amount</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/50">
@@ -289,14 +289,14 @@ export default function StaffActivityDashboard({ staff, onClose }: Props) {
                         {format(new Date(log.time), 'MMM d, h:mm a')}
                       </td>
                       <td className="px-6 py-3">
-                        <span className={`inline-flex px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${
+                        <span className={`inline-flex px-2 py-1 rounded-md text-[10px] font-bold  capitalize tracking-wider ${
                           log.type === 'Sale' ? 'bg-primary/10 text-primary' :
                           log.type === 'Collection' ? 'bg-success/10 text-success' :
                           log.type === 'Payout' || log.type === 'Expense' ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground'
                         }`}>{log.type}</span>
                       </td>
                       <td className="px-6 py-3 text-sm text-muted-foreground font-mono">{log.id}</td>
-                      <td className="px-6 py-3 text-sm font-medium uppercase tracking-wider">{getAccountName(log.method)}</td>
+                      <td className="px-6 py-3 text-sm font-medium  capitalize tracking-wider">{getAccountName(log.method)}</td>
                       <td className="px-6 py-3 text-right text-sm font-bold text-foreground">{formatCurrency(Number(log.amount))}</td>
                     </tr>
                   ))

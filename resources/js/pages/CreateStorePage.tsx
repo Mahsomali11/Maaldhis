@@ -97,7 +97,7 @@ export default function CreateStorePage() {
               <div className="w-24 h-24 rounded-3xl bg-destructive/10 flex items-center justify-center mb-6 border border-destructive/20 ring-8 ring-destructive/5">
                 <Ban size={40} className="text-destructive" />
               </div>
-              <h2 className="text-3xl font-black text-foreground tracking-tight mb-3">Limit Reached</h2>
+              <h2 className="text-3xl font-black text-foreground tracking-tight mb-3 capitalize">Limit Reached</h2>
               <p className="text-sm font-medium text-muted-foreground mb-8">{blocked}</p>
               <button
                 onClick={() => navigate('/upgrade')}
@@ -117,7 +117,7 @@ export default function CreateStorePage() {
                         <Store size={24} />
                      </div>
                      <div>
-                        <h2 className="text-xl font-black text-foreground">Store Details</h2>
+                        <h2 className="text-xl font-black text-foreground capitalize">Store Details</h2>
                         <p className="text-sm font-medium text-muted-foreground mt-0.5">Basic information for your new store.</p>
                      </div>
                   </div>
@@ -129,13 +129,13 @@ export default function CreateStorePage() {
                         <ShieldCheck size={16} />
                      </div>
                      <p className="text-sm font-bold text-primary/90 leading-relaxed pt-1">
-                       As the creator, you will automatically be assigned the <span className="uppercase tracking-widest text-primary font-black mx-1">Owner</span> role for this new store.
+                       As the creator, you will automatically be assigned the <span className=" capitalize tracking-widest text-primary font-black mx-1">Owner</span> role for this new store.
                      </p>
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2 md:col-span-2">
-                      <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Store Name <span className="text-destructive">*</span></label>
+                      <label className="text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">Store Name <span className="text-destructive">*</span></label>
                       <input 
                         value={storeName} 
                         onChange={e => setStoreName(e.target.value)} 
@@ -147,7 +147,7 @@ export default function CreateStorePage() {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">City / Location <span className="text-destructive">*</span></label>
+                      <label className="text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">City / Location <span className="text-destructive">*</span></label>
                       <input 
                         value={location} 
                         onChange={e => setLocation(e.target.value)} 
@@ -159,7 +159,7 @@ export default function CreateStorePage() {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Business Phone <span className="text-destructive">*</span></label>
+                      <label className="text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">Business Phone <span className="text-destructive">*</span></label>
                       <input 
                         value={phone} 
                         onChange={e => setPhone(e.target.value)} 
@@ -181,7 +181,7 @@ export default function CreateStorePage() {
                         <Globe size={24} />
                      </div>
                      <div>
-                        <h2 className="text-xl font-black text-foreground">Localization</h2>
+                        <h2 className="text-xl font-black text-foreground capitalize">Localization</h2>
                         <p className="text-sm font-medium text-muted-foreground mt-0.5">Set the default country and currency.</p>
                      </div>
                   </div>
@@ -190,7 +190,7 @@ export default function CreateStorePage() {
                <div className="p-8 space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Country</label>
+                      <label className="text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">Country</label>
                       <input 
                         value={country} 
                         onChange={e => setCountry(e.target.value)} 
@@ -201,7 +201,7 @@ export default function CreateStorePage() {
                     </div>
                     
                     <div className="space-y-2">
-                      <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Primary Currency</label>
+                      <label className="text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">Primary Currency</label>
                       <select 
                         value={currency} 
                         onChange={e => setCurrency(e.target.value)}
@@ -224,7 +224,7 @@ export default function CreateStorePage() {
                   <button 
                     type="submit" 
                     disabled={loading} 
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 bg-primary text-primary-foreground px-8 py-4 rounded-xl text-base font-black shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:scale-[0.98] transition-all disabled:opacity-50"
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 bg-primary text-primary-foreground px-8 py-4 rounded-xl text-base font-black shadow-lg hover:shadow-xl hover:-translate-y-0.5 active:scale-[0.98] transition-all disabled:opacity-50 capitalize"
                   >
                     {loading ? (
                        <span className="flex items-center gap-2">

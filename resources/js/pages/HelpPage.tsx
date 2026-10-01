@@ -70,7 +70,7 @@ export default function HelpPage() {
            <div className="w-16 h-16 rounded-3xl bg-primary/10 flex items-center justify-center mx-auto mb-6 text-primary border border-primary/20">
               <LifeBuoy size={32} />
            </div>
-           <h1 className="text-3xl md:text-4xl font-black tracking-tight text-foreground">How can we help?</h1>
+           <h1 className="text-3xl md:text-4xl font-black tracking-tight text-foreground capitalize">How can we help?</h1>
            <p className="text-base text-muted-foreground font-medium">Find answers in our FAQ or reach out to our support team for assistance.</p>
         </div>
 
@@ -81,7 +81,7 @@ export default function HelpPage() {
               <Mail size={24} />
             </div>
             <div>
-               <h3 className="text-lg font-bold text-foreground mb-1 group-hover:text-primary transition-colors">Email Support</h3>
+               <h3 className="text-lg font-bold text-foreground mb-1 group-hover:text-primary transition-colors capitalize">Email Support</h3>
                <p className="text-sm font-medium text-muted-foreground">Send us a detailed message anytime.</p>
             </div>
           </a>
@@ -91,7 +91,7 @@ export default function HelpPage() {
               <MessageCircle size={24} />
             </div>
             <div>
-               <h3 className="text-lg font-bold text-foreground mb-1 group-hover:text-success transition-colors">WhatsApp Support</h3>
+               <h3 className="text-lg font-bold text-foreground mb-1 group-hover:text-success transition-colors capitalize">WhatsApp Support</h3>
                <p className="text-sm font-medium text-muted-foreground">Chat with us for quick assistance.</p>
             </div>
           </a>
@@ -99,7 +99,7 @@ export default function HelpPage() {
 
         {/* FAQ Sections */}
         <div>
-          <h3 className="text-xl font-black text-foreground mb-6 flex items-center gap-2">
+          <h3 className="text-xl font-black text-foreground mb-6 flex items-center gap-2 capitalize">
              <HelpCircle size={24} className="text-primary" />
              Frequently Asked Questions
           </h3>
@@ -123,7 +123,7 @@ export default function HelpPage() {
                         </div>
                         {section.category}
                      </div>
-                     <span className={`text-[10px] uppercase tracking-widest font-black px-2 py-0.5 rounded-lg ${
+                     <span className={`text-[10px]  capitalize tracking-widest font-black px-2 py-0.5 rounded-lg ${
                         expandedCategory === section.category ? 'bg-background text-primary' : 'bg-muted text-muted-foreground'
                      }`}>
                         {section.questions.length} Qs
@@ -137,7 +137,7 @@ export default function HelpPage() {
                {faqs.map(section => (
                  expandedCategory === section.category && (
                     <div key={section.category} className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-                       <h4 className="text-lg font-black text-foreground mb-4 pb-2 border-b border-border/50">{section.category}</h4>
+                       <h4 className="text-lg font-black text-foreground mb-4 pb-2 border-b border-border/50 capitalize">{section.category}</h4>
                        
                        {section.questions.map((faq, i) => (
                          <div key={i} className={`bg-card border rounded-2xl overflow-hidden transition-all ${expandedQ === faq.q ? 'border-primary shadow-md ring-4 ring-primary/5' : 'border-border shadow-sm hover:border-primary/50'}`}>
@@ -176,7 +176,7 @@ export default function HelpPage() {
                  <Globe size={28} className="text-muted-foreground" />
               </div>
               <div>
-                 <h4 className="text-lg font-black text-foreground">Maaldhis POS</h4>
+                 <h4 className="text-lg font-black text-foreground capitalize">Maaldhis POS</h4>
                  <p className="text-sm font-medium text-muted-foreground">Version 1.0.0 • © {new Date().getFullYear()} Maaldhis</p>
               </div>
            </div>

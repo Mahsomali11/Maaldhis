@@ -71,6 +71,8 @@ export interface Item {
   item_code: string;
   name: string;
   category: string;
+  sub_category_id?: string | null;
+  sub_category?: Category | null;
   type: 'product' | 'service';
   barcode: string;
   cost_price: number;

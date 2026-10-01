@@ -217,7 +217,7 @@ export default function StartSalePage() {
   const CheckoutPanel = () => (
     <div className="bg-card h-full flex flex-col rounded-3xl shadow-sm border border-border overflow-hidden lg:shadow-xl">
       <div className="px-6 py-5 border-b border-border/50 bg-muted/10 flex items-center justify-between sticky top-0 z-10 backdrop-blur-md">
-        <h2 className="text-lg font-black text-foreground flex items-center gap-2">
+        <h2 className="text-lg font-black text-foreground flex items-center gap-2 capitalize">
           Current Order
         </h2>
         <span className="bg-primary text-primary-foreground font-bold px-3 py-1 rounded-full text-xs">
@@ -271,7 +271,7 @@ export default function StartSalePage() {
                 </div>
                 
                 <div className="flex items-center justify-between border-t border-border/50 pt-3 mt-3">
-                   <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Quantity</span>
+                   <span className="text-[10px] font-bold text-muted-foreground  capitalize tracking-widest">Quantity</span>
                    <div className="flex items-center bg-muted rounded-xl p-1">
                       <button onClick={() => removeFromCart(c.item.id)} className="w-8 h-8 rounded-lg flex items-center justify-center text-foreground hover:bg-background hover:shadow-sm transition-all">
                         <Minus size={14} />
@@ -296,7 +296,7 @@ export default function StartSalePage() {
                  <button 
                   key={type} 
                   onClick={() => setSaleType(type)}
-                  className={`flex-1 py-2.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${saleType === type ? 'bg-background shadow-sm text-foreground ring-1 ring-border' : 'text-muted-foreground hover:text-foreground'}`}>
+                  className={`flex-1 py-2.5 rounded-lg text-xs font-bold  capitalize tracking-wider transition-all ${saleType === type ? 'bg-background shadow-sm text-foreground ring-1 ring-border' : 'text-muted-foreground hover:text-foreground'}`}>
                    {type}
                  </button>
                ))}
@@ -334,7 +334,7 @@ export default function StartSalePage() {
           )}
           <div className="h-px w-full bg-border/50 my-2"></div>
           <div className="flex justify-between items-end">
-            <span className="text-foreground font-black uppercase tracking-widest text-xs mb-1">Total</span>
+            <span className="text-foreground font-black  capitalize tracking-widest text-xs mb-1">Total</span>
             <span className="text-foreground font-black text-3xl tracking-tight">{formatCurrency(cartTotal)}</span>
           </div>
         </div>
@@ -343,19 +343,19 @@ export default function StartSalePage() {
           <button 
             onClick={clearCart}
             disabled={cart.length === 0} 
-            className="py-3.5 rounded-xl bg-background border border-border text-foreground text-sm font-bold hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
+            className="py-3.5 rounded-xl bg-background border border-border text-foreground text-sm font-bold hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm capitalize">
             Cancel
           </button>
           <button 
             disabled={cart.length === 0}
-            className="py-3.5 rounded-xl bg-background border border-border text-foreground text-sm font-bold hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
+            className="py-3.5 rounded-xl bg-background border border-border text-foreground text-sm font-bold hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm capitalize">
             Hold
           </button>
         </div>
         <button 
           onClick={handleComplete} 
           disabled={isSubmitting || cart.length === 0}
-          className="w-full py-4 rounded-xl bg-primary text-primary-foreground font-black text-base hover:opacity-90 shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none">
+          className="w-full py-4 rounded-xl bg-primary text-primary-foreground font-black text-base hover:opacity-90 shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none capitalize">
           {isSubmitting ? (
              <>
                 <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
@@ -432,12 +432,12 @@ export default function StartSalePage() {
             <>
               <button 
                 onClick={() => handleCategoryClick('Back')}
-                className="px-4 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-widest whitespace-nowrap transition-all shadow-sm snap-start bg-card border border-border text-muted-foreground hover:bg-muted hover:text-foreground flex items-center gap-1">
+                className="px-4 py-2.5 rounded-xl text-[11px] font-bold  capitalize tracking-widest whitespace-nowrap transition-all shadow-sm snap-start bg-card border border-border text-muted-foreground hover:bg-muted hover:text-foreground flex items-center gap-1">
                 <ArrowLeft size={14} /> Back
               </button>
               <button 
                 onClick={() => setActiveCategory('All')}
-                className={`px-5 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-widest whitespace-nowrap transition-all shadow-sm snap-start ${
+                className={`px-5 py-2.5 rounded-xl text-[11px] font-bold  capitalize tracking-widest whitespace-nowrap transition-all shadow-sm snap-start ${
                   activeCategory === 'All'
                     ? 'bg-foreground text-background scale-105' 
                     : 'bg-card border border-border text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -448,7 +448,7 @@ export default function StartSalePage() {
                 <button 
                   key={cat.id} 
                   onClick={() => handleCategoryClick(cat)}
-                  className={`px-5 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-widest whitespace-nowrap transition-all shadow-sm snap-start ${
+                  className={`px-5 py-2.5 rounded-xl text-[11px] font-bold  capitalize tracking-widest whitespace-nowrap transition-all shadow-sm snap-start ${
                     activeCategory === cat.id 
                       ? 'bg-foreground text-background scale-105' 
                       : 'bg-card border border-border text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -461,7 +461,7 @@ export default function StartSalePage() {
             <>
               <button 
                 onClick={() => handleCategoryClick('All')}
-                className={`px-5 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-widest whitespace-nowrap transition-all shadow-sm snap-start ${
+                className={`px-5 py-2.5 rounded-xl text-[11px] font-bold  capitalize tracking-widest whitespace-nowrap transition-all shadow-sm snap-start ${
                   activeCategory === 'All' 
                     ? 'bg-foreground text-background scale-105' 
                     : 'bg-card border border-border text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -472,7 +472,7 @@ export default function StartSalePage() {
                 <button 
                   key={cat.id} 
                   onClick={() => handleCategoryClick(cat)}
-                  className={`px-5 py-2.5 rounded-xl text-[11px] font-bold uppercase tracking-widest whitespace-nowrap transition-all shadow-sm snap-start ${
+                  className={`px-5 py-2.5 rounded-xl text-[11px] font-bold  capitalize tracking-widest whitespace-nowrap transition-all shadow-sm snap-start ${
                     activeCategory === cat.name 
                       ? 'bg-foreground text-background scale-105' 
                       : 'bg-card border border-border text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -516,7 +516,7 @@ export default function StartSalePage() {
                        <img src={defaultImage} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                     </div>
                     <div className="flex flex-col flex-1 px-1">
-                       <h4 className="font-bold text-foreground text-sm line-clamp-2 leading-tight mb-2 group-hover:text-primary transition-colors">{item.name}</h4>
+                       <h4 className="font-bold text-foreground text-sm line-clamp-2 leading-tight mb-2 group-hover:text-primary transition-colors capitalize">{item.name}</h4>
                        <div className="mt-auto flex items-center gap-2">
                           <span className="flex-1 text-sm font-black text-foreground">
                             {item.sell_price > 0 ? formatCurrency(item.sell_price) : 'Free'}
@@ -548,7 +548,7 @@ export default function StartSalePage() {
               <div className="w-10 h-10 rounded-full bg-background/20 flex items-center justify-center border border-background/20">
                 <span className="text-sm font-black">{cart.reduce((s, c) => s + c.quantity, 0)}</span>
               </div>
-              <span className="text-base font-bold uppercase tracking-wider">View Order</span>
+              <span className="text-base font-bold  capitalize tracking-wider">View Order</span>
             </div>
             <span className="text-xl font-black">{formatCurrency(cartTotal)}</span>
           </button>

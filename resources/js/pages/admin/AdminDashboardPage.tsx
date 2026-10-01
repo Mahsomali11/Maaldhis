@@ -119,7 +119,7 @@ export default function AdminDashboardPage() {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-card rounded-xl p-6 border border-border">
-          <h3 className="text-foreground font-semibold mb-4">Revenue Trend</h3>
+          <h3 className="text-foreground font-semibold mb-4 capitalize">Revenue Trend</h3>
           <ResponsiveContainer width="100%" height={250}>
             <AreaChart data={revenueData}>
               <defs>
@@ -138,7 +138,7 @@ export default function AdminDashboardPage() {
         </div>
 
         <div className="bg-card rounded-xl p-6 border border-border">
-          <h3 className="text-foreground font-semibold mb-4">Store Growth</h3>
+          <h3 className="text-foreground font-semibold mb-4 capitalize">Store Growth</h3>
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={storeGrowthData}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(220,15%,20%)" />
@@ -154,16 +154,16 @@ export default function AdminDashboardPage() {
       {/* Recent Stores */}
       <div className="bg-card rounded-xl border border-border">
         <div className="p-5 border-b border-border">
-          <h3 className="text-foreground font-semibold">Recent Store Registrations</h3>
+          <h3 className="text-foreground font-semibold capitalize">Recent Store Registrations</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-border">
-                <th className="text-left py-3 px-5 text-xs font-medium text-muted-foreground uppercase">Store Name</th>
-                <th className="text-left py-3 px-5 text-xs font-medium text-muted-foreground uppercase">Owner</th>
-                <th className="text-left py-3 px-5 text-xs font-medium text-muted-foreground uppercase">Location</th>
-                <th className="text-left py-3 px-5 text-xs font-medium text-muted-foreground uppercase">Created</th>
+                <th className="text-left py-3 px-5 text-xs font-medium text-muted-foreground  capitalize">Store Name</th>
+                <th className="text-left py-3 px-5 text-xs font-medium text-muted-foreground  capitalize">Owner</th>
+                <th className="text-left py-3 px-5 text-xs font-medium text-muted-foreground  capitalize">Location</th>
+                <th className="text-left py-3 px-5 text-xs font-medium text-muted-foreground  capitalize">Created</th>
               </tr>
             </thead>
             <tbody>

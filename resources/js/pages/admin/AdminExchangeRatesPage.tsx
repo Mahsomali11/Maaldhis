@@ -87,7 +87,7 @@ export default function AdminExchangeRatesPage() {
       {/* Add form */}
       {showAdd && (
         <div className="bg-card rounded-xl p-5 border border-border space-y-3">
-          <h3 className="text-foreground font-semibold">Add New Currency</h3>
+          <h3 className="text-foreground font-semibold capitalize">Add New Currency</h3>
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <input value={newCurrency.currency_code} onChange={e => setNewCurrency(p => ({ ...p, currency_code: e.target.value }))}
               placeholder="Code (e.g. NGN)" className="px-3 py-2 rounded-lg bg-[hsl(220,15%,18%)] border border-[hsl(220,15%,22%)] text-foreground text-sm" />
@@ -99,7 +99,7 @@ export default function AdminExchangeRatesPage() {
               placeholder="Rate to USD" type="number" step="any" className="px-3 py-2 rounded-lg bg-[hsl(220,15%,18%)] border border-[hsl(220,15%,22%)] text-foreground text-sm" />
           </div>
           <div className="flex gap-2">
-            <button onClick={handleAddCurrency} className="px-4 py-2 bg-primary text-primary-foreground text-foreground rounded-lg text-sm font-medium">Save</button>
+            <button onClick={handleAddCurrency} className="px-4 py-2 bg-primary text-primary-foreground text-foreground rounded-lg text-sm font-medium capitalize">Save</button>
             <button onClick={() => setShowAdd(false)} className="px-4 py-2 bg-[hsl(220,15%,18%)] text-muted-foreground rounded-lg text-sm">Cancel</button>
           </div>
         </div>
@@ -111,13 +111,13 @@ export default function AdminExchangeRatesPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border">
-                <th className="text-left py-3 px-5 text-xs font-medium text-muted-foreground uppercase">Code</th>
-                <th className="text-left py-3 px-5 text-xs font-medium text-muted-foreground uppercase">Name</th>
-                <th className="text-left py-3 px-5 text-xs font-medium text-muted-foreground uppercase">Symbol</th>
-                <th className="text-left py-3 px-5 text-xs font-medium text-muted-foreground uppercase">Rate to USD</th>
-                <th className="text-left py-3 px-5 text-xs font-medium text-muted-foreground uppercase">1 USD =</th>
-                <th className="text-left py-3 px-5 text-xs font-medium text-muted-foreground uppercase">Updated</th>
-                <th className="text-right py-3 px-5 text-xs font-medium text-muted-foreground uppercase">Actions</th>
+                <th className="text-left py-3 px-5 text-xs font-medium text-muted-foreground  capitalize">Code</th>
+                <th className="text-left py-3 px-5 text-xs font-medium text-muted-foreground  capitalize">Name</th>
+                <th className="text-left py-3 px-5 text-xs font-medium text-muted-foreground  capitalize">Symbol</th>
+                <th className="text-left py-3 px-5 text-xs font-medium text-muted-foreground  capitalize">Rate to USD</th>
+                <th className="text-left py-3 px-5 text-xs font-medium text-muted-foreground  capitalize">1 USD =</th>
+                <th className="text-left py-3 px-5 text-xs font-medium text-muted-foreground  capitalize">Updated</th>
+                <th className="text-right py-3 px-5 text-xs font-medium text-muted-foreground  capitalize">Actions</th>
               </tr>
             </thead>
             <tbody>

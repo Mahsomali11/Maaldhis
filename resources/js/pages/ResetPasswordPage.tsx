@@ -72,7 +72,7 @@ export default function ResetPasswordPage() {
             <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-6">
                <KeyRound size={24} className="text-primary" />
             </div>
-            <h1 className="text-3xl font-light text-foreground tracking-tight">
+            <h1 className="text-3xl font-light text-foreground tracking-tight capitalize">
               Reset <span className="font-semibold">Password</span>
             </h1>
             <p className="text-sm text-muted-foreground mt-2">
@@ -89,7 +89,7 @@ export default function ResetPasswordPage() {
               )}
               
               <div className="space-y-2">
-                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">New Password</label>
+                <label className="text-xs font-bold text-muted-foreground  capitalize tracking-wider">New Password</label>
                 <input 
                   type="password" 
                   value={newPassword} 
@@ -101,7 +101,7 @@ export default function ResetPasswordPage() {
               </div>
 
               <button type="submit" disabled={loading}
-                className="w-full h-11 rounded-md bg-primary text-primary-foreground text-sm font-bold mt-4 shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50">
+                className="w-full h-11 rounded-md bg-primary text-primary-foreground text-sm font-bold mt-4 shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50 capitalize">
                 {loading ? 'Updating...' : 'Update Password'}
               </button>
             </form>
@@ -120,7 +120,7 @@ export default function ResetPasswordPage() {
               )}
               
               <div className="space-y-2">
-                <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Email Address</label>
+                <label className="text-xs font-bold text-muted-foreground  capitalize tracking-wider">Email Address</label>
                 <input 
                   type="email" 
                   value={email} 
@@ -132,7 +132,7 @@ export default function ResetPasswordPage() {
               </div>
 
               <button type="submit" disabled={loading}
-                className="w-full h-11 rounded-md bg-primary text-primary-foreground text-sm font-bold mt-4 shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50">
+                className="w-full h-11 rounded-md bg-primary text-primary-foreground text-sm font-bold mt-4 shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50 capitalize">
                 {loading ? 'Sending...' : 'Send Reset Link'}
               </button>
             </form>
@@ -147,7 +147,7 @@ export default function ResetPasswordPage() {
         <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, black 1px, transparent 0)', backgroundSize: '32px 32px' }}></div>
         
         <div className="relative z-10 max-w-lg p-12">
-          <h2 className="text-4xl font-light text-foreground leading-tight tracking-tight mb-6">
+          <h2 className="text-4xl font-light text-foreground leading-tight tracking-tight mb-6 capitalize">
             Secure <span className="font-semibold">Access</span>
           </h2>
           <p className="text-lg text-muted-foreground">

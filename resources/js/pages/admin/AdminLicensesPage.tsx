@@ -391,7 +391,7 @@ export default function AdminLicensesPage() {
           <thead>
             <tr className="border-b border-border">
               {['License Key', 'Owner', 'Email', 'Plan', 'Start', 'Expiry', 'Days Left', 'Stores', 'Status', 'Actions'].map(h => (
-                <th key={h} className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase">{h}</th>
+                <th key={h} className="text-left py-3 px-4 text-xs font-medium text-muted-foreground  capitalize">{h}</th>
               ))}
             </tr>
           </thead>
@@ -446,7 +446,7 @@ export default function AdminLicensesPage() {
       {showDetail && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowDetail(null)}>
           <div className="bg-card rounded-2xl border border-border max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
-            <h2 className="text-xl font-bold text-foreground mb-2">Owner License Details</h2>
+            <h2 className="text-xl font-bold text-foreground mb-2 capitalize">Owner License Details</h2>
             {(() => {
               const owner = getOwnerProfile(showDetail);
               const ownerStores = getOwnerStores(showDetail);
@@ -486,7 +486,7 @@ export default function AdminLicensesPage() {
       {showCreate && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowCreate(false)}>
           <div className="bg-card rounded-2xl border border-border max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
-            <h2 className="text-xl font-bold text-foreground mb-4">Create Owner License</h2>
+            <h2 className="text-xl font-bold text-foreground mb-4 capitalize">Create Owner License</h2>
             <div className="space-y-4">
               <div>
                 <label className={labelClass}>Owner Account</label>
@@ -524,7 +524,7 @@ export default function AdminLicensesPage() {
             </div>
             <div className="flex gap-3 mt-6">
               <button onClick={() => setShowCreate(false)} className="flex-1 py-2.5 rounded-lg bg-muted text-foreground hover:bg-accent">Cancel</button>
-              <button onClick={createLicense} disabled={!form.owner_user_id || !form.plan_id} className="flex-1 py-2.5 rounded-lg bg-primary text-primary-foreground text-foreground hover:opacity-90 disabled:opacity-50">
+              <button onClick={createLicense} disabled={!form.owner_user_id || !form.plan_id} className="flex-1 py-2.5 rounded-lg bg-primary text-primary-foreground text-foreground hover:opacity-90 disabled:opacity-50 capitalize">
                 {licenses.some((l: any) => l.owner_user_id === form.owner_user_id) ? 'Update License' : 'Create License'}
               </button>
             </div>
@@ -536,7 +536,7 @@ export default function AdminLicensesPage() {
       {showExtend && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowExtend(null)}>
           <div className="bg-card rounded-2xl border border-border max-w-md w-full p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <h2 className="text-xl font-bold text-foreground mb-2">Extend Owner License</h2>
+            <h2 className="text-xl font-bold text-foreground mb-2 capitalize">Extend Owner License</h2>
             <p className="text-sm text-muted-foreground mb-1">Owner: <span className="text-foreground">{getOwnerProfile(showExtend)?.full_name || getOwnerProfile(showExtend)?.email || '—'}</span></p>
             <p className="text-sm text-muted-foreground mb-1">Stores: <span className="text-foreground">{getOwnerStores(showExtend).length}</span></p>
             <p className="text-sm text-muted-foreground mb-4">Current expiry: <span className="text-foreground">{showExtend.expiry_date}</span></p>
@@ -599,7 +599,7 @@ export default function AdminLicensesPage() {
 
             {computeExtendPreview && (
               <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4 mb-4">
-                <h4 className="text-xs font-semibold text-blue-400 mb-2 uppercase">Preview</h4>
+                <h4 className="text-xs font-semibold text-blue-400 mb-2  capitalize">Preview</h4>
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between"><span className="text-muted-foreground">Current Expiry</span><span className="text-foreground">{computeExtendPreview.currentExpiry}</span></div>
                   {computeExtendPreview.startFrom && <div className="flex justify-between"><span className="text-muted-foreground">Start From</span><span className="text-foreground">{computeExtendPreview.startFrom}</span></div>}
@@ -611,7 +611,7 @@ export default function AdminLicensesPage() {
 
             <div className="flex gap-3">
               <button onClick={() => setShowExtend(null)} className="flex-1 py-2.5 rounded-lg bg-muted text-foreground">Cancel</button>
-              <button onClick={extendLicense} disabled={!computeExtendPreview} className="flex-1 py-2.5 rounded-lg bg-primary text-primary-foreground text-foreground hover:opacity-90 disabled:opacity-50">Extend License</button>
+              <button onClick={extendLicense} disabled={!computeExtendPreview} className="flex-1 py-2.5 rounded-lg bg-primary text-primary-foreground text-foreground hover:opacity-90 disabled:opacity-50 capitalize">Extend License</button>
             </div>
           </div>
         </div>
@@ -621,7 +621,7 @@ export default function AdminLicensesPage() {
       {showChangePlan && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowChangePlan(null)}>
           <div className="bg-card rounded-2xl border border-border max-w-md w-full p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <h2 className="text-xl font-bold text-foreground mb-2">Change Owner Plan</h2>
+            <h2 className="text-xl font-bold text-foreground mb-2 capitalize">Change Owner Plan</h2>
             <p className="text-sm text-muted-foreground mb-1">Owner: <span className="text-foreground">{getOwnerProfile(showChangePlan)?.full_name || getOwnerProfile(showChangePlan)?.email || '—'}</span></p>
             <p className="text-sm text-muted-foreground mb-1">Current Plan: <span className="text-foreground">{showChangePlan.plans?.name || '—'}</span></p>
             <p className="text-sm text-muted-foreground mb-4">Current Expiry: <span className="text-foreground">{showChangePlan.expiry_date}</span></p>
@@ -668,7 +668,7 @@ export default function AdminLicensesPage() {
 
             {computeChangePlanPreview && changePlanId !== showChangePlan.plan_id && (
               <div className="bg-purple-500/10 border border-purple-500/20 rounded-lg p-4 mb-4">
-                <h4 className="text-xs font-semibold text-purple-400 mb-2 uppercase">Preview</h4>
+                <h4 className="text-xs font-semibold text-purple-400 mb-2  capitalize">Preview</h4>
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between"><span className="text-muted-foreground">Owner</span><span className="text-foreground">{computeChangePlanPreview.owner}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">Current Plan</span><span className="text-foreground">{computeChangePlanPreview.currentPlan}</span></div>
@@ -681,7 +681,7 @@ export default function AdminLicensesPage() {
 
             <div className="flex gap-3">
               <button onClick={() => setShowChangePlan(null)} className="flex-1 py-2.5 rounded-lg bg-muted text-foreground">Cancel</button>
-              <button onClick={changePlan} disabled={!changePlanId || changePlanId === showChangePlan.plan_id} className="flex-1 py-2.5 rounded-lg bg-primary text-primary-foreground text-foreground hover:opacity-90 disabled:opacity-50">Change Plan</button>
+              <button onClick={changePlan} disabled={!changePlanId || changePlanId === showChangePlan.plan_id} className="flex-1 py-2.5 rounded-lg bg-primary text-primary-foreground text-foreground hover:opacity-90 disabled:opacity-50 capitalize">Change Plan</button>
             </div>
           </div>
         </div>

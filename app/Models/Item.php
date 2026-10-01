@@ -15,4 +15,9 @@ class Item extends Model
         'sell_price' => 'float',
         'quantity' => 'float',
     ];
+
+    public function subCategory()
+    {
+        return $this->belongsTo(Category::class, 'sub_category_id');
+    }
 }

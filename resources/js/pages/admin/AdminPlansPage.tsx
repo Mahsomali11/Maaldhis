@@ -135,7 +135,7 @@ export default function AdminPlansPage() {
           <div key={plan.id} className="bg-card rounded-xl border border-border p-6">
             <div className="flex items-start justify-between mb-4">
               <div>
-                <h3 className="text-lg font-bold text-foreground">{plan.name}</h3>
+                <h3 className="text-lg font-bold text-foreground capitalize">{plan.name}</h3>
                 <p className="text-primary text-2xl font-bold mt-1">${plan.monthly_price}<span className="text-sm text-muted-foreground">/mo</span></p>
                 <p className="text-sm text-muted-foreground">${plan.yearly_price}/year</p>
               </div>
@@ -169,7 +169,7 @@ export default function AdminPlansPage() {
       {showForm && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowForm(false)}>
           <div className="bg-card rounded-2xl border border-border max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <h2 className="text-xl font-bold text-foreground mb-4">{editing ? 'Edit Plan' : 'Create Plan'}</h2>
+            <h2 className="text-xl font-bold text-foreground mb-4 capitalize">{editing ? 'Edit Plan' : 'Create Plan'}</h2>
             <div className="space-y-3">
               {[
                 { label: 'Plan Name', key: 'name', type: 'text' },
@@ -177,7 +177,7 @@ export default function AdminPlansPage() {
                 { label: 'Yearly Price ($)', key: 'yearly_price', type: 'number' },
               ].map(f => (
                 <div key={f.key}>
-                  <label className="text-sm text-muted-foreground mb-1 block">{f.label}</label>
+                  <label className="text-sm text-muted-foreground mb-1 block capitalize">{f.label}</label>
                   <input type={f.type} value={(form as any)[f.key]} onChange={e => setForm({ ...form, [f.key]: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-background border border-input text-foreground text-sm" />
                 </div>
               ))}
@@ -189,7 +189,7 @@ export default function AdminPlansPage() {
                   { label: 'Storage (GB)', key: 'storage_limit' },
                 ].map(f => (
                   <div key={f.key}>
-                    <label className="text-sm text-muted-foreground mb-1 block">{f.label}</label>
+                    <label className="text-sm text-muted-foreground mb-1 block capitalize">{f.label}</label>
                     <input type="number" value={(form as any)[f.key]} onChange={e => setForm({ ...form, [f.key]: e.target.value })} className="w-full px-3 py-2 rounded-lg bg-background border border-input text-foreground text-sm" />
                   </div>
                 ))}
@@ -198,10 +198,10 @@ export default function AdminPlansPage() {
               {/* Feature Toggles */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm text-muted-foreground">Feature Permissions</label>
+                  <label className="text-sm text-muted-foreground capitalize">Feature Permissions</label>
                   <div className="flex gap-2">
-                    <button onClick={enableAllFeatures} className="text-xs text-primary hover:underline">Enable All</button>
-                    <button onClick={disableAllFeatures} className="text-xs text-red-400 hover:underline">Disable All</button>
+                    <button onClick={enableAllFeatures} className="text-xs text-primary hover:underline capitalize">Enable All</button>
+                    <button onClick={disableAllFeatures} className="text-xs text-red-400 hover:underline capitalize">Disable All</button>
                   </div>
                 </div>
                 <div className="grid grid-cols-1 gap-1.5 max-h-60 overflow-y-auto bg-[hsl(220,20%,12%)] rounded-lg p-3">
@@ -231,7 +231,7 @@ export default function AdminPlansPage() {
             </div>
             <div className="flex gap-3 mt-6">
               <button onClick={() => setShowForm(false)} className="flex-1 py-2.5 rounded-lg bg-muted text-foreground">Cancel</button>
-              <button onClick={savePlan} disabled={!form.name} className="flex-1 py-2.5 rounded-lg bg-primary text-primary-foreground text-foreground hover:opacity-90 disabled:opacity-50">Save</button>
+              <button onClick={savePlan} disabled={!form.name} className="flex-1 py-2.5 rounded-lg bg-primary text-primary-foreground text-foreground hover:opacity-90 disabled:opacity-50 capitalize">Save</button>
             </div>
           </div>
         </div>

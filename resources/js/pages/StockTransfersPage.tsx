@@ -79,7 +79,7 @@ export default function StockTransfersPage() {
      const Icon = config.icon;
      
      return (
-       <span className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1 text-[10px] font-bold border uppercase tracking-widest ${config.bg} ${config.text} ${config.border}`}>
+       <span className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1 text-[10px] font-bold border  capitalize tracking-widest ${config.bg} ${config.text} ${config.border}`}>
          <Icon size={12} />
          {status}
        </span>
@@ -113,7 +113,7 @@ export default function StockTransfersPage() {
             <div className="w-20 h-20 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-6">
                <Store size={36} className="text-muted-foreground/50" />
             </div>
-            <h3 className="text-xl font-black text-foreground mb-2">Multiple Stores Required</h3>
+            <h3 className="text-xl font-black text-foreground mb-2 capitalize">Multiple Stores Required</h3>
             <p className="text-sm font-medium text-muted-foreground max-w-md mx-auto">
                You need at least two stores connected to your account to perform stock transfers. Please create another store branch first.
             </p>
@@ -123,7 +123,7 @@ export default function StockTransfersPage() {
             <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
                <ArrowRightLeft size={36} className="text-primary" />
             </div>
-            <h3 className="text-xl font-black text-foreground mb-2">No Transfers Yet</h3>
+            <h3 className="text-xl font-black text-foreground mb-2 capitalize">No Transfers Yet</h3>
             <p className="text-sm font-medium text-muted-foreground max-w-md mx-auto mb-6">
                You haven't initiated or received any stock transfers. Move inventory between your stores easily.
             </p>
@@ -140,11 +140,11 @@ export default function StockTransfersPage() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-border/50 bg-muted/10">
-                    <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Date</th>
-                    <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-right">Source Store</th>
-                    <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-center">Direction</th>
-                    <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Destination Store</th>
-                    <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-center">Status</th>
+                    <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">Date</th>
+                    <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest text-right">Source Store</th>
+                    <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest text-center">Direction</th>
+                    <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">Destination Store</th>
+                    <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest text-center">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/50">
@@ -206,7 +206,7 @@ export default function StockTransfersPage() {
                      <div key={st.id} className="bg-card rounded-2xl border border-border p-5 shadow-sm">
                         <div className="flex justify-between items-center mb-4 pb-4 border-b border-border/50">
                            <div className="flex flex-col">
-                              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Transfer Date</span>
+                              <span className="text-[10px] font-bold text-muted-foreground  capitalize tracking-widest mb-1">Transfer Date</span>
                               <span className="font-bold text-sm text-foreground">{new Date(st.created_at).toLocaleDateString()}</span>
                            </div>
                            {getStatusBadge(st.status)}
@@ -214,14 +214,14 @@ export default function StockTransfersPage() {
                         
                         <div className="flex items-center gap-3">
                            <div className="flex-1 bg-muted/20 border border-border/50 rounded-xl p-3 text-center">
-                              <span className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">From</span>
+                              <span className="block text-[10px] font-bold text-muted-foreground  capitalize tracking-widest mb-1">From</span>
                               <span className="font-bold text-sm text-foreground truncate block">{source?.store_name || 'Unknown'}</span>
                            </div>
                            <div className="shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                               <ArrowRight size={14} className="text-primary" />
                            </div>
                            <div className="flex-1 bg-primary/5 border border-primary/10 rounded-xl p-3 text-center">
-                              <span className="block text-[10px] font-bold text-primary/70 uppercase tracking-widest mb-1">To</span>
+                              <span className="block text-[10px] font-bold text-primary/70  capitalize tracking-widest mb-1">To</span>
                               <span className="font-bold text-sm text-primary truncate block">{dest?.store_name || 'Unknown'}</span>
                            </div>
                         </div>
@@ -238,7 +238,7 @@ export default function StockTransfersPage() {
         <div className="fixed inset-0 z-50 bg-foreground/20 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
           <div className="w-full sm:max-w-2xl bg-card rounded-t-3xl sm:rounded-3xl border border-border shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300">
             <div className="flex justify-between items-center px-6 py-5 border-b border-border bg-muted/10">
-              <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+              <h3 className="text-lg font-bold text-foreground flex items-center gap-2 capitalize">
                  <ArrowRightLeft size={18} className="text-primary" />
                  New Stock Transfer
               </h3>
@@ -254,7 +254,7 @@ export default function StockTransfersPage() {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest block">From (Source)</label>
+                  <label className="text-[11px] font-bold text-muted-foreground  capitalize tracking-widest block">From (Source)</label>
                   <div className="w-full px-4 py-3 h-12 rounded-xl border border-border/50 bg-muted/30 text-muted-foreground font-bold text-sm flex items-center gap-2">
                     <Store size={16} /> {currentStore?.store_name}
                   </div>
@@ -272,7 +272,7 @@ export default function StockTransfersPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest block">To (Destination) <span className="text-destructive">*</span></label>
+                  <label className="text-[11px] font-bold text-muted-foreground  capitalize tracking-widest block">To (Destination) <span className="text-destructive">*</span></label>
                   <select 
                     value={destStoreId} 
                     onChange={e => setDestStoreId(e.target.value)}
@@ -289,7 +289,7 @@ export default function StockTransfersPage() {
               <div className="h-px bg-border/50 w-full"></div>
 
               <div className="space-y-4">
-                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                <label className="text-[11px] font-bold text-muted-foreground  capitalize tracking-widest flex items-center gap-2">
                    <Package size={14} /> Items to Transfer
                 </label>
                 
@@ -317,7 +317,7 @@ export default function StockTransfersPage() {
                     />
                     <button 
                       onClick={handleAddItem} 
-                      className="px-6 h-12 rounded-xl bg-secondary text-secondary-foreground text-sm font-bold hover:bg-secondary/80 transition-colors shadow-sm"
+                      className="px-6 h-12 rounded-xl bg-secondary text-secondary-foreground text-sm font-bold hover:bg-secondary/80 transition-colors shadow-sm capitalize"
                     >
                       Add
                     </button>
@@ -329,9 +329,9 @@ export default function StockTransfersPage() {
                     <table className="w-full text-left">
                       <thead className="bg-muted/10 border-b border-border/50">
                         <tr>
-                          <th className="px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Item Name</th>
-                          <th className="px-5 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest text-right">Transfer Qty</th>
-                          <th className="px-5 py-3 w-12"></th>
+                          <th className="px-5 py-3 text-[10px] font-bold text-muted-foreground  capitalize tracking-widest">Item Name</th>
+                          <th className="px-5 py-3 text-[10px] font-bold text-muted-foreground  capitalize tracking-widest text-right">Transfer Qty</th>
+                          <th className="px-5 py-3 w-12 capitalize"></th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border/50">
@@ -385,7 +385,7 @@ export default function StockTransfersPage() {
               <button 
                 onClick={handleCreateTransfer} 
                 disabled={selectedItems.length === 0 || !destStoreId}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-50 shadow-sm"
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-50 shadow-sm capitalize"
               >
                 <Truck size={16} /> Initiate Transfer
               </button>

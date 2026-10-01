@@ -99,7 +99,7 @@ export default function AdminStoresPage() {
             <thead>
               <tr className="border-b border-border">
                 {['Store Name', 'Owner', 'Phone', 'Location', 'Plan', 'License', 'Expiry', 'Actions'].map(h => (
-                  <th key={h} className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase">{h}</th>
+                  <th key={h} className="text-left py-3 px-4 text-xs font-medium text-muted-foreground  capitalize">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -140,7 +140,7 @@ export default function AdminStoresPage() {
       {showDetail && selectedStore && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowDetail(false)}>
           <div className="bg-card rounded-2xl border border-border max-w-lg w-full p-6" onClick={e => e.stopPropagation()}>
-            <h2 className="text-xl font-bold text-foreground mb-4">{selectedStore.store_name}</h2>
+            <h2 className="text-xl font-bold text-foreground mb-4 capitalize">{selectedStore.store_name}</h2>
             <div className="space-y-3 text-sm">
               <div className="flex justify-between"><span className="text-muted-foreground">Owner</span><span className="text-foreground">{selectedStore.profiles?.full_name || selectedStore.profiles?.email}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Email</span><span className="text-foreground">{selectedStore.profiles?.email}</span></div>

@@ -70,7 +70,7 @@ export default function CustomerDisplayPage() {
               <ShoppingBag size={40} />
             </div>
             <div>
-               <h1 className="text-5xl font-black text-foreground tracking-tight mb-2">Your Order</h1>
+               <h1 className="text-5xl font-black text-foreground tracking-tight mb-2 capitalize">Your Order</h1>
                <p className="text-lg font-medium text-muted-foreground">{cart.length} {cart.length === 1 ? 'item' : 'items'} in cart</p>
             </div>
           </div>
@@ -117,7 +117,7 @@ export default function CustomerDisplayPage() {
                <div className="w-14 h-14 rounded-2xl bg-primary-foreground/10 flex items-center justify-center backdrop-blur-md">
                   <Store size={28} className="text-primary-foreground" />
                </div>
-               <h2 className="text-4xl font-black text-primary-foreground tracking-tight">{storeName}</h2>
+               <h2 className="text-4xl font-black text-primary-foreground tracking-tight capitalize">{storeName}</h2>
             </div>
             <div className="w-24 h-2 bg-primary-foreground/20 rounded-full"></div>
           </div>
@@ -137,7 +137,7 @@ export default function CustomerDisplayPage() {
                  </div>
                )}
                <div>
-                  <p className="text-2xl font-bold text-primary-foreground/80 uppercase tracking-widest mb-4">Total Due</p>
+                  <p className="text-2xl font-bold text-primary-foreground/80  capitalize tracking-widest mb-4">Total Due</p>
                   <p className="text-7xl xl:text-8xl font-black text-primary-foreground tracking-tight leading-none">{formatCurrency(total)}</p>
                </div>
             </div>

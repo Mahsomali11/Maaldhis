@@ -112,7 +112,7 @@ export default function SalesReportPage() {
         <Icon size={24} className={color} />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold text-muted-foreground uppercase tracking-wider mb-1 truncate">{label}</p>
+        <p className="text-sm font-bold text-muted-foreground  capitalize tracking-wider mb-1 truncate">{label}</p>
         <p className={`text-2xl font-black ${color} truncate tracking-tight`}>{value}</p>
       </div>
     </div>
@@ -153,7 +153,7 @@ export default function SalesReportPage() {
         {/* Date Display */}
         <div className="flex items-center gap-3 text-foreground bg-card p-4 rounded-xl border border-border shadow-sm inline-flex">
           <CalendarDays size={20} className="text-primary" />
-          <h2 className="text-base font-bold">{dateDisplay}</h2>
+          <h2 className="text-base font-bold capitalize">{dateDisplay}</h2>
         </div>
 
         {filteredSales.length === 0 && tab !== 'all' ? (
@@ -161,7 +161,7 @@ export default function SalesReportPage() {
             <div className="w-24 h-24 rounded-full bg-muted/50 flex items-center justify-center mb-6">
               <Activity size={40} className="text-muted-foreground/50" />
             </div>
-            <h3 className="text-xl font-bold text-foreground mb-2">No transactions</h3>
+            <h3 className="text-xl font-bold text-foreground mb-2 capitalize">No transactions</h3>
             <p className="text-muted-foreground">There are no transactions in this period.</p>
           </div>
         ) : (
@@ -171,11 +171,11 @@ export default function SalesReportPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="bg-card rounded-3xl p-8 border border-border shadow-sm flex flex-col justify-center items-center text-center overflow-hidden relative">
                 <div className={`absolute top-0 w-full h-2 ${netProfit >= 0 ? 'bg-success' : 'bg-destructive'}`}></div>
-                <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-3">Net Profit</p>
+                <p className="text-sm font-bold text-muted-foreground  capitalize tracking-widest mb-3">Net Profit</p>
                 <p className={`text-5xl md:text-6xl font-black tracking-tighter ${netProfit >= 0 ? 'text-success' : 'text-destructive'}`}>
                   {formatCurrency(netProfit)}
                 </p>
-                <div className={`mt-6 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider ${netProfit >= 0 ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}>
+                <div className={`mt-6 px-4 py-1.5 rounded-full text-xs font-bold  capitalize tracking-wider ${netProfit >= 0 ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}`}>
                   {netProfit >= 0 ? 'Profitable' : 'Loss'}
                 </div>
               </div>
@@ -201,7 +201,7 @@ export default function SalesReportPage() {
             {/* Payment Methods */}
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 pt-4">
               <div className="bg-card rounded-3xl p-6 sm:p-8 border border-border shadow-sm">
-                <h3 className="font-black text-foreground text-xl mb-6">Payment Methods <span className="text-muted-foreground font-medium text-lg">(Cash Sales)</span></h3>
+                <h3 className="font-black text-foreground text-xl mb-6 capitalize">Payment Methods <span className="text-muted-foreground font-medium text-lg">(Cash Sales)</span></h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {salePaymentsByMethod.length > 0 ? (
                     salePaymentsByMethod.map(({ account, total }) => (
@@ -223,7 +223,7 @@ export default function SalesReportPage() {
               </div>
 
               <div className="bg-card rounded-3xl p-6 sm:p-8 border border-border shadow-sm">
-                <h3 className="font-black text-foreground text-xl mb-6">Payment Methods <span className="text-muted-foreground font-medium text-lg">(Credit Payments)</span></h3>
+                <h3 className="font-black text-foreground text-xl mb-6 capitalize">Payment Methods <span className="text-muted-foreground font-medium text-lg">(Credit Payments)</span></h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {creditPaymentsByMethod.length > 0 ? (
                     creditPaymentsByMethod.map(({ account, total }) => (
@@ -249,17 +249,17 @@ export default function SalesReportPage() {
             {/* Filtered Transactions List */}
             <div className="bg-card rounded-3xl border border-border shadow-sm overflow-hidden mt-8">
                <div className="p-6 border-b border-border/50 bg-muted/10">
-                 <h3 className="font-black text-foreground text-xl">Transactions List</h3>
+                 <h3 className="font-black text-foreground text-xl capitalize">Transactions List</h3>
                  <p className="text-sm text-muted-foreground mt-1">Filtered by your selected date and payment account.</p>
                </div>
                <table className="w-full text-left border-collapse">
                  <thead className="bg-muted/30 border-b border-border">
                    <tr>
-                     <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Time</th>
-                     <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Receipt</th>
-                     <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Type</th>
-                     <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Account</th>
-                     <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-right">Amount</th>
+                     <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">Time</th>
+                     <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">Receipt</th>
+                     <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">Type</th>
+                     <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">Account</th>
+                     <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest text-right">Amount</th>
                    </tr>
                  </thead>
                  <tbody className="divide-y divide-border/50">
@@ -272,7 +272,7 @@ export default function SalesReportPage() {
                          </td>
                          <td className="px-6 py-4 text-sm font-mono text-muted-foreground">{sale.receipt_no}</td>
                          <td className="px-6 py-4">
-                           <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-success/10 text-success">
+                           <span className="px-2.5 py-1 rounded-full text-[10px] font-bold  capitalize tracking-wider bg-success/10 text-success">
                              {sale.sale_type} sale
                            </span>
                          </td>

@@ -79,7 +79,7 @@ export default function ReceiptPage({ saleId }: { saleId?: string }) {
           </div>
         </div>
         
-        <h2 className="text-center text-2xl font-black tracking-tight text-foreground mb-1">Sale Complete</h2>
+        <h2 className="text-center text-2xl font-black tracking-tight text-foreground mb-1 capitalize">Sale Complete</h2>
         <p className="text-center text-sm font-medium text-muted-foreground mb-6 bg-muted/50 py-1 px-3 rounded-full inline-block mx-auto max-w-fit flex items-center justify-center self-center">Receipt #{sale.receipt_no}</p>
 
         <div className="border-t-2 border-dashed border-border/60 pt-5">
@@ -116,7 +116,7 @@ export default function ReceiptPage({ saleId }: { saleId?: string }) {
 
           {template === 'modern' && (
             <div className="flex flex-col items-center justify-center text-center space-y-1">
-              <div className="text-lg font-black text-foreground uppercase tracking-wider">{currentStore?.store_name}</div>
+              <div className="text-lg font-black text-foreground  capitalize tracking-wider">{currentStore?.store_name}</div>
               <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
                 {currentStore?.location && <span>{currentStore.location}</span>}
                 {currentStore?.location && currentStore?.phone && <span>&bull;</span>}
@@ -213,7 +213,7 @@ export default function ReceiptPage({ saleId }: { saleId?: string }) {
 
         {sale.status === 'returned' && (
           <div className="mt-4 bg-destructive/10 border border-destructive/20 rounded-xl px-4 py-3 text-center">
-            <span className="text-destructive font-black tracking-widest text-sm">REFUNDED</span>
+            <span className="text-destructive font-black capitalize tracking-widest text-sm">REFUNDED</span>
           </div>
         )}
 
@@ -222,7 +222,7 @@ export default function ReceiptPage({ saleId }: { saleId?: string }) {
           {currentStore?.receipt_footer_text && (
             <p className="text-center text-xs text-muted-foreground">{currentStore.receipt_footer_text}</p>
           )}
-          <p className="text-center text-[10px] font-bold tracking-widest text-muted-foreground/40 uppercase mt-4">Powered by Maaldhis</p>
+          <p className="text-center text-[10px] font-bold capitalize tracking-widest text-muted-foreground/40  mt-4">Powered by Maaldhis</p>
         </div>
         </div>
 
@@ -232,17 +232,17 @@ export default function ReceiptPage({ saleId }: { saleId?: string }) {
             <button onClick={() => openFormatPicker('print')}
               className="py-4 rounded-2xl bg-info/10 text-info font-bold flex flex-col items-center justify-center gap-1.5 hover:bg-info/20 active:scale-[0.98] transition-all">
               <Printer size={22} />
-              <span className="text-[11px] uppercase tracking-wider">Print</span>
+              <span className="text-[11px]  capitalize tracking-wider">Print</span>
             </button>
             <button onClick={() => openFormatPicker('download')}
               className="py-4 rounded-2xl bg-primary/10 text-primary font-bold flex flex-col items-center justify-center gap-1.5 hover:bg-primary/20 active:scale-[0.98] transition-all">
               <Download size={22} />
-              <span className="text-[11px] uppercase tracking-wider">PDF</span>
+              <span className="text-[11px]  capitalize tracking-wider">PDF</span>
             </button>
             <button onClick={handleShare}
-              className="py-4 rounded-2xl bg-muted text-foreground font-bold flex flex-col items-center justify-center gap-1.5 hover:bg-accent active:scale-[0.98] transition-all">
+              className="py-4 rounded-2xl bg-muted text-foreground font-bold flex flex-col items-center justify-center gap-1.5 hover:bg-accent active:scale-[0.98] transition-all capitalize">
               <Share2 size={22} />
-              <span className="text-[11px] uppercase tracking-wider">Share</span>
+              <span className="text-[11px]  capitalize tracking-wider">Share</span>
             </button>
           </div>
 
@@ -270,7 +270,7 @@ export default function ReceiptPage({ saleId }: { saleId?: string }) {
         <div className="fixed inset-0 z-50 bg-foreground/20 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200" onClick={() => setShowFormatPicker(false)}>
           <div className="w-full sm:w-[420px] bg-card rounded-t-3xl sm:rounded-3xl p-6 sm:p-8 space-y-4 shadow-2xl animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-2">
-               <h3 className="text-xl font-bold text-foreground">
+               <h3 className="text-xl font-bold text-foreground capitalize">
                  {printAction === 'print' ? 'Print Format' : 'PDF Format'}
                </h3>
                <button onClick={() => setShowFormatPicker(false)} className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:bg-accent transition-colors">×</button>

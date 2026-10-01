@@ -67,11 +67,11 @@ export default function PaymentAccountLedger({ account, onClose }: { account: an
                <Wallet size={20} />
              </div>
              <div>
-                <h2 className="text-lg font-black text-foreground">{account.account_name} Ledger</h2>
+                <h2 className="text-lg font-black text-foreground capitalize">{account.account_name} Ledger</h2>
                 <p className="text-xs text-muted-foreground font-medium">{account.account_type} &bull; {account.provider_name || 'No Provider'}</p>
              </div>
           </div>
-          <button onClick={onClose} className="w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors capitalize">
             <X size={18} />
           </button>
         </div>
@@ -92,15 +92,15 @@ export default function PaymentAccountLedger({ account, onClose }: { account: an
 
         <div className="grid grid-cols-1 sm:grid-cols-3 p-6 gap-6 bg-card border-b border-border">
           <div className="bg-success/10 border border-success/20 rounded-2xl p-5">
-            <p className="text-xs font-bold text-success uppercase tracking-wider mb-1 flex items-center gap-1"><ArrowDownRight size={14}/> Inflow (Sales)</p>
+            <p className="text-xs font-bold text-success  capitalize tracking-wider mb-1 flex items-center gap-1"><ArrowDownRight size={14}/> Inflow (Sales)</p>
             <p className="text-2xl font-black text-success">{formatCurrency(inflow)}</p>
           </div>
           <div className="bg-destructive/10 border border-destructive/20 rounded-2xl p-5">
-            <p className="text-xs font-bold text-destructive uppercase tracking-wider mb-1 flex items-center gap-1"><ArrowUpRight size={14}/> Outflow (Expenses)</p>
+            <p className="text-xs font-bold text-destructive  capitalize tracking-wider mb-1 flex items-center gap-1"><ArrowUpRight size={14}/> Outflow (Expenses)</p>
             <p className="text-2xl font-black text-destructive">{formatCurrency(outflow)}</p>
           </div>
           <div className={`border rounded-2xl p-5 ${net >= 0 ? 'bg-primary/10 border-primary/20' : 'bg-muted border-border'}`}>
-            <p className="text-xs font-bold text-foreground uppercase tracking-wider mb-1">Net Balance</p>
+            <p className="text-xs font-bold text-foreground  capitalize tracking-wider mb-1">Net Balance</p>
             <p className={`text-2xl font-black ${net >= 0 ? 'text-primary' : 'text-foreground'}`}>{formatCurrency(net)}</p>
           </div>
         </div>
@@ -109,18 +109,18 @@ export default function PaymentAccountLedger({ account, onClose }: { account: an
            {transactions.length === 0 ? (
              <div className="flex flex-col items-center justify-center p-16 text-center">
                 <Receipt size={40} className="text-muted-foreground/30 mb-4" />
-                <h3 className="text-foreground font-bold text-lg mb-1">No transactions</h3>
+                <h3 className="text-foreground font-bold text-lg mb-1 capitalize">No transactions</h3>
                 <p className="text-muted-foreground text-sm">There are no transactions for this account in the selected period.</p>
              </div>
            ) : (
              <table className="w-full text-left border-collapse">
                <thead className="sticky top-0 bg-muted/90 backdrop-blur-md z-10 border-b border-border">
                  <tr>
-                   <th className="px-6 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Date & Time</th>
-                   <th className="px-6 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Type</th>
-                   <th className="px-6 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Reference</th>
-                   <th className="px-6 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Description</th>
-                   <th className="px-6 py-3 text-[10px] font-bold text-muted-foreground uppercase tracking-widest text-right">Amount</th>
+                   <th className="px-6 py-3 text-[10px] font-bold text-muted-foreground  capitalize tracking-widest">Date & Time</th>
+                   <th className="px-6 py-3 text-[10px] font-bold text-muted-foreground  capitalize tracking-widest">Type</th>
+                   <th className="px-6 py-3 text-[10px] font-bold text-muted-foreground  capitalize tracking-widest">Reference</th>
+                   <th className="px-6 py-3 text-[10px] font-bold text-muted-foreground  capitalize tracking-widest">Description</th>
+                   <th className="px-6 py-3 text-[10px] font-bold text-muted-foreground  capitalize tracking-widest text-right">Amount</th>
                  </tr>
                </thead>
                <tbody className="divide-y divide-border/50">
@@ -130,7 +130,7 @@ export default function PaymentAccountLedger({ account, onClose }: { account: an
                         {format(t.date, 'MMM d, yyyy')} <span className="text-muted-foreground text-xs block">{format(t.date, 'h:mm a')}</span>
                      </td>
                      <td className="px-6 py-4">
-                       <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${t.isOutflow ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success'}`}>
+                       <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold  capitalize tracking-wider ${t.isOutflow ? 'bg-destructive/10 text-destructive' : 'bg-success/10 text-success'}`}>
                          {t.type}
                        </span>
                      </td>

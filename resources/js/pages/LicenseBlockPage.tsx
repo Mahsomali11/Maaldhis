@@ -59,30 +59,30 @@ export default function LicenseBlockPage() {
           )}
         </div>
 
-        <h1 className="text-3xl font-black text-foreground mb-3 tracking-tight">{displayInfo.title}</h1>
+        <h1 className="text-3xl font-black text-foreground mb-3 tracking-tight capitalize">{displayInfo.title}</h1>
         <p className="text-sm font-medium text-muted-foreground mb-8 max-w-xs mx-auto leading-relaxed">{displayInfo.message}</p>
 
         {currentStore && (
           <div className="bg-muted/30 rounded-2xl border border-border/50 p-5 mb-8 text-left space-y-4 shadow-inner">
             <div className="flex justify-between items-center">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Store</span>
+              <span className="text-[10px] font-bold text-muted-foreground  capitalize tracking-widest">Store</span>
               <span className="text-sm font-black text-foreground">{currentStore.store_name}</span>
             </div>
             <div className="flex justify-between items-center border-t border-border/50 pt-4">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Status</span>
-              <span className="text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg border shadow-sm" style={{ color: displayInfo.color, backgroundColor: displayInfo.bg, borderColor: displayInfo.color }}>
+              <span className="text-[10px] font-bold text-muted-foreground  capitalize tracking-widest">Status</span>
+              <span className="text-[10px] font-black  capitalize tracking-widest px-2.5 py-1 rounded-lg border shadow-sm" style={{ color: displayInfo.color, backgroundColor: displayInfo.bg, borderColor: displayInfo.color }}>
                 {isExpired ? 'Expired' : status}
               </span>
             </div>
             {licenseStatus?.expiry_date && (
               <div className="flex justify-between items-center border-t border-border/50 pt-4">
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Expiry Date</span>
+                <span className="text-[10px] font-bold text-muted-foreground  capitalize tracking-widest">Expiry Date</span>
                 <span className="text-sm font-bold text-foreground">{licenseStatus.expiry_date}</span>
               </div>
             )}
             {licenseStatus?.plan_name && (
               <div className="flex justify-between items-center border-t border-border/50 pt-4">
-                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Plan</span>
+                <span className="text-[10px] font-bold text-muted-foreground  capitalize tracking-widest">Plan</span>
                 <span className="text-sm font-bold text-foreground capitalize">{licenseStatus.plan_name}</span>
               </div>
             )}
@@ -122,7 +122,7 @@ export default function LicenseBlockPage() {
             </button>
             <button
               onClick={logout}
-              className="w-full py-3 rounded-xl bg-transparent text-muted-foreground text-xs font-bold hover:text-destructive hover:bg-destructive/10 transition-all flex items-center justify-center gap-1.5"
+              className="w-full py-3 rounded-xl bg-transparent text-muted-foreground text-xs font-bold hover:text-destructive hover:bg-destructive/10 transition-all flex items-center justify-center gap-1.5 capitalize"
             >
               <LogOut size={14} /> Sign Out
             </button>

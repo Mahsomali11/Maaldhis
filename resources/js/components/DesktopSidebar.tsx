@@ -166,7 +166,7 @@ export default function DesktopSidebar({ isMobile = false }: { isMobile?: boolea
           </div>
           <div className="flex flex-col">
             <span className="font-black text-xl tracking-tight text-foreground leading-none">Maaldhis</span>
-            <span className="text-[10px] font-bold text-primary uppercase tracking-widest mt-1 leading-none">POS System</span>
+            <span className="text-[10px] font-bold text-primary  capitalize tracking-widest mt-1 leading-none">POS System</span>
           </div>
         </div>
 
@@ -187,7 +187,7 @@ export default function DesktopSidebar({ isMobile = false }: { isMobile?: boolea
                 )}
                 <div className="text-left min-w-0 flex flex-col justify-center">
                   <p className="text-sm font-black text-foreground truncate">{currentStore?.store_name || 'My Store'}</p>
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest truncate">{role}</p>
+                  <p className="text-[10px] font-bold text-muted-foreground  capitalize tracking-widest truncate">{role}</p>
                 </div>
               </div>
               <ChevronsUpDown size={16} className="text-muted-foreground shrink-0" />
@@ -234,7 +234,7 @@ export default function DesktopSidebar({ isMobile = false }: { isMobile?: boolea
           
           {isAdmin ? (
              <div className="space-y-1">
-               <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest px-4 mb-3">Admin Panel</p>
+               <p className="text-[11px] font-bold text-muted-foreground  capitalize tracking-widest px-4 mb-3">Admin Panel</p>
                <NavItem label="Dashboard" icon={LayoutDashboard} path="/admin/dashboard" />
                <NavItem label="Stores" icon={Store} path="/admin/stores" />
                <NavItem label="Licenses" icon={ShieldCheck} path="/admin/licenses" />
@@ -251,15 +251,15 @@ export default function DesktopSidebar({ isMobile = false }: { isMobile?: boolea
           ) : (
             <>
               <div className="space-y-1">
-                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest px-4 mb-3">Main</p>
+                <p className="text-[11px] font-bold text-muted-foreground  capitalize tracking-widest px-4 mb-3">Main</p>
                 {filteredMainNav.map(item => <NavItem key={item.path} {...item} />)}
               </div>
               <div className="space-y-1">
-                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest px-4 mb-3">Modules</p>
+                <p className="text-[11px] font-bold text-muted-foreground  capitalize tracking-widest px-4 mb-3">Modules</p>
                 {filteredModuleNav.map(item => <NavItem key={item.path} {...item} />)}
               </div>
               <div className="space-y-1">
-                <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest px-4 mb-3">Settings</p>
+                <p className="text-[11px] font-bold text-muted-foreground  capitalize tracking-widest px-4 mb-3">Settings</p>
                 {filteredBottomNav.map(item => <NavItem key={item.path} {...item} />)}
               </div>
             </>
@@ -275,11 +275,11 @@ export default function DesktopSidebar({ isMobile = false }: { isMobile?: boolea
                 </div>
                 <div className="flex-1 flex flex-col items-start min-w-0">
                   <span className="truncate w-full text-left text-sm font-bold text-foreground leading-tight">{displayUser?.full_name || 'User'}</span>
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-tight">{role}</span>
+                  <span className="text-[10px] font-bold text-muted-foreground  capitalize tracking-widest leading-tight">{role}</span>
                 </div>
               </button>
               <div className="h-px bg-border/50 my-1 mx-2"></div>
-              <button onClick={isAdmin ? adminLogout : logout} className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl hover:bg-primary/10 text-primary transition-colors text-sm font-bold">
+              <button onClick={isAdmin ? adminLogout : logout} className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl hover:bg-primary/10 text-primary transition-colors text-sm font-bold capitalize">
                 <LogOut size={16} />
                 <span>Sign Out</span>
               </button>

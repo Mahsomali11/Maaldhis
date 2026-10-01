@@ -57,7 +57,7 @@ export default function ProfilePage() {
         rightAction={
           <button 
             onClick={logout}
-            className="px-5 py-2 rounded-md bg-destructive/10 text-destructive text-sm font-bold hover:bg-destructive/20 transition-colors shadow-sm"
+            className="px-5 py-2 rounded-md bg-destructive/10 text-destructive text-sm font-bold hover:bg-destructive/20 transition-colors shadow-sm capitalize"
           >
             Sign Out
           </button>
@@ -69,7 +69,7 @@ export default function ProfilePage() {
         {/* Section 1: Overview */}
         <div className="flex flex-col md:flex-row gap-8 pb-10 border-b border-border">
           <div className="w-full md:w-1/3 shrink-0">
-            <h2 className="text-base font-semibold text-foreground mb-2">Account Overview</h2>
+            <h2 className="text-base font-semibold text-foreground mb-2 capitalize">Account Overview</h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Your personal account details and current subscription status.
             </p>
@@ -84,14 +84,14 @@ export default function ProfilePage() {
                   </div>
                 )}
                 <div className="min-w-0 flex-1 text-center sm:text-left">
-                  <h2 className="text-2xl font-light tracking-tight text-foreground">{profile?.full_name || 'User'}</h2>
+                  <h2 className="text-2xl font-light tracking-tight text-foreground capitalize">{profile?.full_name || 'User'}</h2>
                   <p className="text-sm text-muted-foreground mt-1">{profile?.email}</p>
                   
                   {licenseStatus && (
                     <div className="mt-4 inline-flex flex-wrap items-center justify-center sm:justify-start gap-3">
                       <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-warning/10 border border-warning/20">
                         <Crown size={14} className="text-warning" />
-                        <span className="text-xs font-bold tracking-wider uppercase text-warning">{licenseStatus.plan_name || 'Free'} Plan</span>
+                        <span className="text-xs font-bold capitalize tracking-wider  text-warning">{licenseStatus.plan_name || 'Free'} Plan</span>
                       </div>
                       
                       <button
@@ -110,7 +110,7 @@ export default function ProfilePage() {
         {/* Section 2: Personal Information */}
         <div className="flex flex-col md:flex-row gap-8 pb-10 border-b border-border">
           <div className="w-full md:w-1/3 shrink-0">
-            <h2 className="text-base font-semibold text-foreground mb-2">Personal Details</h2>
+            <h2 className="text-base font-semibold text-foreground mb-2 capitalize">Personal Details</h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Update your basic profile information. Your email address cannot be changed from this screen.
             </p>
@@ -120,7 +120,7 @@ export default function ProfilePage() {
                <div className="p-6 space-y-5">
                  
                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Full Name</label>
+                    <label className="text-xs font-bold text-muted-foreground  capitalize tracking-wider">Full Name</label>
                     <input 
                       value={fullName} 
                       onChange={e => setFullName(e.target.value)}
@@ -129,7 +129,7 @@ export default function ProfilePage() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Phone Number</label>
+                    <label className="text-xs font-bold text-muted-foreground  capitalize tracking-wider">Phone Number</label>
                     <input 
                       value={phone} 
                       onChange={e => setPhone(e.target.value)}
@@ -138,7 +138,7 @@ export default function ProfilePage() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Email Address</label>
+                    <label className="text-xs font-bold text-muted-foreground  capitalize tracking-wider">Email Address</label>
                     <input 
                       value={profile?.email || ''} 
                       disabled
@@ -152,7 +152,7 @@ export default function ProfilePage() {
                   <button 
                     onClick={handleSaveProfile}
                     disabled={saving || (!fullName && !phone)}
-                    className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2 rounded-md text-sm font-bold shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+                    className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2 rounded-md text-sm font-bold shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50 capitalize"
                   >
                     <Save size={16} />
                     <span>{saving ? 'Saving...' : 'Save Profile'}</span>
@@ -165,7 +165,7 @@ export default function ProfilePage() {
         {/* Section 3: Security */}
         <div className="flex flex-col md:flex-row gap-8 pb-10">
           <div className="w-full md:w-1/3 shrink-0">
-            <h2 className="text-base font-semibold text-foreground mb-2">Security</h2>
+            <h2 className="text-base font-semibold text-foreground mb-2 capitalize">Security</h2>
             <p className="text-sm text-muted-foreground leading-relaxed">
               Ensure your account is using a long, random password to stay secure.
             </p>
@@ -175,7 +175,7 @@ export default function ProfilePage() {
                <div className="p-6 space-y-5">
                  
                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">New Password</label>
+                    <label className="text-xs font-bold text-muted-foreground  capitalize tracking-wider">New Password</label>
                     <div className="relative">
                       <input
                         type={showPassword ? 'text' : 'password'}
@@ -195,7 +195,7 @@ export default function ProfilePage() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Confirm Password</label>
+                    <label className="text-xs font-bold text-muted-foreground  capitalize tracking-wider">Confirm Password</label>
                     <input 
                       type={showPassword ? 'text' : 'password'}
                       value={confirmPassword} 
@@ -211,7 +211,7 @@ export default function ProfilePage() {
                   <button 
                     onClick={handleChangePassword}
                     disabled={changingPassword || !newPassword}
-                    className="flex items-center gap-2 bg-foreground text-background px-5 py-2 rounded-md text-sm font-bold shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+                    className="flex items-center gap-2 bg-foreground text-background px-5 py-2 rounded-md text-sm font-bold shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50 capitalize"
                   >
                     <KeyRound size={16} />
                     <span>{changingPassword ? 'Updating...' : 'Update Password'}</span>

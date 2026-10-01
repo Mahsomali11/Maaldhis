@@ -28,20 +28,20 @@ function getStockStatus(item: { type: string; quantity: number; low_stock_thresh
 function StockBadge({ status }: { status: string }) {
   if (status === 'out_of_stock') {
     return (
-      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-destructive/10 text-destructive border border-destructive/20">
+      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold  capitalize tracking-wider bg-destructive/10 text-destructive border border-destructive/20">
         Out of Stock
       </span>
     );
   }
   if (status === 'low_stock') {
     return (
-      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-warning/10 text-warning border border-warning/20">
+      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold  capitalize tracking-wider bg-warning/10 text-warning border border-warning/20">
         Low Stock
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-success/10 text-success border border-success/20">
+    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold  capitalize tracking-wider bg-success/10 text-success border border-success/20">
       In Stock
     </span>
   );
@@ -215,7 +215,7 @@ export default function InventoryPage() {
       <PageHeader 
         title="Inventory Management" 
         rightAction={
-          <button onClick={handleDownloadExcel} className="p-2 text-muted-foreground hover:text-foreground transition-colors hidden sm:block">
+          <button onClick={handleDownloadExcel} className="p-2 text-muted-foreground hover:text-foreground transition-colors hidden sm:block capitalize">
             <Download size={20} />
           </button>
         } 
@@ -330,7 +330,7 @@ export default function InventoryPage() {
                 </button>
               )}
               
-              <label className="hidden lg:flex h-11 items-center gap-2 px-4 rounded-xl bg-background text-foreground hover:bg-accent border border-input text-sm font-bold cursor-pointer transition-colors shadow-sm">
+              <label className="hidden lg:flex h-11 items-center gap-2 px-4 rounded-xl bg-background text-foreground hover:bg-accent border border-input text-sm font-bold cursor-pointer transition-colors shadow-sm capitalize">
                 <Upload size={16} /> Import Excel
                 <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleUploadExcel} />
               </label>
@@ -364,18 +364,19 @@ export default function InventoryPage() {
               <table className="w-full text-left border-collapse min-w-[900px]">
                 <thead>
                   <tr className="border-b border-border/50 bg-muted/10">
-                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">Code</th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">Product Name</th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">Category</th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap text-right">Cost Price</th>
-                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap text-right">Sell Price</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest whitespace-nowrap">Code</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest whitespace-nowrap">Product Name</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest whitespace-nowrap">Category</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest whitespace-nowrap">Sub-Category</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest whitespace-nowrap text-right">Cost Price</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest whitespace-nowrap text-right">Sell Price</th>
                     {tab === 'product' && (
                       <>
-                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap text-right">Qty</th>
-                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap text-center">Status</th>
+                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest whitespace-nowrap text-right">Qty</th>
+                        <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest whitespace-nowrap text-center">Status</th>
                       </>
                     )}
-                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap text-right">Actions</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest whitespace-nowrap text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/50">
@@ -398,6 +399,11 @@ export default function InventoryPage() {
                           {item.name}
                         </td>
                         <td className="px-6 py-4 text-sm text-muted-foreground">{item.category || '—'}</td>
+                        <td className="px-6 py-4 text-sm text-muted-foreground">
+                          {item.sub_category_id 
+                            ? (storeCategories.find(c => c.id === item.sub_category_id)?.name || item.sub_category?.name || '—')
+                            : (item.sub_category?.name || '—')}
+                        </td>
                         <td className="px-6 py-4 text-sm text-muted-foreground text-right">{formatCurrency(item.cost_price)}</td>
                         <td className="px-6 py-4 text-sm font-bold text-foreground text-right">{formatCurrency(item.sell_price)}</td>
                         {tab === 'product' && (
@@ -435,19 +441,19 @@ export default function InventoryPage() {
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
            <div className="w-full max-w-lg bg-card rounded-2xl border border-border shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
              <div className="px-6 py-5 border-b border-border bg-muted/10 flex justify-between items-center">
-               <h3 className="text-lg font-bold text-foreground">{editingItem ? 'Edit' : 'Add'} {tab === 'product' ? 'Product' : 'Service'}</h3>
+               <h3 className="text-lg font-bold text-foreground capitalize">{editingItem ? 'Edit' : 'Add'} {tab === 'product' ? 'Product' : 'Service'}</h3>
                <button onClick={() => { setShowForm(false); setEditingItem(null); }} className="w-8 h-8 rounded-full flex items-center justify-center bg-background border border-border text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"><X size={16} /></button>
              </div>
              <div className="p-6 max-h-[75vh] overflow-y-auto">
                <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
-                  <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Item Name <span className="text-destructive">*</span></label>
+                  <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Item Name <span className="text-destructive">*</span></label>
                   <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Wireless Mouse"
                     className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all" required />
                 </div>
                 
                 <div>
-                  <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Product Image (Max 2MB)</label>
+                  <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Product Image (Max 2MB)</label>
                   <input type="file" accept="image/png, image/jpeg, image/jpg, image/webp, image/svg+xml" 
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
@@ -485,7 +491,7 @@ export default function InventoryPage() {
                 </div>
                 
                 <div>
-                  <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Category</label>
+                  <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Category</label>
                   <select 
                     value={form.category} 
                     onChange={e => setForm(f => ({ ...f, category: e.target.value, sub_category_id: '' }))}
@@ -507,7 +513,7 @@ export default function InventoryPage() {
                   
                   return (
                     <div>
-                      <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Sub-Category</label>
+                      <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Sub-Category</label>
                       <select 
                         value={form.sub_category_id} 
                         onChange={e => setForm(f => ({ ...f, sub_category_id: e.target.value }))}
@@ -523,7 +529,7 @@ export default function InventoryPage() {
                 })()}
 
                 <div>
-                  <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Barcode</label>
+                  <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Barcode</label>
                   <div className="relative flex gap-2">
                     <input value={form.barcode} onChange={e => setForm(f => ({ ...f, barcode: e.target.value }))} placeholder="Optional barcode"
                       className="flex-1 px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all" />
@@ -536,12 +542,12 @@ export default function InventoryPage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Cost Price <span className="text-destructive">*</span></label>
+                    <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Cost Price <span className="text-destructive">*</span></label>
                     <input type="number" step="0.01" value={form.cost_price} onChange={e => setForm(f => ({ ...f, cost_price: e.target.value }))} placeholder="0.00"
                       className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all" required />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Sell Price <span className="text-destructive">*</span></label>
+                    <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Sell Price <span className="text-destructive">*</span></label>
                     <input type="number" step="0.01" value={form.sell_price} onChange={e => setForm(f => ({ ...f, sell_price: e.target.value }))} placeholder="0.00"
                       className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all" required />
                   </div>
@@ -550,12 +556,12 @@ export default function InventoryPage() {
                 {tab === 'product' && (
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Initial Quantity <span className="text-destructive">*</span></label>
+                      <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Initial Quantity <span className="text-destructive">*</span></label>
                       <input type="number" value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))} placeholder="0"
                         className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all" required />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Low Stock Alert</label>
+                      <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Low Stock Alert</label>
                       <input type="number" value={form.low_stock_threshold} onChange={e => setForm(f => ({ ...f, low_stock_threshold: e.target.value }))} placeholder="5"
                         className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all" />
                     </div>
@@ -564,7 +570,7 @@ export default function InventoryPage() {
 
                 <div className="flex gap-3 pt-6 border-t border-border mt-6">
                   <button type="button" onClick={() => { setShowForm(false); setEditingItem(null); setForm({ name: '', category: '', sub_category_id: '', barcode: '', cost_price: '', sell_price: '', quantity: '', low_stock_threshold: '5', image_path: '' }); }} className="flex-1 py-3 rounded-xl bg-muted text-foreground text-sm font-bold hover:bg-accent transition-colors">Cancel</button>
-                  <button type="submit" className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:opacity-90 transition-opacity shadow-sm">{editingItem ? 'Save Changes' : 'Add Item'}</button>
+                  <button type="submit" className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:opacity-90 transition-opacity shadow-sm capitalize">{editingItem ? 'Save Changes' : 'Add Item'}</button>
                 </div>
                </form>
              </div>

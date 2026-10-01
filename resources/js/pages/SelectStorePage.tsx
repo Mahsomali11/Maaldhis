@@ -48,8 +48,8 @@ export default function SelectStorePage() {
           <div className="w-20 h-20 rounded-3xl bg-primary flex items-center justify-center mx-auto mb-6 shadow-xl shadow-primary/20 ring-8 ring-primary/10">
             <Building2 size={36} className="text-primary-foreground" />
           </div>
-          <h1 className="text-4xl font-black text-foreground tracking-tight mb-3">Welcome, {user?.full_name?.split(' ')[0] || 'User'}!</h1>
-          <p className="text-sm font-medium text-muted-foreground uppercase tracking-widest">Select a workspace to continue</p>
+          <h1 className="text-4xl font-black text-foreground tracking-tight mb-3 capitalize">Welcome, {user?.full_name?.split(' ')[0] || 'User'}!</h1>
+          <p className="text-sm font-medium text-muted-foreground  capitalize tracking-widest">Select a workspace to continue</p>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -69,13 +69,13 @@ export default function SelectStorePage() {
                 </div>
                 
                 <div>
-                  <h3 className="text-xl font-bold text-foreground mb-2 line-clamp-1 group-hover:text-primary transition-colors">{store.store_name}</h3>
+                  <h3 className="text-xl font-bold text-foreground mb-2 line-clamp-1 group-hover:text-primary transition-colors capitalize">{store.store_name}</h3>
                   <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                      <MapPin size={14} className="shrink-0" />
                      <span className="truncate">{store.location || 'No location set'}</span>
                   </div>
                   <div className="mt-4 pt-4 border-t border-border/50">
-                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-muted text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-muted text-[10px] font-bold text-muted-foreground  capitalize tracking-widest">
                         ID: {store.store_code}
                      </span>
                   </div>
@@ -104,7 +104,7 @@ export default function SelectStorePage() {
             <div className="w-14 h-14 rounded-full bg-background border border-border flex items-center justify-center mb-4 text-muted-foreground group-hover:text-primary group-hover:scale-110 group-hover:border-primary/30 transition-all shadow-sm">
               <Plus size={24} />
             </div>
-            <h3 className="text-lg font-bold text-foreground mb-1 group-hover:text-primary transition-colors">Add New Store</h3>
+            <h3 className="text-lg font-bold text-foreground mb-1 group-hover:text-primary transition-colors capitalize">Add New Store</h3>
             <p className="text-xs font-medium text-muted-foreground">Create another workspace</p>
           </button>
         </div>

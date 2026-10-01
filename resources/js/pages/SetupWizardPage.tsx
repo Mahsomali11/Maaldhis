@@ -153,7 +153,7 @@ export default function SetupWizardPage() {
         {step > 0 && (
           <div className="px-6 pt-6 pb-2">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Setup {step}/{totalSteps - 1}</span>
+              <span className="text-xs font-semibold text-muted-foreground  capitalize tracking-wider">Setup {step}/{totalSteps - 1}</span>
               <span className="text-xs font-bold text-primary">{Math.round((step / (totalSteps - 1)) * 100)}%</span>
             </div>
             <Progress value={(step / (totalSteps - 1)) * 100} className="h-1.5" />
@@ -167,7 +167,7 @@ export default function SetupWizardPage() {
               <div className="w-16 h-16 rounded bg-primary/10 flex items-center justify-center mb-6 border border-primary/20">
                 <Sparkles size={32} className="text-primary" />
               </div>
-              <h1 className="text-xl font-bold text-foreground mb-2 uppercase tracking-wider">Welcome to Your POS</h1>
+              <h1 className="text-xl font-bold text-foreground mb-2  capitalize tracking-wider">Welcome to Your POS</h1>
               <p className="text-sm text-muted-foreground mb-8 max-w-sm">Let's set up your store in a few simple steps. This will only take a couple of minutes.</p>
               <button onClick={() => setStep(1)} className={`${btnPrimary} w-full max-w-xs px-8`}>
                 Start Setup
@@ -181,26 +181,26 @@ export default function SetupWizardPage() {
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <Package size={18} className="text-muted-foreground" />
-                  <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">Store Profile</h2>
+                  <h2 className="text-sm font-semibold text-foreground  capitalize tracking-wider">Store Profile</h2>
                 </div>
                 <p className="text-xs text-muted-foreground">Your store has been created. You can edit these details later in settings.</p>
               </div>
 
               <div className="bg-background rounded-md border border-border p-4 space-y-3">
                 <div className="flex justify-between items-center py-1">
-                  <span className="text-xs font-medium text-muted-foreground uppercase">Store Name</span>
+                  <span className="text-xs font-medium text-muted-foreground ">Store Name</span>
                   <span className="text-sm font-semibold text-foreground">{currentStore?.store_name}</span>
                 </div>
                 <div className="flex justify-between items-center py-1 border-t border-border pt-3">
-                  <span className="text-xs font-medium text-muted-foreground uppercase">Location</span>
+                  <span className="text-xs font-medium text-muted-foreground ">Location</span>
                   <span className="text-sm font-semibold text-foreground">{currentStore?.location || '—'}</span>
                 </div>
                 <div className="flex justify-between items-center py-1 border-t border-border pt-3">
-                  <span className="text-xs font-medium text-muted-foreground uppercase">Currency</span>
+                  <span className="text-xs font-medium text-muted-foreground ">Currency</span>
                   <span className="text-sm font-semibold text-foreground">{currentStore?.currency}</span>
                 </div>
                 <div className="flex justify-between items-center py-1 border-t border-border pt-3">
-                  <span className="text-xs font-medium text-muted-foreground uppercase">Store Code</span>
+                  <span className="text-xs font-medium text-muted-foreground ">Store Code</span>
                   <span className="text-sm font-semibold text-foreground">{currentStore?.store_code}</span>
                 </div>
               </div>
@@ -214,7 +214,7 @@ export default function SetupWizardPage() {
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <Package size={18} className="text-muted-foreground" />
-                  <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">Add First Products</h2>
+                  <h2 className="text-sm font-semibold text-foreground  capitalize tracking-wider">Add First Products</h2>
                 </div>
                 <p className="text-xs text-muted-foreground">Add products or import a starter template.</p>
               </div>
@@ -223,7 +223,7 @@ export default function SetupWizardPage() {
               <div className="flex flex-wrap gap-2">
                 {Object.keys(STARTER_TEMPLATES).map(cat => (
                   <button key={cat} onClick={() => handleImportTemplate(cat)}
-                    className={`px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider border transition-colors ${selectedTemplate === cat ? 'bg-primary/10 text-primary border-primary/20' : 'bg-muted/30 text-muted-foreground border-border hover:border-primary/50'}`}>
+                    className={`px-3 py-1.5 rounded-md text-[10px] font-bold  capitalize tracking-wider border transition-colors ${selectedTemplate === cat ? 'bg-primary/10 text-primary border-primary/20' : 'bg-muted/30 text-muted-foreground border-border hover:border-primary/50'}`}>
                     {cat}
                   </button>
                 ))}
@@ -250,7 +250,7 @@ export default function SetupWizardPage() {
                 ))}
               </div>
 
-              <button onClick={addProductRow} className="flex items-center gap-1.5 text-xs font-semibold text-primary">
+              <button onClick={addProductRow} className="flex items-center gap-1.5 text-xs font-semibold text-primary capitalize">
                 <Plus size={14} /> Add another product
               </button>
 
@@ -269,7 +269,7 @@ export default function SetupWizardPage() {
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <Users size={18} className="text-muted-foreground" />
-                  <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">Add First Customer</h2>
+                  <h2 className="text-sm font-semibold text-foreground  capitalize tracking-wider">Add First Customer</h2>
                 </div>
                 <p className="text-xs text-muted-foreground">Optional — useful for credit sales.</p>
               </div>
@@ -295,7 +295,7 @@ export default function SetupWizardPage() {
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <UserPlus size={18} className="text-muted-foreground" />
-                  <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">Add Staff Member</h2>
+                  <h2 className="text-sm font-semibold text-foreground  capitalize tracking-wider">Add Staff Member</h2>
                 </div>
                 <p className="text-xs text-muted-foreground">Optional — add your team members.</p>
               </div>
@@ -325,14 +325,14 @@ export default function SetupWizardPage() {
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <CreditCard size={18} className="text-muted-foreground" />
-                  <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">Payment Settings</h2>
+                  <h2 className="text-sm font-semibold text-foreground  capitalize tracking-wider">Payment Settings</h2>
                 </div>
                 <p className="text-xs text-muted-foreground">Enable your accepted payment methods.</p>
               </div>
 
               <div className="flex flex-col gap-2">
                 {PAYMENT_METHODS.map(method => (
-                  <label key={method} className="flex items-center gap-3 bg-background rounded-md p-3 border border-border cursor-pointer hover:border-primary/50 transition-colors">
+                  <label key={method} className="flex items-center gap-3 bg-background rounded-md p-3 border border-border cursor-pointer hover:border-primary/50 transition-colors capitalize">
                     <input type="checkbox" checked={paymentMethods[method]}
                       onChange={() => setPaymentMethods({ ...paymentMethods, [method]: !paymentMethods[method] })}
                       className="w-4 h-4 rounded border-input accent-primary" />

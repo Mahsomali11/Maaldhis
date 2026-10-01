@@ -71,7 +71,7 @@ export default function AdminAnalyticsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-card rounded-xl p-6 border border-border">
-          <h3 className="text-foreground font-semibold mb-4">Top Performing Stores (USD)</h3>
+          <h3 className="text-foreground font-semibold mb-4 capitalize">Top Performing Stores (USD)</h3>
           {topStores.length > 0 ? (
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={topStores}>
@@ -87,7 +87,7 @@ export default function AdminAnalyticsPage() {
         </div>
 
         <div className="bg-card rounded-xl p-6 border border-border">
-          <h3 className="text-foreground font-semibold mb-4">Revenue Distribution (USD)</h3>
+          <h3 className="text-foreground font-semibold mb-4 capitalize">Revenue Distribution (USD)</h3>
           {topStores.length > 0 ? (
             <ResponsiveContainer width="100%" height={250}>
               <PieChart>

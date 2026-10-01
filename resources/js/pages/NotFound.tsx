@@ -23,7 +23,7 @@ const NotFound = () => {
            <SearchX size={48} className="text-muted-foreground" />
         </div>
         
-        <h1 className="mb-2 text-7xl font-black text-foreground tracking-tighter">404</h1>
+        <h1 className="mb-2 text-7xl font-black text-foreground tracking-tighter capitalize">404</h1>
         <p className="mb-8 text-xl font-bold text-muted-foreground">Oops! Page not found.</p>
         
         <div className="bg-muted/30 rounded-2xl p-4 mb-8">

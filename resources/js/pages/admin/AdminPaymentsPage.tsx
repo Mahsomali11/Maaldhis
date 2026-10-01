@@ -34,7 +34,7 @@ export default function AdminPaymentsPage() {
       <div className="bg-card rounded-xl border border-border overflow-x-auto">
         <table className="w-full">
           <thead><tr className="border-b border-border">
-            {['Store', 'Amount', 'Method', 'Reference', 'Status', 'Date', 'Next Due'].map(h => <th key={h} className="text-left py-3 px-4 text-xs font-medium text-muted-foreground uppercase">{h}</th>)}
+            {['Store', 'Amount', 'Method', 'Reference', 'Status', 'Date', 'Next Due'].map(h => <th key={h} className="text-left py-3 px-4 text-xs font-medium text-muted-foreground  capitalize">{h}</th>)}
           </tr></thead>
           <tbody>
             {filtered.map((p: any) => (

@@ -90,11 +90,11 @@ export default function SignupPage() {
         <div className="w-full max-w-[420px]">
           
           <div className="flex flex-col items-start mb-8">
-            <h1 className="text-3xl font-light text-foreground tracking-tight">Create <span className="font-semibold">Account</span></h1>
+            <h1 className="text-3xl font-light text-foreground tracking-tight capitalize">Create <span className="font-semibold">Account</span></h1>
             <p className="text-sm text-muted-foreground mt-2">Start your 14-day free trial. No credit card required.</p>
             
             <div className="w-full mt-6">
-               <div className="flex justify-between text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+               <div className="flex justify-between text-xs font-semibold text-muted-foreground  capitalize tracking-wider mb-2">
                  <span>{step === 1 ? 'Your Details' : 'Store Details'}</span>
                  <span>Step {step} of {totalSteps}</span>
                </div>
@@ -117,7 +117,7 @@ export default function SignupPage() {
                 )}
                 
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Full Name *</label>
+                  <label className="text-xs font-bold text-muted-foreground  capitalize tracking-wider">Full Name *</label>
                   <input 
                     type="text" 
                     value={data.fullName} 
@@ -129,7 +129,7 @@ export default function SignupPage() {
                 </div>
                 
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Email Address *</label>
+                  <label className="text-xs font-bold text-muted-foreground  capitalize tracking-wider">Email Address *</label>
                   <input 
                     type="email" 
                     value={data.email} 
@@ -142,7 +142,7 @@ export default function SignupPage() {
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Password *</label>
+                    <label className="text-xs font-bold text-muted-foreground  capitalize tracking-wider">Password *</label>
                     <input 
                       type="password" 
                       value={data.password} 
@@ -153,7 +153,7 @@ export default function SignupPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Confirm *</label>
+                    <label className="text-xs font-bold text-muted-foreground  capitalize tracking-wider">Confirm *</label>
                     <input 
                       type="password" 
                       value={data.confirmPassword} 
@@ -168,7 +168,7 @@ export default function SignupPage() {
                 <button 
                   type="button" 
                   onClick={handleNext}
-                  className="w-full h-11 flex items-center justify-center gap-2 rounded-md bg-primary text-primary-foreground text-sm font-bold shadow-sm hover:opacity-90 transition-opacity mt-6"
+                  className="w-full h-11 flex items-center justify-center gap-2 rounded-md bg-primary text-primary-foreground text-sm font-bold shadow-sm hover:opacity-90 transition-opacity mt-6 capitalize"
                 >
                   Continue <ArrowRight size={16} />
                 </button>
@@ -195,7 +195,7 @@ export default function SignupPage() {
                 )}
                 
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Store Name *</label>
+                  <label className="text-xs font-bold text-muted-foreground  capitalize tracking-wider">Store Name *</label>
                   <input 
                     type="text" 
                     value={data.storeName} 
@@ -207,7 +207,7 @@ export default function SignupPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="flex items-center justify-between text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  <label className="flex items-center justify-between text-xs font-bold text-muted-foreground  capitalize tracking-wider">
                     <span>Business Phone</span>
                     {detecting && (
                       <span className="flex items-center gap-1 text-primary lowercase normal-case text-[10px]">
@@ -225,7 +225,7 @@ export default function SignupPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Store Location</label>
+                  <label className="text-xs font-bold text-muted-foreground  capitalize tracking-wider">Store Location</label>
                   <input 
                     type="text" 
                     value={data.storeLocation} 
@@ -236,7 +236,7 @@ export default function SignupPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Primary Currency</label>
+                  <label className="text-xs font-bold text-muted-foreground  capitalize tracking-wider">Primary Currency</label>
                   <select 
                     value={data.currency} 
                     onChange={e => setData('currency', e.target.value)}
@@ -258,14 +258,14 @@ export default function SignupPage() {
                   <button 
                     type="button" 
                     onClick={handleBack}
-                    className="flex-1 h-11 flex items-center justify-center gap-2 rounded-md bg-muted text-foreground text-sm font-semibold hover:bg-accent transition-colors"
+                    className="flex-1 h-11 flex items-center justify-center gap-2 rounded-md bg-muted text-foreground text-sm font-semibold hover:bg-accent transition-colors capitalize"
                   >
                     <ArrowLeft size={16} /> Back
                   </button>
                   <button 
                     type="submit" 
                     disabled={processing}
-                    className="flex-[2] h-11 flex items-center justify-center rounded-md bg-primary text-primary-foreground text-sm font-bold shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+                    className="flex-[2] h-11 flex items-center justify-center rounded-md bg-primary text-primary-foreground text-sm font-bold shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50 capitalize"
                   >
                     {processing ? 'Creating...' : 'Create Store'}
                   </button>
@@ -286,22 +286,22 @@ export default function SignupPage() {
           <div className="grid grid-cols-2 gap-8">
              <div className="space-y-3">
                 <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">1</div>
-                <h3 className="font-semibold text-foreground">Sign Up</h3>
+                <h3 className="font-semibold text-foreground capitalize">Sign Up</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">Create your account in seconds without any payment details.</p>
              </div>
              <div className="space-y-3">
                 <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">2</div>
-                <h3 className="font-semibold text-foreground">Setup Store</h3>
+                <h3 className="font-semibold text-foreground capitalize">Setup Store</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">Add your business details to configure your receipt branding.</p>
              </div>
              <div className="space-y-3">
                 <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">3</div>
-                <h3 className="font-semibold text-foreground">Add Products</h3>
+                <h3 className="font-semibold text-foreground capitalize">Add Products</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">Easily import your inventory or create products individually.</p>
              </div>
              <div className="space-y-3">
                 <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center text-primary font-bold">4</div>
-                <h3 className="font-semibold text-foreground">Start Selling</h3>
+                <h3 className="font-semibold text-foreground capitalize">Start Selling</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">Use the POS interface to ring up sales and track your cash flow.</p>
              </div>
           </div>

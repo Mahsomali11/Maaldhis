@@ -222,7 +222,7 @@ export default function UpgradePage() {
         
         {/* Header Section */}
         <div className="text-center space-y-4 max-w-2xl mx-auto">
-           <h1 className="text-4xl md:text-5xl font-black tracking-tight text-foreground">Choose your plan</h1>
+           <h1 className="text-4xl md:text-5xl font-black tracking-tight text-foreground capitalize">Choose your plan</h1>
            <p className="text-lg text-muted-foreground font-medium">Unlock premium features and scale your business with the right tools for your store.</p>
         </div>
 
@@ -234,17 +234,17 @@ export default function UpgradePage() {
                 <ShieldCheck size={24} className="text-primary" />
               </div>
               <div>
-                <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-1">
+                <p className="text-sm font-bold text-muted-foreground  capitalize tracking-widest mb-1">
                   Current Plan
                 </p>
                 <div className="flex items-center gap-2">
                    <span className="text-lg font-black text-foreground capitalize">{licenseStatus.plan_name || 'Trial'}</span>
                    {licenseStatus.days_remaining !== undefined && licenseStatus.days_remaining >= 0 ? (
-                      <span className="px-2.5 py-0.5 rounded-full bg-success/10 text-success text-[10px] font-bold uppercase tracking-widest">
+                      <span className="px-2.5 py-0.5 rounded-full bg-success/10 text-success text-[10px] font-bold  capitalize tracking-widest">
                          {licenseStatus.days_remaining} days left
                       </span>
                    ) : (
-                      <span className="px-2.5 py-0.5 rounded-full bg-destructive/10 text-destructive text-[10px] font-bold uppercase tracking-widest">
+                      <span className="px-2.5 py-0.5 rounded-full bg-destructive/10 text-destructive text-[10px] font-bold  capitalize tracking-widest">
                          Expired
                       </span>
                    )}
@@ -253,7 +253,7 @@ export default function UpgradePage() {
             </div>
             {licenseStatus.expiry_date && (
                <div className="text-right hidden sm:block">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Expires On</p>
+                  <p className="text-[10px] font-bold text-muted-foreground  capitalize tracking-widest mb-1">Expires On</p>
                   <p className="text-sm font-semibold text-foreground">{licenseStatus.expiry_date}</p>
                </div>
             )}
@@ -270,7 +270,7 @@ export default function UpgradePage() {
              <button onClick={() => setBillingCycle('yearly')}
                className={`relative px-8 py-3 rounded-xl text-sm font-bold transition-all flex items-center gap-2 ${billingCycle === 'yearly' ? 'bg-primary text-primary-foreground shadow-md' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}>
                Yearly
-               <span className={`px-2 py-0.5 rounded-md text-[10px] uppercase tracking-widest font-black ${billingCycle === 'yearly' ? 'bg-background text-primary' : 'bg-primary text-primary-foreground'}`}>Save 20%</span>
+               <span className={`px-2 py-0.5 rounded-md text-[10px]  capitalize tracking-widest font-black ${billingCycle === 'yearly' ? 'bg-background text-primary' : 'bg-primary text-primary-foreground'}`}>Save 20%</span>
              </button>
            </div>
         </div>
@@ -279,7 +279,7 @@ export default function UpgradePage() {
         {plans.length === 0 ? (
           <div className="bg-card border border-border rounded-3xl p-12 text-center max-w-md mx-auto shadow-sm">
             <Crown size={48} className="text-muted-foreground/30 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-foreground mb-2">No Plans Available</h3>
+            <h3 className="text-xl font-bold text-foreground mb-2 capitalize">No Plans Available</h3>
             <p className="text-muted-foreground font-medium text-sm">Please contact your administrator to set up subscription plans.</p>
           </div>
         ) : (
@@ -303,7 +303,7 @@ export default function UpgradePage() {
                   }`}>
                   
                   {isCurrentPlan && (
-                    <div className={`absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-[11px] font-black uppercase tracking-widest shadow-sm ${canRenew ? 'bg-warning text-warning-foreground' : 'bg-foreground text-background'}`}>
+                    <div className={`absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-[11px] font-black  capitalize tracking-widest shadow-sm ${canRenew ? 'bg-warning text-warning-foreground' : 'bg-foreground text-background'}`}>
                       {canRenew ? 'Time to Renew' : 'Current Plan'}
                     </div>
                   )}
@@ -320,7 +320,7 @@ export default function UpgradePage() {
                   </div>
                   
                   <div className="mb-6">
-                    <h3 className="text-2xl font-black text-foreground mb-1">{plan.name}</h3>
+                    <h3 className="text-2xl font-black text-foreground mb-1 capitalize">{plan.name}</h3>
                     <div className="flex items-baseline gap-1">
                       <span className="text-4xl font-black text-foreground tracking-tight">{formatLocalPrice(price)}</span>
                       <span className="text-sm font-bold text-muted-foreground">/{billingCycle === 'monthly' ? 'mo' : 'yr'}</span>
@@ -330,11 +330,11 @@ export default function UpgradePage() {
                   <div className="space-y-4 mb-8 flex-1">
                     <div className="bg-muted/30 rounded-2xl p-4 grid grid-cols-2 gap-4">
                        <div>
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Users</p>
+                          <p className="text-[10px] font-bold text-muted-foreground  capitalize tracking-widest mb-1">Users</p>
                           <p className="text-sm font-bold text-foreground">{plan.max_users === -1 ? 'Unlimited' : plan.max_users}</p>
                        </div>
                        <div>
-                          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Stores</p>
+                          <p className="text-[10px] font-bold text-muted-foreground  capitalize tracking-widest mb-1">Stores</p>
                           <p className="text-sm font-bold text-foreground">{plan.max_stores === -1 ? 'Unlimited' : plan.max_stores}</p>
                        </div>
                     </div>
@@ -372,13 +372,13 @@ export default function UpgradePage() {
         {/* Payment section */}
         {selectedPlan && (
           <div className="max-w-2xl mx-auto bg-card rounded-3xl p-6 md:p-10 border border-border shadow-xl animate-in slide-in-from-bottom-8 duration-500">
-            <h3 className="text-2xl font-black text-foreground mb-8 text-center">
+            <h3 className="text-2xl font-black text-foreground mb-8 text-center capitalize">
               {currentPlanName === plans.find(p => p.id === selectedPlan)?.name.toLowerCase() ? 'Complete Renewal' : 'Complete Upgrade'}
             </h3>
 
             {/* Payment Method Selection */}
             <div className="space-y-4 mb-8">
-              <label className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Select Payment Method</label>
+              <label className="text-xs font-bold text-muted-foreground  capitalize tracking-widest">Select Payment Method</label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <button onClick={() => setPaymentMethod('manual')}
                   className={`py-4 px-6 rounded-2xl font-bold text-sm flex items-center gap-3 transition-all border-2 ${
@@ -406,7 +406,7 @@ export default function UpgradePage() {
             {/* M-Pesa Phone Input */}
             {paymentMethod === 'mpesa' && (
               <div className="space-y-3 mb-8 bg-success/5 border border-success/20 p-6 rounded-2xl">
-                <label className="text-xs font-bold text-success uppercase tracking-widest">M-Pesa Phone Number</label>
+                <label className="text-xs font-bold text-success  capitalize tracking-widest">M-Pesa Phone Number</label>
                 <div className="relative">
                   <Phone size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <input
@@ -450,7 +450,7 @@ export default function UpgradePage() {
               </div>
               <div className="h-px w-full bg-border/50"></div>
               <div className="flex justify-between items-end">
-                <span className="font-black text-foreground uppercase tracking-widest text-xs mb-1">Total Due</span>
+                <span className="font-black text-foreground  capitalize tracking-widest text-xs mb-1">Total Due</span>
                 <span className="font-black text-foreground text-3xl tracking-tight">
                   {formatLocalPrice(
                     billingCycle === 'monthly'

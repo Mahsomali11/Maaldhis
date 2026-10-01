@@ -94,7 +94,7 @@ export default function ReceiptHistoryPage() {
             <div className="w-20 h-20 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-6">
                <Receipt size={36} className="text-muted-foreground/50" />
             </div>
-            <h3 className="text-xl font-black text-foreground mb-2">No receipts found</h3>
+            <h3 className="text-xl font-black text-foreground mb-2 capitalize">No receipts found</h3>
             <p className="text-sm font-medium text-muted-foreground">There are no recorded sales for {localDate.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.</p>
           </div>
         ) : (
@@ -106,12 +106,12 @@ export default function ReceiptHistoryPage() {
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-border/50 bg-muted/10">
-                      <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Receipt #</th>
-                      <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Customer</th>
-                      <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-center">Payment</th>
-                      <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-center">Status</th>
-                      <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-right">Total</th>
-                      <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-right">Actions</th>
+                      <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">Receipt #</th>
+                      <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">Customer</th>
+                      <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest text-center">Payment</th>
+                      <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest text-center">Status</th>
+                      <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest text-right">Total</th>
+                      <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/50">
@@ -136,7 +136,7 @@ export default function ReceiptHistoryPage() {
                             {customer?.name || <span className="text-muted-foreground font-medium italic">Walk-in Customer</span>}
                           </td>
                           <td className="px-6 py-5 text-center">
-                            <span className={`inline-flex items-center gap-1 text-[10px] uppercase font-bold tracking-widest px-2.5 py-1 rounded-lg border ${
+                            <span className={`inline-flex items-center gap-1 text-[10px]  font-bold capitalize tracking-widest px-2.5 py-1 rounded-lg border ${
                               !sale.payment_account_id && sale.sale_type === 'cash' ? 'bg-primary/10 text-primary border-primary/20' :
                               sale.sale_type === 'credit' ? 'bg-warning/10 text-warning border-warning/20' :
                               'bg-blue-500/10 text-blue-500 border-blue-500/20'
@@ -146,11 +146,11 @@ export default function ReceiptHistoryPage() {
                           </td>
                           <td className="px-6 py-5 text-center">
                             {sale.status === 'completed' ? (
-                               <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold tracking-widest px-2.5 py-1 rounded-lg border bg-success/10 text-success border-success/20">
+                               <span className="inline-flex items-center gap-1 text-[10px]  font-bold capitalize tracking-widest px-2.5 py-1 rounded-lg border bg-success/10 text-success border-success/20">
                                   <CheckCircle2 size={10} /> Completed
                                </span>
                             ) : (
-                               <span className="inline-flex items-center gap-1 text-[10px] uppercase font-bold tracking-widest px-2.5 py-1 rounded-lg border bg-destructive/10 text-destructive border-destructive/20">
+                               <span className="inline-flex items-center gap-1 text-[10px]  font-bold capitalize tracking-widest px-2.5 py-1 rounded-lg border bg-destructive/10 text-destructive border-destructive/20">
                                   <RotateCcw size={10} /> Returned
                                </span>
                             )}
@@ -208,12 +208,12 @@ export default function ReceiptHistoryPage() {
                           
                           <div className="bg-muted/20 border border-border/50 rounded-xl p-4 space-y-3 mb-4">
                              <div className="flex justify-between items-center">
-                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Customer</span>
+                                <span className="text-[10px] font-bold text-muted-foreground  capitalize tracking-widest">Customer</span>
                                 <span className="text-xs font-bold text-foreground">{customer?.name || 'Walk-in'}</span>
                              </div>
                              <div className="flex justify-between items-center pt-2 border-t border-border/50">
-                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Payment</span>
-                                <span className={`text-[10px] uppercase font-bold tracking-widest px-2.5 py-1 rounded-lg border ${
+                                <span className="text-[10px] font-bold text-muted-foreground  capitalize tracking-widest">Payment</span>
+                                <span className={`text-[10px]  font-bold capitalize tracking-widest px-2.5 py-1 rounded-lg border ${
                                   !sale.payment_account_id && sale.sale_type === 'cash' ? 'bg-primary/10 text-primary border-primary/20' : 
                                   sale.sale_type === 'credit' ? 'bg-warning/10 text-warning border-warning/20' : 
                                   'bg-blue-500/10 text-blue-500 border-blue-500/20'
@@ -222,8 +222,8 @@ export default function ReceiptHistoryPage() {
                                 </span>
                              </div>
                              <div className="flex justify-between items-center pt-2 border-t border-border/50">
-                                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Status</span>
-                                <span className={`text-[10px] uppercase font-bold tracking-widest px-2.5 py-1 rounded-lg border ${sale.status === 'completed' ? 'bg-success/10 text-success border-success/20' : 'bg-destructive/10 text-destructive border-destructive/20'}`}>
+                                <span className="text-[10px] font-bold text-muted-foreground  capitalize tracking-widest">Status</span>
+                                <span className={`text-[10px]  font-bold capitalize tracking-widest px-2.5 py-1 rounded-lg border ${sale.status === 'completed' ? 'bg-success/10 text-success border-success/20' : 'bg-destructive/10 text-destructive border-destructive/20'}`}>
                                    {sale.status}
                                 </span>
                              </div>
@@ -254,14 +254,14 @@ export default function ReceiptHistoryPage() {
                   <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
                      <TrendingUp size={64} />
                   </div>
-                  <p className="text-[11px] font-bold text-primary uppercase tracking-widest mb-2 relative z-10">Day's Total Revenue</p>
+                  <p className="text-[11px] font-bold text-primary  capitalize tracking-widest mb-2 relative z-10">Day's Total Revenue</p>
                   <p className="text-3xl font-black text-foreground relative z-10">
                     {formatCurrency(dayReceipts.filter(s => s.status !== 'returned').reduce((sum, s) => sum + s.total, 0))}
                   </p>
                 </div>
 
                 <div>
-                  <h4 className="font-bold text-foreground mb-4 text-[11px] uppercase tracking-widest flex items-center gap-2">
+                  <h4 className="font-bold text-foreground mb-4 text-[11px]  capitalize tracking-widest flex items-center gap-2">
                      <Box size={14} className="text-muted-foreground" />
                      Summary for {localDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                   </h4>
@@ -293,7 +293,7 @@ export default function ReceiptHistoryPage() {
         <div className="fixed inset-0 z-50 bg-foreground/20 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
           <div className="w-full sm:max-w-md bg-card rounded-t-3xl sm:rounded-3xl shadow-2xl border border-border overflow-hidden animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300">
             <div className="flex justify-between items-center px-6 py-5 border-b border-border bg-muted/10">
-              <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+              <h3 className="text-lg font-bold text-foreground flex items-center gap-2 capitalize">
                  <Printer size={18} className="text-primary" /> Print Options
               </h3>
               <button 

@@ -161,15 +161,15 @@ export default function CreditRecordPage() {
             
             {/* Main Area: Outstanding Debts */}
             <div className="lg:col-span-2 space-y-6">
-              <h3 className="font-black text-foreground text-xl">Outstanding Debts</h3>
+              <h3 className="font-black text-foreground text-xl capitalize">Outstanding Debts</h3>
               
               <div className="hidden md:block bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-border/50 bg-muted/10">
-                      <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Date & Reference</th>
-                      <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-right">Original Amount</th>
-                      <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-right">Balance Due</th>
+                      <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">Date & Reference</th>
+                      <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest text-right">Original Amount</th>
+                      <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest text-right">Balance Due</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/50">
@@ -216,7 +216,7 @@ export default function CreditRecordPage() {
                        <div key={debt.id} className="bg-card rounded-2xl border border-border p-5 shadow-sm">
                           <div className="flex justify-between items-start mb-3">
                              <div>
-                                <h4 className="font-bold text-foreground text-sm">
+                                <h4 className="font-bold text-foreground text-sm capitalize">
                                    {new Date(debt.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                                 </h4>
                                 <div className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground mt-1">
@@ -225,7 +225,7 @@ export default function CreditRecordPage() {
                                 </div>
                              </div>
                              <div className="text-right">
-                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-0.5">Balance Due</p>
+                                <p className="text-[10px] font-bold text-muted-foreground  capitalize tracking-widest mb-0.5">Balance Due</p>
                                 <p className="font-black text-destructive">{formatCurrency(debt.balance_amount)}</p>
                              </div>
                           </div>
@@ -247,7 +247,7 @@ export default function CreditRecordPage() {
                 {/* Summary */}
                 <div className="text-center p-6 bg-destructive/5 rounded-2xl border border-destructive/20 relative overflow-hidden">
                   <div className="absolute top-0 w-full h-1.5 bg-destructive"></div>
-                  <p className="text-xs font-bold text-destructive uppercase tracking-widest mb-2">Total Outstanding</p>
+                  <p className="text-xs font-bold text-destructive  capitalize tracking-widest mb-2">Total Outstanding</p>
                   <p className="text-4xl font-black text-destructive mb-2">
                     {formatCurrency(selectedCustomerInfo.total_balance)}
                   </p>
@@ -258,13 +258,13 @@ export default function CreditRecordPage() {
 
                 {/* Payment Form */}
                 <form onSubmit={handlePayment} className="space-y-5">
-                  <h4 className="font-black text-foreground flex items-center gap-2">
+                  <h4 className="font-black text-foreground flex items-center gap-2 capitalize">
                     <CreditCard size={18} className="text-primary" />
                     Record Payment
                   </h4>
                   
                   <div>
-                    <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Amount to pay</label>
+                    <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Amount to pay</label>
                     <div className="relative">
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-black">$</span>
                       <input 
@@ -280,7 +280,7 @@ export default function CreditRecordPage() {
 
                   {paymentAccounts.length > 0 ? (
                     <div>
-                      <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Payment Account</label>
+                      <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Payment Account</label>
                       <select 
                         value={paymentAccountId || ''} 
                         onChange={e => setPaymentAccountId(e.target.value)}
@@ -291,7 +291,7 @@ export default function CreditRecordPage() {
                     </div>
                   ) : (
                     <div>
-                      <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Payment Method</label>
+                      <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Payment Method</label>
                       <select 
                         value={payMethod} 
                         onChange={e => setPayMethod(e.target.value)}
@@ -306,7 +306,7 @@ export default function CreditRecordPage() {
 
                   <button 
                     type="submit" 
-                    className="w-full h-11 mt-2 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90 transition-colors shadow-sm flex items-center justify-center gap-2"
+                    className="w-full h-11 mt-2 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90 transition-colors shadow-sm flex items-center justify-center gap-2 capitalize"
                   >
                     <Plus size={16} /> Submit Payment
                   </button>
@@ -345,7 +345,7 @@ export default function CreditRecordPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
            <div className="bg-card rounded-3xl p-8 border border-border shadow-sm flex flex-col justify-center items-center text-center col-span-1 md:col-span-2 relative overflow-hidden">
              <div className="absolute top-0 w-full h-2 bg-destructive"></div>
-             <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-3">Total Customer Debt</p>
+             <p className="text-sm font-bold text-muted-foreground  capitalize tracking-widest mb-3">Total Customer Debt</p>
              <p className="text-5xl md:text-6xl font-black text-destructive tracking-tighter">
                {formatCurrency(totalOwed)}
              </p>
@@ -357,7 +357,7 @@ export default function CreditRecordPage() {
                     <Users size={20} />
                  </div>
                  <div>
-                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Debtors</p>
+                    <p className="text-xs font-bold text-muted-foreground  capitalize tracking-widest">Debtors</p>
                     <p className="text-xl font-black text-foreground">{aggregatedDebts.length}</p>
                  </div>
               </div>
@@ -366,7 +366,7 @@ export default function CreditRecordPage() {
                     <Activity size={20} />
                  </div>
                  <div>
-                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Active Records</p>
+                    <p className="text-xs font-bold text-muted-foreground  capitalize tracking-widest">Active Records</p>
                     <p className="text-xl font-black text-foreground">{storeDebts.length}</p>
                  </div>
               </div>
@@ -411,9 +411,9 @@ export default function CreditRecordPage() {
                <table className="w-full text-left border-collapse">
                  <thead>
                    <tr className="border-b border-border/50 bg-muted/10">
-                     <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Customer Details</th>
-                     <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-center">Records</th>
-                     <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-right">Total Debt</th>
+                     <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">Customer Details</th>
+                     <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest text-center">Records</th>
+                     <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest text-right">Total Debt</th>
                    </tr>
                  </thead>
                  <tbody className="divide-y divide-border/50">
@@ -472,7 +472,7 @@ export default function CreditRecordPage() {
                            {debt.customer_name.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                           <h4 className="font-bold text-foreground text-base leading-tight">{debt.customer_name}</h4>
+                           <h4 className="font-bold text-foreground text-base leading-tight capitalize">{debt.customer_name}</h4>
                            {debt.customer_phone && <span className="text-xs font-mono text-muted-foreground mt-0.5 inline-block">{debt.customer_phone}</span>}
                         </div>
                       </div>
@@ -494,7 +494,7 @@ export default function CreditRecordPage() {
             <div className="w-24 h-24 rounded-full bg-muted/50 flex items-center justify-center mb-6">
                <Landmark size={40} className="text-muted-foreground/50" />
             </div>
-            <h3 className="text-xl font-bold text-foreground mb-2">No supplier debts</h3>
+            <h3 className="text-xl font-bold text-foreground mb-2 capitalize">No supplier debts</h3>
             <p className="text-muted-foreground">You don't have any outstanding debts to suppliers.</p>
           </div>
         )}
@@ -505,7 +505,7 @@ export default function CreditRecordPage() {
         <div className="fixed inset-0 z-50 bg-foreground/20 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
           <div className="w-full sm:max-w-md bg-card rounded-t-3xl sm:rounded-3xl border border-border shadow-2xl overflow-hidden animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300">
             <div className="flex justify-between items-center px-6 py-5 border-b border-border bg-muted/10">
-              <h3 className="text-xl font-bold text-foreground">Add Credit Record</h3>
+              <h3 className="text-xl font-bold text-foreground capitalize">Add Credit Record</h3>
               <button 
                 onClick={() => setShowAdd(false)}
                 className="w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
@@ -524,7 +524,7 @@ export default function CreditRecordPage() {
               ) : (
                 <form onSubmit={handleAddCredit} className="space-y-5">
                   <div>
-                    <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Customer <span className="text-destructive">*</span></label>
+                    <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Customer <span className="text-destructive">*</span></label>
                     <select 
                       value={addCustomerId} 
                       onChange={e => setAddCustomerId(e.target.value)}
@@ -539,7 +539,7 @@ export default function CreditRecordPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Amount <span className="text-destructive">*</span></label>
+                    <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Amount <span className="text-destructive">*</span></label>
                     <div className="relative">
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-black">$</span>
                       <input 
@@ -554,7 +554,7 @@ export default function CreditRecordPage() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Note <span className="lowercase font-medium">(optional)</span></label>
+                    <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Note <span className="lowercase font-medium">(optional)</span></label>
                     <input 
                       value={addNote} 
                       onChange={e => setAddNote(e.target.value)}
@@ -573,7 +573,7 @@ export default function CreditRecordPage() {
                     </button>
                     <button 
                       type="submit" 
-                      className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
+                      className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2 capitalize"
                     >
                       <Plus size={16} /> Add Record
                     </button>

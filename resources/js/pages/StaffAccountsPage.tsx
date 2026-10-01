@@ -109,9 +109,9 @@ export default function StaffAccountsPage() {
   };
 
   const getRoleBadge = (r: string) => {
-     if (r === 'admin') return <span className="inline-flex items-center gap-1 bg-info/10 text-info border border-info/20 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest"><ShieldAlert size={10} /> Admin</span>;
-     if (r === 'inventory_manager') return <span className="inline-flex items-center gap-1 bg-warning/10 text-warning border border-warning/20 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest"><LayoutGrid size={10} /> Inventory</span>;
-     return <span className="inline-flex items-center gap-1 bg-success/10 text-success border border-success/20 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest"><BadgeCheck size={10} /> Cashier</span>;
+     if (r === 'admin') return <span className="inline-flex items-center gap-1 bg-info/10 text-info border border-info/20 px-2.5 py-0.5 rounded-full text-[10px] font-bold  capitalize tracking-widest"><ShieldAlert size={10} /> Admin</span>;
+     if (r === 'inventory_manager') return <span className="inline-flex items-center gap-1 bg-warning/10 text-warning border border-warning/20 px-2.5 py-0.5 rounded-full text-[10px] font-bold  capitalize tracking-widest"><LayoutGrid size={10} /> Inventory</span>;
+     return <span className="inline-flex items-center gap-1 bg-success/10 text-success border border-success/20 px-2.5 py-0.5 rounded-full text-[10px] font-bold  capitalize tracking-widest"><BadgeCheck size={10} /> Cashier</span>;
   };
 
   const viewingStaff = viewingStaffId ? staffAccounts.find(s => s.id === viewingStaffId) : null;
@@ -156,10 +156,10 @@ export default function StaffAccountsPage() {
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="border-b border-border/50 bg-muted/10">
-                    <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Name & Email</th>
-                    <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-center">Role</th>
-                    <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground uppercase tracking-widest">Phone</th>
-                    <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground uppercase tracking-widest text-right">Actions</th>
+                    <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">Name & Email</th>
+                    <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest text-center">Role</th>
+                    <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">Phone</th>
+                    <th className="px-6 py-5 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/50">
@@ -240,11 +240,11 @@ export default function StaffAccountsPage() {
                      </div>
                      <div className="bg-muted/20 rounded-xl p-4 border border-border/50 space-y-3 mb-4">
                         <div className="flex justify-between items-center">
-                           <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Role</span>
+                           <span className="text-[10px] font-bold text-muted-foreground  capitalize tracking-widest">Role</span>
                            {getRoleBadge(staff.role)}
                         </div>
                         <div className="flex justify-between items-center pt-2 mt-2 border-t border-border/50">
-                           <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Phone</span>
+                           <span className="text-[10px] font-bold text-muted-foreground  capitalize tracking-widest">Phone</span>
                            <span className="text-xs font-bold text-foreground">{staff.phone || '—'}</span>
                         </div>
                      </div>
@@ -283,7 +283,7 @@ export default function StaffAccountsPage() {
           {/* Sidebar Info Column */}
           <div className="xl:col-span-1">
             <div className="bg-card rounded-3xl border border-border shadow-sm p-6 sm:p-8 sticky top-6">
-              <h4 className="text-[11px] font-bold text-primary uppercase tracking-widest mb-6 flex items-center gap-2">
+              <h4 className="text-[11px] font-bold text-primary  capitalize tracking-widest mb-6 flex items-center gap-2">
                  <ShieldAlert size={14} /> Role Permissions
               </h4>
               <div className="space-y-6">
@@ -314,7 +314,7 @@ export default function StaffAccountsPage() {
         <div className="fixed inset-0 z-50 bg-foreground/20 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
           <div className="w-full sm:max-w-md bg-card rounded-t-3xl sm:rounded-3xl border border-border shadow-2xl overflow-hidden animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300">
             <div className="flex justify-between items-center px-6 py-5 border-b border-border bg-muted/10">
-              <h3 className="text-lg font-bold text-foreground flex items-center gap-2">
+              <h3 className="text-lg font-bold text-foreground flex items-center gap-2 capitalize">
                  {editingId ? <Pencil size={18} className="text-primary"/> : <UserPlus size={18} className="text-primary"/>}
                  {editingId ? 'Edit Staff Account' : 'Add New Staff'}
               </h3>
@@ -328,7 +328,7 @@ export default function StaffAccountsPage() {
             
             <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-5 overflow-y-auto max-h-[80vh]">
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest block">Full Name <span className="text-destructive">*</span></label>
+                <label className="text-[11px] font-bold text-muted-foreground  capitalize tracking-widest block">Full Name <span className="text-destructive">*</span></label>
                 <input 
                   value={name} 
                   onChange={e => setName(e.target.value)} 
@@ -339,7 +339,7 @@ export default function StaffAccountsPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest block">Email Address <span className="text-destructive">*</span></label>
+                <label className="text-[11px] font-bold text-muted-foreground  capitalize tracking-widest block">Email Address <span className="text-destructive">*</span></label>
                 <input 
                   value={email} 
                   onChange={e => setEmail(e.target.value)} 
@@ -351,7 +351,7 @@ export default function StaffAccountsPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest block">Phone Number</label>
+                <label className="text-[11px] font-bold text-muted-foreground  capitalize tracking-widest block">Phone Number</label>
                 <input 
                   value={phone} 
                   onChange={e => setPhone(e.target.value)} 
@@ -361,7 +361,7 @@ export default function StaffAccountsPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest block">
+                <label className="text-[11px] font-bold text-muted-foreground  capitalize tracking-widest block">
                   {editingId ? 'New Password' : 'Password'} {!editingId && <span className="text-destructive">*</span>}
                 </label>
                 <input 
@@ -376,7 +376,7 @@ export default function StaffAccountsPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest block">Store Assignment</label>
+                  <label className="text-[11px] font-bold text-muted-foreground  capitalize tracking-widest block">Store Assignment</label>
                   <select 
                     value={storeId} 
                     onChange={e => setStoreId(e.target.value)}
@@ -390,7 +390,7 @@ export default function StaffAccountsPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest block">Role Assignment</label>
+                  <label className="text-[11px] font-bold text-muted-foreground  capitalize tracking-widest block">Role Assignment</label>
                   <select 
                     value={role} 
                     onChange={e => setRole(e.target.value as typeof role)}
@@ -413,7 +413,7 @@ export default function StaffAccountsPage() {
                 </button>
                 <button 
                   type="submit" 
-                  className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:opacity-90 transition-opacity shadow-sm"
+                  className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:opacity-90 transition-opacity shadow-sm capitalize"
                 >
                   {editingId ? 'Save Changes' : 'Create Staff'}
                 </button>

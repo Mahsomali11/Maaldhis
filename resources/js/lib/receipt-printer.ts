@@ -233,7 +233,7 @@ export function generateA4InvoiceHTML(data: ReceiptData): string {
   <!-- Customer / Cashier -->
   <div style="display:flex;justify-content:space-between;margin-bottom:24px;padding:12px 16px;background:#f8f9fa;border-radius:8px">
     <div>
-      <div style="font-size:11px;color:#999;text-transform:uppercase;font-weight:600;margin-bottom:4px">Bill To</div>
+      <div style="font-size:11px;color:#999;text-transform:;font-weight:600;margin-bottom:4px">Bill To</div>
       ${customer ? `
         <div style="font-weight:600">${escapeHtml(customer.name)}</div>
         ${customer.phone ? `<div style="font-size:13px;color:#666">${escapeHtml(customer.phone)}</div>` : ''}
@@ -241,7 +241,7 @@ export function generateA4InvoiceHTML(data: ReceiptData): string {
       ` : `<div style="color:#999">Walk-in Customer</div>`}
     </div>
     <div style="text-align:right">
-      <div style="font-size:11px;color:#999;text-transform:uppercase;font-weight:600;margin-bottom:4px">Served By</div>
+      <div style="font-size:11px;color:#999;text-transform:;font-weight:600;margin-bottom:4px">Served By</div>
       <div>${escapeHtml(cashierName)}</div>
       <div style="font-size:13px;color:#666">Payment: ${(paymentMethod || sale.sale_type).toUpperCase()}</div>
     </div>
@@ -256,11 +256,11 @@ export function generateA4InvoiceHTML(data: ReceiptData): string {
   <table style="margin-bottom:24px">
     <thead>
       <tr style="background:#f0f0f0">
-        <th style="padding:10px 12px;text-align:left;font-size:12px;color:#666;text-transform:uppercase">#</th>
-        <th style="padding:10px 12px;text-align:left;font-size:12px;color:#666;text-transform:uppercase">Item</th>
-        <th style="padding:10px 12px;text-align:center;font-size:12px;color:#666;text-transform:uppercase">Qty</th>
-        <th style="padding:10px 12px;text-align:right;font-size:12px;color:#666;text-transform:uppercase">Unit Price</th>
-        <th style="padding:10px 12px;text-align:right;font-size:12px;color:#666;text-transform:uppercase">Total</th>
+        <th style="padding:10px 12px;text-align:left;font-size:12px;color:#666;text-transform:">#</th>
+        <th style="padding:10px 12px;text-align:left;font-size:12px;color:#666;text-transform:">Item</th>
+        <th style="padding:10px 12px;text-align:center;font-size:12px;color:#666;text-transform:">Qty</th>
+        <th style="padding:10px 12px;text-align:right;font-size:12px;color:#666;text-transform:">Unit Price</th>
+        <th style="padding:10px 12px;text-align:right;font-size:12px;color:#666;text-transform:">Total</th>
       </tr>
     </thead>
     <tbody>${itemRows}</tbody>

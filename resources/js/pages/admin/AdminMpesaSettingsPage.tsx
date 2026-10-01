@@ -202,7 +202,7 @@ export default function AdminMpesaSettingsPage() {
 
   const renderSecretField = (label: string, field: keyof MpesaConfig, required?: boolean) => (
     <div key={field}>
-      <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+      <label className="block text-xs font-medium text-muted-foreground mb-1.5 capitalize">
         {label} {required && <span className="text-red-400">*</span>}
       </label>
       <div className="relative">
@@ -222,7 +222,7 @@ export default function AdminMpesaSettingsPage() {
 
   const renderTextField = (label: string, field: keyof MpesaConfig, required?: boolean, placeholder?: string) => (
     <div key={field}>
-      <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+      <label className="block text-xs font-medium text-muted-foreground mb-1.5 capitalize">
         {label} {required && <span className="text-red-400">*</span>}
       </label>
       <input
@@ -262,7 +262,7 @@ export default function AdminMpesaSettingsPage() {
 
       {/* Environment */}
       <div className="bg-card rounded-xl border border-border p-5">
-        <h3 className="text-sm font-semibold text-foreground mb-3">Environment</h3>
+        <h3 className="text-sm font-semibold text-foreground mb-3 capitalize">Environment</h3>
         <div className="flex gap-3">
           {(['sandbox', 'production'] as const).map(env => (
             <button key={env} onClick={() => setConfig(prev => ({ ...prev, environment: env }))}
@@ -277,7 +277,7 @@ export default function AdminMpesaSettingsPage() {
 
       {/* Credentials */}
       <div className="bg-card rounded-xl border border-border p-5 space-y-4">
-        <h3 className="text-sm font-semibold text-foreground">API Credentials</h3>
+        <h3 className="text-sm font-semibold text-foreground capitalize">API Credentials</h3>
         {renderTextField('Consumer Key', 'consumer_key', true)}
         {renderSecretField('Consumer Secret', 'consumer_secret_encrypted', true)}
         {renderTextField('Shortcode / Business Short Code', 'shortcode', true)}
@@ -286,7 +286,7 @@ export default function AdminMpesaSettingsPage() {
 
       {/* URLs */}
       <div className="bg-card rounded-xl border border-border p-5 space-y-4">
-        <h3 className="text-sm font-semibold text-foreground">URLs</h3>
+        <h3 className="text-sm font-semibold text-foreground capitalize">URLs</h3>
         {renderTextField('Callback URL', 'callback_url', false, 'https://your-domain.com/api/mpesa/callback')}
         {renderTextField('Confirmation URL', 'confirmation_url', false, 'Optional')}
         {renderTextField('Validation URL', 'validation_url', false, 'Optional')}
@@ -294,7 +294,7 @@ export default function AdminMpesaSettingsPage() {
 
       {/* Optional */}
       <div className="bg-card rounded-xl border border-border p-5 space-y-4">
-        <h3 className="text-sm font-semibold text-foreground">Optional Settings</h3>
+        <h3 className="text-sm font-semibold text-foreground capitalize">Optional Settings</h3>
         {renderTextField('Initiator Name', 'initiator_name', false, 'Optional')}
         {renderSecretField('Security Credential', 'security_credential_encrypted')}
       </div>
@@ -302,18 +302,18 @@ export default function AdminMpesaSettingsPage() {
       {/* Actions */}
       <div className="flex flex-col gap-3">
         <button onClick={handleSave} disabled={saving}
-          className="w-full py-3 rounded-xl bg-primary text-primary-foreground text-foreground font-bold flex items-center justify-center gap-2 disabled:opacity-50 hover:opacity-90 transition-opacity">
+          className="w-full py-3 rounded-xl bg-primary text-primary-foreground text-foreground font-bold flex items-center justify-center gap-2 disabled:opacity-50 hover:opacity-90 transition-opacity capitalize">
           {saving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
           Save Settings
         </button>
         <div className="flex gap-3">
           <button onClick={handleTest} disabled={testing || !hasExisting}
-            className="flex-1 py-2.5 rounded-xl bg-background border border-input text-foreground font-medium flex items-center justify-center gap-2 disabled:opacity-40 hover:bg-muted/80">
+            className="flex-1 py-2.5 rounded-xl bg-background border border-input text-foreground font-medium flex items-center justify-center gap-2 disabled:opacity-40 hover:bg-muted/80 capitalize">
             {testing ? <Loader2 size={16} className="animate-spin" /> : <TestTube size={16} />}
             Test Connection
           </button>
           <button onClick={handleReset} disabled={!hasExisting}
-            className="flex-1 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 font-medium flex items-center justify-center gap-2 disabled:opacity-40 hover:bg-red-500/15">
+            className="flex-1 py-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 font-medium flex items-center justify-center gap-2 disabled:opacity-40 hover:bg-red-500/15 capitalize">
             <RotateCcw size={16} />
             Reset
           </button>

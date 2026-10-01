@@ -175,7 +175,7 @@ export default function LearningCenterPage() {
            <div className="w-16 h-16 rounded-3xl bg-primary/10 flex items-center justify-center mx-auto mb-6 text-primary border border-primary/20">
               <BookOpen size={32} />
            </div>
-           <h1 className="text-3xl md:text-4xl font-black tracking-tight text-foreground">Master Maaldhis</h1>
+           <h1 className="text-3xl md:text-4xl font-black tracking-tight text-foreground capitalize">Master Maaldhis</h1>
            <p className="text-base text-muted-foreground font-medium">Explore step-by-step guides and tutorials to get the most out of your POS system.</p>
         </div>
 
@@ -183,7 +183,7 @@ export default function LearningCenterPage() {
            
            {/* Sidebar topics list */}
            <div className="lg:col-span-1 space-y-2">
-             <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-4 px-2">Tutorial Topics</h3>
+             <h3 className="text-[11px] font-bold text-muted-foreground  capitalize tracking-widest mb-4 px-2">Tutorial Topics</h3>
              {topics.map(topic => (
                <button
                  key={topic.title}
@@ -215,7 +215,7 @@ export default function LearningCenterPage() {
                                 <topic.icon size={28} />
                              </div>
                              <div>
-                                <h2 className="text-2xl font-black text-foreground">{topic.title}</h2>
+                                <h2 className="text-2xl font-black text-foreground capitalize">{topic.title}</h2>
                                 <p className="text-sm font-medium text-muted-foreground mt-1">{topic.description}</p>
                              </div>
                           </div>
@@ -224,7 +224,7 @@ export default function LearningCenterPage() {
                        {/* Steps */}
                        <div className="p-8 space-y-8">
                           <div>
-                             <h3 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest mb-6 flex items-center gap-2">
+                             <h3 className="text-[11px] font-bold text-muted-foreground  capitalize tracking-widest mb-6 flex items-center gap-2">
                                 <PlayCircle size={14} className="text-primary" /> Step-by-Step Guide
                              </h3>
                              <ol className="space-y-6">
@@ -257,7 +257,7 @@ export default function LearningCenterPage() {
                                    <Lightbulb size={20} />
                                 </div>
                                 <div>
-                                   <h4 className="text-xs font-bold text-info uppercase tracking-widest mb-1">Pro Tip</h4>
+                                   <h4 className="text-xs font-bold text-info  capitalize tracking-widest mb-1">Pro Tip</h4>
                                    <p className="text-sm font-medium text-info/90 leading-relaxed">{topic.tip}</p>
                                 </div>
                              </div>

@@ -92,7 +92,7 @@ export default function DeviceManagementPage() {
             <ShieldCheck size={32} className="text-primary" />
           </div>
           <div className="flex-1">
-            <h2 className="text-lg font-bold text-foreground">Manage your devices</h2>
+            <h2 className="text-lg font-bold text-foreground capitalize">Manage your devices</h2>
             <p className="text-sm text-muted-foreground mt-1 max-w-xl">
               You are currently signed in to the devices below. For your security, log out of any devices you don't recognize or no longer use.
             </p>
@@ -103,7 +103,7 @@ export default function DeviceManagementPage() {
         <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
           <div className="px-6 py-5 border-b border-border bg-muted/10 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
             <div>
-              <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+              <h3 className="text-base font-bold text-foreground flex items-center gap-2 capitalize">
                 Active Devices 
                 <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-md text-xs font-bold">
                   {activeDevices.length}{licenseStatus?.max_devices ? ` / ${licenseStatus.max_devices}` : ''}
@@ -167,7 +167,7 @@ export default function DeviceManagementPage() {
                           {device.device_name || 'Unknown Device'}
                         </p>
                         {device.device_id === currentDeviceId && (
-                          <span className="text-[10px] bg-primary text-primary-foreground px-2 py-0.5 rounded-full font-bold uppercase tracking-wider shrink-0">
+                          <span className="text-[10px] bg-primary text-primary-foreground px-2 py-0.5 rounded-full font-bold  capitalize tracking-wider shrink-0">
                             Current Session
                           </span>
                         )}
@@ -214,7 +214,7 @@ export default function DeviceManagementPage() {
         {/* Inactive Devices */}
         {inactiveDevices.length > 0 && (
           <div className="bg-card rounded-2xl border border-border shadow-sm p-6">
-            <h3 className="text-base font-bold text-foreground mb-4">
+            <h3 className="text-base font-bold text-foreground mb-4 capitalize">
               Previous Devices <span className="text-muted-foreground font-medium text-sm">({inactiveDevices.length})</span>
             </h3>
             <div className="space-y-3">
