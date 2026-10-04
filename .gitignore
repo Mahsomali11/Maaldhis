@@ -1,0 +1,8 @@
+*.log
+
+Homestead.json
+Homestead.yaml
+Thumbs.db
+.env
+.env.example
+=
