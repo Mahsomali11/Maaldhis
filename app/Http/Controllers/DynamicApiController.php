@@ -208,6 +208,14 @@ class DynamicApiController extends Controller
         if ($id) {
             $record = $class::findOrFail($id);
             $record->update($body);
+            
+            if ($table === 'plans' && isset($body['features'])) {
+                $featuresJson = is_array($body['features']) ? json_encode($body['features']) : $body['features'];
+                \Illuminate\Support\Facades\DB::table('licenses')
+                    ->where('plan_id', $id)
+                    ->update(['features_enabled' => $featuresJson]);
+            }
+            
             return response()->json($record);
         }
         
@@ -227,6 +235,23 @@ class DynamicApiController extends Controller
         
         if ($filtered) {
             $query->update($body);
+            
+            if ($table === 'plans' && isset($body['features'])) {
+                $planId = null;
+                foreach ($request->query() as $key => $value) {
+                    if ($key === 'id' && is_string($value) && str_starts_with($value, 'eq.')) {
+                        $planId = substr($value, 3);
+                        break;
+                    }
+                }
+                if ($planId) {
+                    $featuresJson = is_array($body['features']) ? json_encode($body['features']) : $body['features'];
+                    \Illuminate\Support\Facades\DB::table('licenses')
+                        ->where('plan_id', $planId)
+                        ->update(['features_enabled' => $featuresJson]);
+                }
+            }
+            
             return response()->json(['success' => true]);
         }
         
