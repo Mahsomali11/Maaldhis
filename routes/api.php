@@ -80,7 +80,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
     // Dynamic REST API — protected by store access check for normal users
     // Admin users bypass store scoping (they can access all data)
-    Route::middleware([\App\Http\Middleware\CheckStoreAccess::class])->group(function () {
+    Route::middleware([
+        \App\Http\Middleware\CheckStoreAccess::class,
+        \App\Http\Middleware\CheckFeatureAccess::class
+    ])->group(function () {
         
         // Fast optimized endpoint to get all store data in one request
         Route::post('/rest/v1/rpc/get_store_data', function (Request $request) {

@@ -1,6 +1,7 @@
 import { router, usePage, Link } from '@inertiajs/react';
-import { X, Home, Settings, BookOpen, HelpCircle, LogOut, Users, Store, User, Wallet } from 'lucide-react';
+import { X, Home, Settings, BookOpen, HelpCircle, LogOut, Users, Store, User, Wallet, Lock } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
+import { useFeatureAccess } from '@/hooks/useFeatureAccess';
 
 interface SideDrawerProps {
   isOpen: boolean;
@@ -8,15 +9,16 @@ interface SideDrawerProps {
 }
 
 export default function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
-  const navigate = (url, options) => router.visit(url, options);
-  const { currentStore, user, logout } = useApp();
+  const navigate = (url: string, options?: any) => router.visit(url, options);
+  const { currentStore, user, logout, isLicenseActive } = useApp();
+  const { hasFeature } = useFeatureAccess();
 
   const role = user?.role || 'owner';
 
   const menuItems = [
     { label: 'Home', icon: Home, action: () => navigate('/dashboard'), visible: true },
     { label: 'My Profile', icon: User, action: () => navigate('/profile'), visible: true },
-    { label: 'Payment Accounts', icon: Wallet, action: () => navigate('/payment-accounts'), visible: role === 'owner' || role === 'admin' },
+    { label: 'Payment Accounts', icon: Wallet, action: () => navigate('/payment-accounts'), visible: (role === 'owner' || role === 'admin') && hasFeature('payment_integrations'), isLocked: !isLicenseActive },
     { label: 'Preferences', icon: Settings, action: () => navigate('/preferences'), visible: role === 'owner' || role === 'admin' },
     { label: 'Learning Center', icon: BookOpen, action: () => navigate('/learning-center'), visible: true },
     { label: 'Help', icon: HelpCircle, action: () => navigate('/help'), visible: true },
@@ -48,13 +50,21 @@ export default function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
           {menuItems.map(item => (
             <button
               key={item.label}
-              onClick={() => { item.action(); onClose(); }}
+              onClick={() => { 
+                if (item.isLocked) {
+                  navigate('/upgrade');
+                } else {
+                  item.action(); 
+                }
+                onClose(); 
+              }}
               className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-lg text-left transition-colors ${
-                item.danger ? 'text-destructive' : 'text-foreground hover:bg-accent'
+                item.danger ? 'text-destructive' : item.isLocked ? 'text-muted-foreground/40 cursor-not-allowed' : 'text-foreground hover:bg-accent'
               }`}
             >
-              <item.icon size={22} className={item.danger ? 'text-destructive' : 'text-primary'} />
-              <span className="font-medium">{item.label}</span>
+              <item.icon size={22} className={item.danger ? 'text-destructive' : item.isLocked ? 'text-muted-foreground/40' : 'text-primary'} />
+              <span className="font-medium flex-1">{item.label}</span>
+              {item.isLocked && <Lock size={16} className="text-muted-foreground/40" />}
             </button>
           ))}
         </div>

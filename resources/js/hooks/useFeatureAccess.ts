@@ -2,14 +2,17 @@ import { useApp } from '@/context/AppContext';
 import type { FeatureKey } from '@/lib/features';
 
 export function useFeatureAccess() {
-  const { storeFeatures, isLicenseActive } = useApp();
+  const { storeFeatures, isLicenseActive, licenseStatus } = useApp();
 
   const hasFeature = (key: FeatureKey): boolean => {
-    // If license is not active, block all features
-    if (!isLicenseActive) return false;
-    // No features configured = allow all (no license system yet)
-    if (!storeFeatures || Object.keys(storeFeatures).length === 0) return true;
-    return storeFeatures[key] === true;
+    // Note: License active status is now handled separately by isLicenseActive flag.
+    // hasFeature STRICTLY checks if a feature is included in the plan.
+    // If we have a license but it's totally unknown (backward compat), allow all
+    if (!licenseStatus || licenseStatus.status === 'none' || licenseStatus.plan_name === 'None') {
+       if (!storeFeatures || Object.keys(storeFeatures).length === 0) return true;
+    }
+    
+    return storeFeatures?.[key] === true;
   };
 
   return { hasFeature, storeFeatures };

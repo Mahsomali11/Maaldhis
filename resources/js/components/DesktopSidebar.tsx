@@ -49,7 +49,7 @@ export default function DesktopSidebar({ isMobile = false }: { isMobile?: boolea
   const navigate = (url: string, options?: any) => router.visit(url, options);
   const { url } = usePage(); 
   const location = { pathname: url };
-  const { currentStore, stores, setCurrentStore, user, logout } = useApp();
+  const { currentStore, stores, setCurrentStore, user, logout, isLicenseActive } = useApp();
   const { admin, isAdminAuthenticated, logout: adminLogout } = useAdmin();
   const { hasFeature } = useFeatureAccess();
   
@@ -94,11 +94,24 @@ export default function DesktopSidebar({ isMobile = false }: { isMobile?: boolea
 
   const NavItem = ({ label, icon: Icon, path, subItems }: { label: string; icon: any; path: string; subItems?: any[] }) => {
     const featureKey = ROUTE_FEATURE_MAP[path] as FeatureKey | undefined;
-    const isLocked = featureKey ? !hasFeature(featureKey) : false;
-    const hasSubItems = subItems && subItems.length > 0;
+    
+    // Check if the feature is actually in the plan
+    const inPlan = featureKey ? hasFeature(featureKey) : true;
+    
+    // Completely hide if it's not in the plan at all
+    if (!inPlan) return null;
+
+    const validSubItems = subItems ? subItems.filter(s => {
+       const sfKey = ROUTE_FEATURE_MAP[s.path] as FeatureKey | undefined;
+       return sfKey ? hasFeature(sfKey) : true;
+    }) : undefined;
+    const hasSubItems = validSubItems && validSubItems.length > 0;
+    
+    // If it's in the plan, but license is expired/suspended, we show it as blocked
+    const isLocked = featureKey && !isLicenseActive;
     
     // Custom active logic for items with subItems
-    const isSubItemActive = hasSubItems && subItems.some(s => isExactActive(s.path));
+    const isSubItemActive = hasSubItems && validSubItems.some(s => isExactActive(s.path));
     const active = hasSubItems ? isSubItemActive : isActive(path);
     const isOpen = hasSubItems && (inventoryOpen || isSubItemActive);
 
@@ -107,7 +120,7 @@ export default function DesktopSidebar({ isMobile = false }: { isMobile?: boolea
         <button
           onClick={() => {
             if (isLocked) {
-              toast.error('This feature is not included in your current plan. Please upgrade.');
+              toast.error('License Expired/Suspended. Please renew your subscription to access this feature.');
               navigate('/upgrade');
             } else if (hasSubItems) {
               setInventoryOpen(!inventoryOpen);
@@ -124,7 +137,7 @@ export default function DesktopSidebar({ isMobile = false }: { isMobile?: boolea
           }`}
         >
           <div className="flex items-center gap-3">
-             <Icon size={18} className={active ? 'text-primary-foreground' : 'text-muted-foreground'} />
+             <Icon size={18} className={active && !isLocked ? 'text-primary-foreground' : 'text-muted-foreground'} />
              <span className="truncate">{label}</span>
           </div>
           {hasSubItems && <ChevronDown size={14} className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />}
@@ -133,7 +146,7 @@ export default function DesktopSidebar({ isMobile = false }: { isMobile?: boolea
         
         {hasSubItems && isOpen && !isLocked && (
           <div className="pl-9 pr-3 py-1.5 mt-1 space-y-1 relative before:content-[''] before:absolute before:left-5 before:top-0 before:bottom-2 before:w-px before:bg-border">
-            {subItems.map((subItem) => {
+            {validSubItems.map((subItem) => {
               const subActive = isExactActive(subItem.path);
               return (
                 <button

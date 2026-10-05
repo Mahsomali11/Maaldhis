@@ -3,17 +3,38 @@ import DesktopSidebar from './DesktopSidebar';
 import LicenseExpiryBanner from './LicenseExpiryBanner';
 import { useApp } from '@/context/AppContext';
 import { Menu, X, Store } from 'lucide-react';
-import { usePage } from '@inertiajs/react';
+import { usePage, router } from '@inertiajs/react';
+import { ROUTE_FEATURE_MAP } from '@/lib/features';
+import { useFeatureAccess } from '@/hooks/useFeatureAccess';
 
 interface DesktopLayoutProps {
   children: ReactNode;
 }
 
 export default function DesktopLayout({ children }: DesktopLayoutProps) {
-  const { licenseStatus } = useApp();
+  const { licenseStatus, storeFeatures, isLicenseActive } = useApp();
   const { url } = usePage();
+  const { hasFeature } = useFeatureAccess();
   const daysRemaining = licenseStatus?.days_remaining ?? 999;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Check feature access
+  useEffect(() => {
+    // Check if we are fully loaded
+    if (!licenseStatus) return;
+
+    const path = url.split('?')[0];
+    const requiredFeature = ROUTE_FEATURE_MAP[path];
+    
+    if (requiredFeature) {
+      if (!hasFeature(requiredFeature)) {
+        router.visit('/upgrade');
+      } else if (!isLicenseActive) {
+        // It's in the plan, but license is expired
+        router.visit('/upgrade');
+      }
+    }
+  }, [url, licenseStatus, storeFeatures, isLicenseActive, hasFeature]);
 
   // Close mobile menu when url changes
   useEffect(() => {

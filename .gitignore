@@ -13,4 +13,6 @@ yarn-error.log
 Homestead.json
 Homestead.yaml
 Thumbs.db
-.gitattributes
+.env
+.env.example
+=
