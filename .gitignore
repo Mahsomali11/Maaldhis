@@ -1,10 +1,10 @@
 *.log
 /vendor
 /node_modules
-.env
-.env.backup
-.env.production
-.phpunit.result.cache
+/.env
+/.env.backup
+/.env.production
+/.phpunit.result.cache
 /storage/*.key
 public/storage
 public/hot
