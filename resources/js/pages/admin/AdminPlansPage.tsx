@@ -122,7 +122,7 @@ export default function AdminPlansPage() {
   if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div>;
 
   return (
-    <div className="space-y-6 p-[10px]">
+    <div className="p-4 sm:p-6 lg:px-8 space-y-6 max-w-7xl mx-auto w-full">
       <PageHeader title="Subscription Plans" />
       <div className="flex items-center justify-between">
                 <button onClick={() => { setEditing(null); resetForm(); setShowForm(true); }} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-foreground text-sm font-medium hover:opacity-90">
@@ -167,8 +167,8 @@ export default function AdminPlansPage() {
       </div>
 
       {showForm && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowForm(false)}>
-          <div className="bg-card rounded-2xl border border-border max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={() => setShowForm(false)}>
+          <div className="bg-card rounded-2xl sm:rounded-3xl border border-border max-w-lg w-full p-6 max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
             <h2 className="text-xl font-bold text-foreground mb-4 capitalize">{editing ? 'Edit Plan' : 'Create Plan'}</h2>
             <div className="space-y-3">
               {[

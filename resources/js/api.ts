@@ -306,19 +306,31 @@ export const api = {
            const storeData = await storeRes.json();
            if (storeData && storeData.length > 0) {
              const ownerId = storeData[0].owner_user_id;
-             let licRes = await fetch(`${API_URL}/rest/v1/licenses?owner_user_id=eq.${ownerId}&status=eq.active&select=*,plans(name)`, { headers: getHeaders(), credentials: 'same-origin' });
+             let licRes = await fetch(`${API_URL}/rest/v1/licenses?owner_user_id=eq.${ownerId}&status=eq.active&order=expiry_date.desc&select=*,plans(name)`, { headers: getHeaders(), credentials: 'same-origin' });
              let licData = await licRes.json();
              if (!licData || licData.length === 0) {
-                 licRes = await fetch(`${API_URL}/rest/v1/licenses?owner_user_id=eq.${ownerId}&order=id.desc&limit=1&select=*,plans(name)`, { headers: getHeaders(), credentials: 'same-origin' });
+                 licRes = await fetch(`${API_URL}/rest/v1/licenses?owner_user_id=eq.${ownerId}&order=created_at.desc&limit=1&select=*,plans(name)`, { headers: getHeaders(), credentials: 'same-origin' });
                  licData = await licRes.json();
              }
              if (licData && licData.length > 0) {
                const lic = licData[0];
                let remaining = 999;
-               if (lic.expiry_date) {
-                 remaining = Math.max(0, Math.ceil((new Date(lic.expiry_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+               let isTimestampExpired = false;
+               const expiryTimestamp = lic.expiry_date || lic.expires_at;
+               if (expiryTimestamp) {
+                 const diffMs = new Date(expiryTimestamp).getTime() - Date.now();
+                 isTimestampExpired = diffMs <= 0;
+                 remaining = isTimestampExpired ? 0 : Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
                }
-               return { data: { status: lic.status, plan_name: lic.plans?.name || 'Unknown', days_remaining: remaining } };
+               const effectiveStatus = (lic.status === 'active' && isTimestampExpired) ? 'expired' : lic.status;
+               return { 
+                 data: { 
+                   status: effectiveStatus, 
+                   plan_name: lic.plans?.name || 'Unknown', 
+                   days_remaining: remaining,
+                   expiry_date: expiryTimestamp
+                 } 
+               };
              }
            }
          } catch (e) { }
@@ -330,14 +342,14 @@ export const api = {
            const storeData = await storeRes.json();
            if (storeData && storeData.length > 0) {
              const ownerId = storeData[0].owner_user_id;
-             let licRes = await fetch(`${API_URL}/rest/v1/licenses?owner_user_id=eq.${ownerId}&status=eq.active`, { headers: getHeaders(), credentials: 'same-origin' });
+             let licRes = await fetch(`${API_URL}/rest/v1/licenses?owner_user_id=eq.${ownerId}&status=eq.active&order=expiry_date.desc`, { headers: getHeaders(), credentials: 'same-origin' });
              let licData = await licRes.json();
              if (!licData || licData.length === 0) {
-                 licRes = await fetch(`${API_URL}/rest/v1/licenses?owner_user_id=eq.${ownerId}&order=id.desc&limit=1`, { headers: getHeaders(), credentials: 'same-origin' });
+                 licRes = await fetch(`${API_URL}/rest/v1/licenses?owner_user_id=eq.${ownerId}&order=created_at.desc&limit=1`, { headers: getHeaders(), credentials: 'same-origin' });
                  licData = await licRes.json();
              }
              if (licData && licData.length > 0) {
-               return { data: licData[0].features_enabled || {} };
+               return { data: typeof licData[0].features_enabled === 'string' ? JSON.parse(licData[0].features_enabled) : (licData[0].features_enabled || {}) };
              }
            }
          } catch (e) { }

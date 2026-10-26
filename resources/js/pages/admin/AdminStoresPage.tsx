@@ -80,7 +80,7 @@ export default function AdminStoresPage() {
   if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div>;
 
   return (
-    <div className="space-y-6 p-[10px]">
+    <div className="p-4 sm:p-6 lg:px-8 space-y-6 max-w-7xl mx-auto w-full">
       <PageHeader title="Stores Management" />
       <div className="flex items-center justify-between">
         <div>
@@ -138,8 +138,8 @@ export default function AdminStoresPage() {
 
       {/* Store Detail Modal */}
       {showDetail && selectedStore && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowDetail(false)}>
-          <div className="bg-card rounded-2xl border border-border max-w-lg w-full p-6" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={() => setShowDetail(false)}>
+          <div className="bg-card rounded-2xl sm:rounded-3xl border border-border max-w-lg w-full p-6 shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
             <h2 className="text-xl font-bold text-foreground mb-4 capitalize">{selectedStore.store_name}</h2>
             <div className="space-y-3 text-sm">
               <div className="flex justify-between"><span className="text-muted-foreground">Owner</span><span className="text-foreground">{selectedStore.profiles?.full_name || selectedStore.profiles?.email}</span></div>

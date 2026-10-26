@@ -374,7 +374,7 @@ export default function AdminLicensesPage() {
       <PageHeader title="Licenses & Plans" /><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div>;
 
   return (
-    <div className="space-y-6 p-[10px]">
+    <div className="p-4 sm:p-6 lg:px-8 space-y-6 max-w-7xl mx-auto w-full">
       <div className="flex items-center justify-between">
                 <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-foreground text-sm font-medium hover:opacity-90">
           <Plus size={16} /> Create License
@@ -444,8 +444,8 @@ export default function AdminLicensesPage() {
 
       {/* Owner Stores Detail Modal */}
       {showDetail && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowDetail(null)}>
-          <div className="bg-card rounded-2xl border border-border max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={() => setShowDetail(null)}>
+          <div className="bg-card rounded-2xl sm:rounded-3xl border border-border max-w-md w-full p-6 shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
             <h2 className="text-xl font-bold text-foreground mb-2 capitalize">Owner License Details</h2>
             {(() => {
               const owner = getOwnerProfile(showDetail);
@@ -484,8 +484,8 @@ export default function AdminLicensesPage() {
 
       {/* Create License Modal — Owner-based */}
       {showCreate && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowCreate(false)}>
-          <div className="bg-card rounded-2xl border border-border max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={() => setShowCreate(false)}>
+          <div className="bg-card rounded-2xl sm:rounded-3xl border border-border max-w-md w-full p-6 shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
             <h2 className="text-xl font-bold text-foreground mb-4 capitalize">Create Owner License</h2>
             <div className="space-y-4">
               <div>
@@ -534,8 +534,8 @@ export default function AdminLicensesPage() {
 
       {/* Extend License Modal */}
       {showExtend && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowExtend(null)}>
-          <div className="bg-card rounded-2xl border border-border max-w-md w-full p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={() => setShowExtend(null)}>
+          <div className="bg-card rounded-2xl sm:rounded-3xl border border-border max-w-md w-full p-6 max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
             <h2 className="text-xl font-bold text-foreground mb-2 capitalize">Extend Owner License</h2>
             <p className="text-sm text-muted-foreground mb-1">Owner: <span className="text-foreground">{getOwnerProfile(showExtend)?.full_name || getOwnerProfile(showExtend)?.email || '—'}</span></p>
             <p className="text-sm text-muted-foreground mb-1">Stores: <span className="text-foreground">{getOwnerStores(showExtend).length}</span></p>
@@ -619,8 +619,8 @@ export default function AdminLicensesPage() {
 
       {/* Change Plan Modal */}
       {showChangePlan && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onClick={() => setShowChangePlan(null)}>
-          <div className="bg-card rounded-2xl border border-border max-w-md w-full p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={() => setShowChangePlan(null)}>
+          <div className="bg-card rounded-2xl sm:rounded-3xl border border-border max-w-md w-full p-6 max-h-[90vh] overflow-y-auto shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
             <h2 className="text-xl font-bold text-foreground mb-2 capitalize">Change Owner Plan</h2>
             <p className="text-sm text-muted-foreground mb-1">Owner: <span className="text-foreground">{getOwnerProfile(showChangePlan)?.full_name || getOwnerProfile(showChangePlan)?.email || '—'}</span></p>
             <p className="text-sm text-muted-foreground mb-1">Current Plan: <span className="text-foreground">{showChangePlan.plans?.name || '—'}</span></p>

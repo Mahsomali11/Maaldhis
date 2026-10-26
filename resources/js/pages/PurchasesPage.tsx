@@ -301,8 +301,8 @@ export default function PurchasesPage() {
 
       {/* Purchase Details Modal */}
       {selectedPurchase && (
-        <div className="fixed inset-0 z-50 bg-foreground/20 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-2xl bg-card rounded-3xl border border-border shadow-2xl flex flex-col animate-in zoom-in-95 duration-300 max-h-[90vh]">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-2xl bg-card rounded-2xl sm:rounded-3xl border border-border shadow-2xl flex flex-col animate-in zoom-in-95 duration-200 max-h-[90vh]">
             <div className="flex justify-between items-center px-6 py-5 border-b border-border bg-muted/10 shrink-0">
               <div>
                 <h3 className="text-xl font-bold text-foreground flex items-center gap-2">
@@ -427,8 +427,8 @@ export default function PurchasesPage() {
 
       {/* Add Purchase Modal */}
       {showForm && (
-        <div className="fixed inset-0 z-50 bg-foreground/20 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
-          <div className="w-full sm:max-w-4xl max-h-[90vh] bg-card rounded-t-3xl sm:rounded-3xl border border-border shadow-2xl flex flex-col animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-4xl max-h-[90vh] bg-card rounded-2xl sm:rounded-3xl border border-border shadow-2xl flex flex-col animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center px-6 py-5 border-b border-border bg-muted/10 shrink-0">
               <h3 className="text-xl font-bold text-foreground">Record Purchase</h3>
               <button 
@@ -687,8 +687,8 @@ export default function PurchasesPage() {
 
       {/* Quick Add Product Modal */}
       {showQuickAddProduct && (
-        <div className="fixed inset-0 z-[60] bg-foreground/20 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-card rounded-3xl border border-border shadow-2xl flex flex-col animate-in zoom-in-95 duration-300">
+        <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-card rounded-2xl sm:rounded-3xl border border-border shadow-2xl flex flex-col animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center px-6 py-5 border-b border-border bg-muted/10 shrink-0">
               <h3 className="text-xl font-bold text-foreground">Quick Add Product</h3>
               <button 

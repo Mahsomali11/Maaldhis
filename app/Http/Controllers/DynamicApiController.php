@@ -162,9 +162,28 @@ class DynamicApiController extends Controller
         if (is_array($body) && isset($body[0]) && is_array($body[0])) {
             // Bulk insert (array of objects)
             $data = $body;
+            $now = now()->format('Y-m-d H:i:s');
             foreach ($data as &$item) {
-                if (!isset($item['id'])) {
+                if (!isset($item['id']) || empty($item['id'])) {
                     $item['id'] = (string) Str::uuid();
+                }
+                if (!isset($item['created_at']) || empty($item['created_at'])) {
+                    $item['created_at'] = $now;
+                } else {
+                    try {
+                        $item['created_at'] = \Carbon\Carbon::parse($item['created_at'])->format('Y-m-d H:i:s');
+                    } catch (\Exception $e) {
+                        $item['created_at'] = $now;
+                    }
+                }
+                if (!isset($item['updated_at']) || empty($item['updated_at'])) {
+                    $item['updated_at'] = $now;
+                } else {
+                    try {
+                        $item['updated_at'] = \Carbon\Carbon::parse($item['updated_at'])->format('Y-m-d H:i:s');
+                    } catch (\Exception $e) {
+                        $item['updated_at'] = $now;
+                    }
                 }
             }
             try {
@@ -177,8 +196,22 @@ class DynamicApiController extends Controller
         }
 
         // Single insert
-        if (!isset($body['id'])) {
+        if (!isset($body['id']) || empty($body['id'])) {
             $body['id'] = (string) Str::uuid();
+        }
+        if (isset($body['created_at']) && !empty($body['created_at'])) {
+            try {
+                $body['created_at'] = \Carbon\Carbon::parse($body['created_at'])->format('Y-m-d H:i:s');
+            } catch (\Exception $e) {
+                unset($body['created_at']);
+            }
+        }
+        if (isset($body['updated_at']) && !empty($body['updated_at'])) {
+            try {
+                $body['updated_at'] = \Carbon\Carbon::parse($body['updated_at'])->format('Y-m-d H:i:s');
+            } catch (\Exception $e) {
+                unset($body['updated_at']);
+            }
         }
         try {
             $record = $class::create($body);

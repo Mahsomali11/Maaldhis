@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import PageHeader from '@/components/PageHeader';
-import { Search, X, ChevronLeft, Receipt, Plus, Users, Building2, CreditCard, User, Landmark, Activity } from 'lucide-react';
+import { Search, X, ChevronLeft, Receipt, Plus, Users, Building2, CreditCard, User, Landmark, Activity, CheckCircle2, Clock, ShoppingBag, Eye, Printer, Share2, FileText, Check, Loader2 } from 'lucide-react';
+import { printReceipt, shareReceipt } from '@/lib/receipt-printer';
 import { toast } from 'sonner';
 import { api as apiClient } from '@/api';
 
@@ -15,7 +16,7 @@ interface AggregatedDebt {
 }
 
 export default function CreditRecordPage() {
-  const { customerDebts, customers, sales, purchases, suppliers, payments, expenses, recordPayment, currentStore, formatCurrency, user, refreshData } = useApp();
+  const { customerDebts, customers, sales, saleItems, purchases, suppliers, payments, expenses, recordPayment, currentStore, formatCurrency, user, refreshData } = useApp();
   const [tab, setTab] = useState<'customers' | 'your' | 'customer_history' | 'supplier_history'>('customers');
   const [search, setSearch] = useState('');
   
@@ -186,37 +187,181 @@ export default function CreditRecordPage() {
   const totalCustomerHistoryPaid = useMemo(() => storeCustomerSettlements.reduce((sum, s) => sum + Number(s.amount), 0), [storeCustomerSettlements]);
   const totalSupplierHistoryPaid = useMemo(() => storeSupplierSettlements.reduce((sum, s) => sum + Number(s.amount), 0), [storeSupplierSettlements]);
 
+  // Selected debt target for payment & tab filter
+  const [targetDebtId, setTargetDebtId] = useState<string | null>(null);
+  const [debtTab, setDebtTab] = useState<'all' | 'open' | 'paid'>('all');
+
+  // Receipt modal state & loading
+  const [selectedReceipt, setSelectedReceipt] = useState<any | null>(null);
+  const [isLoadingReceipt, setIsLoadingReceipt] = useState(false);
+
+  const handleOpenReceipt = async (identifier: string, debt?: any) => {
+    let target = identifier;
+    if (!target && debt?.notes) {
+      const match = typeof debt.notes === 'string' ? debt.notes.match(/RCP-[0-9A-Za-z-]+/) : null;
+      target = match ? match[0] : debt.notes;
+    }
+    if (!target && debt?.sale_id) {
+      target = debt.sale_id;
+    }
+    if (!target && debt?.id) {
+      target = debt.id;
+    }
+
+    if (!target) {
+      toast.error('Sale receipt reference not found');
+      return;
+    }
+
+    setIsLoadingReceipt(true);
+
+    try {
+      // 1. Try local memory state first
+      let sale = sales.find(s => s.id === target || s.receipt_no === target);
+      if (!sale && debt?.sale_id) {
+        sale = sales.find(s => s.id === debt.sale_id || s.receipt_no === debt.sale_id);
+      }
+
+      let items: any[] = [];
+      let customer: any = null;
+      let paymentMethod = 'Cash';
+      let cashierName = user?.full_name || '';
+
+      if (sale) {
+        items = (saleItems || []).filter(si => si.sale_id === sale.id);
+        customer = sale.customer_id ? customers.find(c => c.id === sale.customer_id) : null;
+        const salePayment = payments.find(p => p.sale_id === sale.id && p.payment_type === 'sale');
+        const usedAccountId = salePayment?.payment_account_id || sale.payment_account_id;
+        paymentMethod = usedAccountId
+          ? (paymentAccounts.find(p => p.id === usedAccountId)?.account_name || 'Card/Transfer')
+          : (salePayment ? salePayment.method : (sale.sale_type || 'Cash'));
+      }
+
+      // 2. Fetch from dedicated Receipt API endpoint if missing or items need loading
+      if (!sale || items.length === 0) {
+        try {
+          const res = await fetch(`/api/rest/v1/receipt-details/${encodeURIComponent(target)}`, {
+            headers: {
+              'Accept': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin',
+          });
+
+          if (res.ok) {
+            const json = await res.json();
+            if (json.success && json.sale) {
+              sale = json.sale;
+              items = json.items || [];
+              if (json.customer) customer = json.customer;
+              if (json.paymentMethod) paymentMethod = json.paymentMethod;
+              if (json.cashierName) cashierName = json.cashierName;
+              if (json.debt && !debt) debt = json.debt;
+            }
+          }
+        } catch (fetchErr) {
+          console.warn('Dedicated receipt API lookup error:', fetchErr);
+        }
+      }
+
+      // 3. Fallback to Supabase query builder if needed
+      if (!sale) {
+        const { data: sById } = await apiClient.from('sales').select('*').eq('id', target).single();
+        sale = sById;
+        if (!sale) {
+          const { data: sByRef } = await apiClient.from('sales').select('*').eq('receipt_no', target).single();
+          sale = sByRef;
+        }
+      }
+
+      if (!sale) {
+        toast.error(`Receipt details not found for ${target}`);
+        return;
+      }
+
+      if (items.length === 0) {
+        const { data: dbItems } = await apiClient.from('sale_items').select('*').eq('sale_id', sale.id);
+        items = dbItems || [];
+      }
+
+      if (!customer && sale.customer_id) {
+        customer = customers.find(c => c.id === sale.customer_id) || null;
+      }
+
+      setSelectedReceipt({
+        sale,
+        items,
+        customer: customer || null,
+        store: currentStore!,
+        cashierName,
+        formatCurrency,
+        paymentMethod,
+        debt: debt || null,
+      });
+    } catch (e: any) {
+      console.error('Error opening receipt:', e);
+      toast.error('Failed to load receipt details');
+    } finally {
+      setIsLoadingReceipt(false);
+    }
+  };
+
   // Get individual debts for selected customer
-  const customerDetailDebts = selectedCustomer
-    ? storeDebts.filter(d => d.customer_id === selectedCustomer && d.balance_amount > 0)
-    : [];
+  const customerAllDebts = useMemo(() => {
+    if (!selectedCustomer) return [];
+    return storeDebts
+      .filter(d => d.customer_id === selectedCustomer)
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  }, [selectedCustomer, storeDebts]);
+
+  const customerDetailDebts = useMemo(() => {
+    if (debtTab === 'open') return customerAllDebts.filter(d => Number(d.balance_amount) > 0);
+    if (debtTab === 'paid') return customerAllDebts.filter(d => Number(d.balance_amount) <= 0 || d.status === 'paid');
+    return customerAllDebts;
+  }, [customerAllDebts, debtTab]);
+
   const selectedCustomerInfo = selectedCustomer
     ? aggregatedDebts.find(d => d.customer_id === selectedCustomer)
     : null;
 
-  const handlePayment = (e: React.FormEvent) => {
+  const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCustomer) return;
+    const amountNum = Number(payAmount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      toast.error('Please enter a valid payment amount');
+      return;
+    }
 
     // Resolve the exact account name to ensure proper ledger/cash-flow synchronization
     const selectedAccount = paymentAccounts.find(pa => pa.id === paymentAccountId);
     const actualMethod = selectedAccount ? selectedAccount.account_name : payMethod;
 
-    recordPayment({
-      store_id: currentStore?.id || '',
-      sale_id: null,
-      customer_id: selectedCustomer,
-      supplier_id: null,
-      payment_type: 'debt_collection',
-      direction: 'in',
-      method: actualMethod as any,
-      payment_account_id: paymentAccountId,
-      amount: Number(payAmount),
-      reference: 'PAY-' + Date.now(),
-      created_by: user?.id || '',
-    });
-    setPayAmount('');
-    toast.success('Payment recorded successfully');
+    const targetDebt = targetDebtId ? customerAllDebts.find(d => d.id === targetDebtId) : null;
+
+    try {
+      await recordPayment({
+        store_id: currentStore?.id || '',
+        sale_id: targetDebt?.sale_id || null,
+        customer_id: selectedCustomer,
+        supplier_id: null,
+        payment_type: 'debt_collection',
+        direction: 'in',
+        method: actualMethod as any,
+        payment_account_id: paymentAccountId,
+        amount: amountNum,
+        reference: 'PAY-' + Date.now(),
+        created_by: user?.id || '',
+      }, targetDebtId || undefined);
+
+      setPayAmount('');
+      setTargetDebtId(null);
+      toast.success(targetDebtId ? 'Specific receipt debt settled successfully!' : 'Payment recorded and debt settled successfully');
+      await refreshData();
+    } catch (err: any) {
+      console.error('Payment error:', err);
+      toast.error(err.message || 'Failed to record payment');
+    }
   };
 
   const handleAddCredit = async (e: React.FormEvent) => {
@@ -233,6 +378,7 @@ export default function CreditRecordPage() {
       original_amount: Number(addAmount),
       balance_amount: Number(addAmount),
       status: 'open',
+      notes: addNote.trim() || null,
     } as any);
     if (error) {
       toast.error('Failed to add credit record: ' + error.message);
@@ -246,6 +392,175 @@ export default function CreditRecordPage() {
     await refreshData();
   };
 
+  const ReceiptModal = () => {
+    if (isLoadingReceipt) {
+      return (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
+          <div className="bg-card rounded-3xl border border-border p-6 shadow-2xl flex items-center gap-3">
+            <Loader2 size={22} className="animate-spin text-primary" />
+            <span className="text-sm font-bold text-foreground">Loading receipt details...</span>
+          </div>
+        </div>
+      );
+    }
+    if (!selectedReceipt) return null;
+    const sale = selectedReceipt.sale;
+    const items = selectedReceipt.items || [];
+    const customer = selectedReceipt.customer;
+    const debt = selectedReceipt.debt;
+    const isDebtSettled = debt ? (Number(debt.balance_amount) <= 0 || debt.status === 'paid') : (Number(sale.outstanding_amount || 0) <= 0);
+
+    return (
+      <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+        <div className="bg-card rounded-3xl border border-border max-w-md w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+          {/* Header */}
+          <div className="px-5 py-4 border-b border-border flex items-center justify-between bg-muted/20">
+            <div className="flex items-center gap-2">
+              <Receipt size={18} className="text-primary" />
+              <h3 className="font-bold text-foreground text-sm">POS Sale Receipt #{sale.receipt_no}</h3>
+            </div>
+            <button 
+              onClick={() => setSelectedReceipt(null)}
+              className="w-8 h-8 rounded-full bg-muted/60 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          {/* Receipt Body */}
+          <div className="overflow-y-auto p-6 space-y-4">
+            {/* Store details */}
+            <div className="text-center pb-4 border-b border-dashed border-border/70">
+              <h4 className="text-base font-black text-foreground">{currentStore?.store_name}</h4>
+              {currentStore?.location && <p className="text-xs text-muted-foreground">{currentStore.location}</p>}
+              {currentStore?.phone && <p className="text-xs text-muted-foreground">Tel: {currentStore.phone}</p>}
+              <div className="mt-2 text-xs font-mono text-muted-foreground">
+                Date: {new Date(sale.sold_at || sale.created_at).toLocaleString()}
+              </div>
+              {customer && (
+                <div className="mt-2 text-xs font-bold text-foreground bg-muted/40 py-1 px-3 rounded-lg inline-block">
+                  Customer: {customer.name} {customer.phone ? `(${customer.phone})` : ''}
+                </div>
+              )}
+            </div>
+
+            {/* Line Items */}
+            <div className="space-y-2 pb-4 border-b border-dashed border-border/70">
+              <div className="flex justify-between text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                <span>Item</span>
+                <span>Total</span>
+              </div>
+              {items.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic text-center py-2">No line item details recorded.</p>
+              ) : (
+                items.map((item: any, idx: number) => {
+                  const itemName = item.item_name || item.name || item.product_name || 'Product Item';
+                  const itemQty = Number(item.quantity || 1);
+                  const itemPrice = Number(item.sell_price || item.unit_price || 0);
+                  const itemTotal = Number(item.line_total != null ? item.line_total : (itemQty * itemPrice));
+                  return (
+                    <div key={item.id || idx} className="flex justify-between items-start text-xs">
+                      <div className="flex-1 pr-2">
+                        <p className="font-bold text-foreground">{itemName}</p>
+                        <p className="text-[10px] text-muted-foreground font-medium">{itemQty} × {formatCurrency(itemPrice)}</p>
+                      </div>
+                      <span className="font-bold text-foreground">{formatCurrency(itemTotal)}</span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Subtotal, Tax, Total */}
+            <div className="space-y-1.5 pb-4 border-b border-dashed border-border/70 text-xs">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground font-medium">Subtotal</span>
+                <span className="font-bold text-foreground">{formatCurrency(sale.subtotal)}</span>
+              </div>
+              {Number(sale.tax) > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground font-medium">Tax {sale.tax_rate ? `(${sale.tax_rate}%)` : ''}</span>
+                  <span className="font-bold text-foreground">{formatCurrency(sale.tax)}</span>
+                </div>
+              )}
+              {Number(sale.discount) > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground font-medium">Discount</span>
+                  <span className="font-bold text-destructive">-{formatCurrency(sale.discount)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-base font-black pt-1.5 border-t border-border/50 text-foreground">
+                <span>Grand Total</span>
+                <span>{formatCurrency(sale.total)}</span>
+              </div>
+            </div>
+
+            {/* Original Payment Split */}
+            <div className="p-3 bg-muted/30 rounded-xl space-y-1.5 text-xs border border-border/50">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Original Payment Split</p>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-muted text-muted-foreground uppercase">{selectedReceipt.paymentMethod}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground font-medium">Paid at Sale:</span>
+                <span className="font-bold text-primary">{formatCurrency(sale.paid_amount)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground font-medium">Original Credit / Debt:</span>
+                <span className="font-bold text-destructive">{formatCurrency(sale.outstanding_amount)}</span>
+              </div>
+
+              {debt && (
+                <div className="flex justify-between items-center pt-2 border-t border-border/50">
+                  <span className="font-bold text-foreground">Current Balance Due:</span>
+                  <span className={`font-black ${isDebtSettled ? 'text-success' : 'text-destructive'}`}>
+                    {formatCurrency(debt.balance_amount)}
+                  </span>
+                </div>
+              )}
+
+              <div className="flex justify-between items-center pt-1">
+                <span className="text-muted-foreground font-medium">Receipt Credit Status:</span>
+                {isDebtSettled ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-success bg-success/10 border border-success/20 px-2 py-0.5 rounded-full">
+                    <CheckCircle2 size={11} /> Paid in Full / Settled
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-destructive bg-destructive/10 border border-destructive/20 px-2 py-0.5 rounded-full">
+                    <Clock size={11} /> Active Debt
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Footer Actions */}
+          <div className="p-4 bg-muted/20 border-t border-border flex gap-2">
+            <button 
+              onClick={() => {
+                printReceipt(selectedReceipt, '80mm');
+                toast.success('Print dialog opened');
+              }}
+              className="flex-1 py-2.5 rounded-xl bg-primary text-primary-foreground font-bold text-xs flex items-center justify-center gap-1.5 hover:opacity-90 transition-opacity"
+            >
+              <Printer size={15} /> Quick Print (80mm)
+            </button>
+            <button 
+              onClick={async () => {
+                const res = await shareReceipt(selectedReceipt);
+                if (res === 'copied') toast.success('Receipt copied to clipboard');
+              }}
+              className="px-4 py-2.5 rounded-xl bg-muted hover:bg-accent text-foreground font-bold text-xs flex items-center justify-center gap-1.5 transition-colors"
+              title="Share Receipt"
+            >
+              <Share2 size={15} /> Share
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // --------------------------------------------------------------------------
   // Detail View (Selected Customer)
   // --------------------------------------------------------------------------
@@ -256,7 +571,10 @@ export default function CreditRecordPage() {
           title={selectedCustomerInfo.customer_name} 
           leftAction={
             <button 
-              onClick={() => setSelectedCustomer(null)} 
+              onClick={() => {
+                setSelectedCustomer(null);
+                setTargetDebtId(null);
+              }} 
               className="flex items-center gap-2 text-sm font-bold text-muted-foreground hover:text-foreground transition-all mr-4 bg-card border border-border shadow-sm px-4 py-2.5 rounded-xl hover:bg-accent"
             >
               <ChevronLeft size={16} /> Back
@@ -269,44 +587,139 @@ export default function CreditRecordPage() {
             
             {/* Main Area: Outstanding Debts */}
             <div className="lg:col-span-2 space-y-6">
-              <h3 className="font-black text-foreground text-xl capitalize">Outstanding Debts</h3>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <h3 className="font-black text-foreground text-xl capitalize">Outstanding Debts</h3>
+                <div className="flex items-center gap-1 bg-muted/40 p-1 rounded-xl border border-border/60">
+                  <button 
+                    onClick={() => setDebtTab('all')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${debtTab === 'all' ? 'bg-primary text-primary-foreground shadow-2xs' : 'text-muted-foreground hover:text-foreground'}`}
+                  >
+                    All ({customerAllDebts.length})
+                  </button>
+                  <button 
+                    onClick={() => setDebtTab('open')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${debtTab === 'open' ? 'bg-primary text-primary-foreground shadow-2xs' : 'text-muted-foreground hover:text-foreground'}`}
+                  >
+                    Unpaid ({customerAllDebts.filter(d => Number(d.balance_amount) > 0).length})
+                  </button>
+                  <button 
+                    onClick={() => setDebtTab('paid')}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all ${debtTab === 'paid' ? 'bg-primary text-primary-foreground shadow-2xs' : 'text-muted-foreground hover:text-foreground'}`}
+                  >
+                    Settled ({customerAllDebts.filter(d => Number(d.balance_amount) <= 0 || d.status === 'paid').length})
+                  </button>
+                </div>
+              </div>
               
               <div className="hidden md:block bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b border-border/50 bg-muted/10">
-                      <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">Date & Reference</th>
-                      <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest text-right">Original Amount</th>
-                      <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest text-right">Balance Due</th>
+                      <th className="px-5 py-4 text-[11px] font-bold text-muted-foreground capitalize tracking-widest">Date & Reference</th>
+                      <th className="px-5 py-4 text-[11px] font-bold text-muted-foreground capitalize tracking-widest">Notes / Notice</th>
+                      <th className="px-5 py-4 text-[11px] font-bold text-muted-foreground capitalize tracking-widest text-right">Original Amount</th>
+                      <th className="px-5 py-4 text-[11px] font-bold text-muted-foreground capitalize tracking-widest text-right">Balance Due</th>
+                      <th className="px-5 py-4 text-[11px] font-bold text-muted-foreground capitalize tracking-widest text-center">Status</th>
+                      <th className="px-5 py-4 text-[11px] font-bold text-muted-foreground capitalize tracking-widest text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/50">
                     {customerDetailDebts.length === 0 ? (
                       <tr>
-                        <td colSpan={3} className="px-6 py-16 text-center">
+                        <td colSpan={6} className="px-6 py-16 text-center">
                           <Receipt size={32} className="mx-auto mb-4 text-muted-foreground/30" />
-                          <p className="text-muted-foreground font-medium">No outstanding debts.</p>
+                          <p className="text-muted-foreground font-medium">No credit records found for this filter.</p>
                         </td>
                       </tr>
                     ) : (
                       customerDetailDebts.map(debt => {
                         const sale = debt.sale_id ? sales.find(s => s.id === debt.sale_id) : null;
+                        const receiptRef = sale?.receipt_no || (typeof debt.notes === 'string' ? debt.notes.match(/RCP-[0-9A-Za-z-]+/)?.[0] : null) || (typeof debt.notes === 'string' && debt.notes.startsWith('RCP-') ? debt.notes : null);
+                        const hasReceipt = Boolean(debt.sale_id || receiptRef);
+                        const isSettled = Number(debt.balance_amount) <= 0 || debt.status === 'paid';
+                        const isPartial = !isSettled && Number(debt.balance_amount) < Number(debt.original_amount);
+                        const isTargeted = targetDebtId === debt.id;
+
                         return (
-                          <tr key={debt.id} className="hover:bg-muted/30 transition-colors">
-                            <td className="px-6 py-4">
+                          <tr key={debt.id} className={`hover:bg-muted/30 transition-colors ${isTargeted ? 'bg-primary/5' : ''}`}>
+                            <td className="px-5 py-4">
                                <div className="font-medium text-sm text-foreground">
                                  {new Date(debt.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                                </div>
-                               <div className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground mt-1">
-                                  <Receipt size={12} />
-                                  {sale ? sale.receipt_no : 'Manual Credit'}
+                               <div className="mt-1">
+                                 {hasReceipt ? (
+                                   <button 
+                                     type="button"
+                                     onClick={() => handleOpenReceipt(debt.sale_id || receiptRef || '', debt)}
+                                     title="Click to view full POS receipt"
+                                     className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-primary hover:text-primary/80 hover:underline transition-all group"
+                                   >
+                                     <Receipt size={13} className="text-primary group-hover:scale-110 transition-transform" />
+                                     <span>{receiptRef || sale?.receipt_no || 'View Receipt'}</span>
+                                   </button>
+                                 ) : (
+                                   <div className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground">
+                                     <FileText size={13} />
+                                     <span>Manual Credit</span>
+                                   </div>
+                                 )}
                                </div>
                             </td>
-                            <td className="px-6 py-4 text-sm font-medium text-right text-muted-foreground">
+
+                            <td className="px-5 py-4">
+                              {debt.sale_id ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/20">
+                                  <ShoppingBag size={11} /> POS Sale Credit
+                                </span>
+                              ) : (
+                                <span className="text-xs text-foreground font-medium line-clamp-2 max-w-[200px]" title={debt.notes || 'Manual Credit'}>
+                                  {debt.notes ? debt.notes : <span className="text-muted-foreground/60 italic">Manual Credit Entry</span>}
+                                </span>
+                              )}
+                            </td>
+
+                            <td className="px-5 py-4 text-sm font-medium text-right text-muted-foreground">
                               {formatCurrency(debt.original_amount)}
                             </td>
-                            <td className="px-6 py-4 text-sm font-bold text-destructive text-right">
+
+                            <td className={`px-5 py-4 text-sm font-black text-right ${isSettled ? 'text-success' : 'text-destructive'}`}>
                               {formatCurrency(debt.balance_amount)}
+                            </td>
+
+                            <td className="px-5 py-4 text-center">
+                              {isSettled ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-success bg-success/10 border border-success/20 px-2.5 py-0.5 rounded-full capitalize">
+                                  <CheckCircle2 size={11} /> Paid in Full
+                                </span>
+                              ) : isPartial ? (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-full capitalize">
+                                  <Activity size={11} /> Partial
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-destructive bg-destructive/10 border border-destructive/20 px-2.5 py-0.5 rounded-full capitalize">
+                                  <Clock size={11} /> Unpaid
+                                </span>
+                              )}
+                            </td>
+
+                            <td className="px-5 py-4 text-right">
+                              {isSettled ? (
+                                <span className="text-xs font-bold text-muted-foreground/60">Settled</span>
+                              ) : (
+                                <button 
+                                  onClick={() => {
+                                    setTargetDebtId(debt.id);
+                                    setPayAmount(String(debt.balance_amount));
+                                  }}
+                                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all shadow-2xs ${
+                                    isTargeted 
+                                      ? 'bg-primary text-primary-foreground ring-2 ring-primary/30' 
+                                      : 'bg-primary/10 hover:bg-primary hover:text-primary-foreground text-primary'
+                                  }`}
+                                >
+                                  {isTargeted ? 'Targeted' : 'Pay'}
+                                </button>
+                              )}
                             </td>
                           </tr>
                         );
@@ -317,30 +730,91 @@ export default function CreditRecordPage() {
               </div>
 
               {/* Mobile Stacking Cards */}
-              <div className="md:hidden space-y-4">
-                 {customerDetailDebts.map(debt => {
+              <div className="md:hidden space-y-4">                  {customerDetailDebts.map(debt => {
                     const sale = debt.sale_id ? sales.find(s => s.id === debt.sale_id) : null;
+                    const receiptRef = sale?.receipt_no || (typeof debt.notes === 'string' ? debt.notes.match(/RCP-[0-9A-Za-z-]+/)?.[0] : null) || (typeof debt.notes === 'string' && debt.notes.startsWith('RCP-') ? debt.notes : null);
+                    const hasReceipt = Boolean(debt.sale_id || receiptRef);
+                    const isSettled = Number(debt.balance_amount) <= 0 || debt.status === 'paid';
+                    const isPartial = !isSettled && Number(debt.balance_amount) < Number(debt.original_amount);
+                    const isTargeted = targetDebtId === debt.id;
+
                     return (
-                       <div key={debt.id} className="bg-card rounded-2xl border border-border p-5 shadow-sm">
-                          <div className="flex justify-between items-start mb-3">
+                       <div key={debt.id} className={`bg-card rounded-2xl border p-5 shadow-sm space-y-3 ${isTargeted ? 'border-primary ring-2 ring-primary/20' : 'border-border'}`}>
+                          <div className="flex justify-between items-start">
                              <div>
                                 <h4 className="font-bold text-foreground text-sm capitalize">
                                    {new Date(debt.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                                 </h4>
-                                <div className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground mt-1">
-                                   <Receipt size={12} />
-                                   {sale ? sale.receipt_no : 'Manual Credit'}
+                                <div className="mt-1">
+                                   {hasReceipt ? (
+                                     <button 
+                                       type="button"
+                                       onClick={() => handleOpenReceipt(debt.sale_id || receiptRef || '', debt)}
+                                       className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-primary hover:underline"
+                                     >
+                                       <Receipt size={13} />
+                                       <span>{receiptRef || sale?.receipt_no || 'View Receipt'}</span>
+                                     </button>
+                                   ) : (
+                                     <div className="flex items-center gap-1.5 text-xs font-mono text-muted-foreground">
+                                       <FileText size={13} />
+                                       <span>Manual Credit</span>
+                                     </div>
+                                   )}
                                 </div>
                              </div>
                              <div className="text-right">
-                                <p className="text-[10px] font-bold text-muted-foreground  capitalize tracking-widest mb-0.5">Balance Due</p>
-                                <p className="font-black text-destructive">{formatCurrency(debt.balance_amount)}</p>
+                                <p className="text-[10px] font-bold text-muted-foreground capitalize tracking-widest mb-0.5">Balance Due</p>
+                                <p className={`font-black ${isSettled ? 'text-success' : 'text-destructive'}`}>{formatCurrency(debt.balance_amount)}</p>
                              </div>
                           </div>
-                          <div className="pt-3 border-t border-border/50 flex justify-between items-center text-sm text-muted-foreground">
-                             <span>Original Amount</span>
-                             <span className="font-medium">{formatCurrency(debt.original_amount)}</span>
+
+                          <div className="pt-2 border-t border-border/50 flex justify-between items-center text-xs">
+                             <span className="text-muted-foreground font-medium">Notes / Notice:</span>
+                             {debt.sale_id ? (
+                               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-primary/10 text-primary border border-primary/20">
+                                 <ShoppingBag size={10} /> POS Sale Credit
+                               </span>
+                             ) : (
+                               <span className="font-medium text-foreground text-right">{debt.notes || 'Manual Credit Entry'}</span>
+                             )}
                           </div>
+
+                          <div className="pt-2 border-t border-border/50 flex justify-between items-center text-xs">
+                             <span className="text-muted-foreground font-medium">Status:</span>
+                             {isSettled ? (
+                               <span className="inline-flex items-center gap-1 text-[10px] font-bold text-success bg-success/10 border border-success/20 px-2.5 py-0.5 rounded-full capitalize">
+                                 <CheckCircle2 size={11} /> Paid in Full
+                               </span>
+                             ) : isPartial ? (
+                               <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-full capitalize">
+                                 <Activity size={11} /> Partial
+                               </span>
+                             ) : (
+                               <span className="inline-flex items-center gap-1 text-[10px] font-bold text-destructive bg-destructive/10 border border-destructive/20 px-2.5 py-0.5 rounded-full capitalize">
+                                 <Clock size={11} /> Unpaid
+                               </span>
+                             )}
+                          </div>
+
+                          <div className="pt-2 border-t border-border/50 flex justify-between items-center text-xs text-muted-foreground">
+                             <span>Original Amount:</span>
+                             <span className="font-medium text-foreground">{formatCurrency(debt.original_amount)}</span>
+                          </div>
+
+                          {!isSettled && (
+                            <div className="pt-2">
+                               <button 
+                                 onClick={() => {
+                                   setTargetDebtId(debt.id);
+                                   setPayAmount(String(debt.balance_amount));
+                                 }}
+                                 className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm"
+                               >
+                                 Pay this balance ({formatCurrency(debt.balance_amount)})
+                               </button>
+                            </div>
+                          )}
                        </div>
                     );
                  })}
@@ -355,7 +829,7 @@ export default function CreditRecordPage() {
                 {/* Summary */}
                 <div className="text-center p-6 bg-destructive/5 rounded-2xl border border-destructive/20 relative overflow-hidden">
                   <div className="absolute top-0 w-full h-1.5 bg-destructive"></div>
-                  <p className="text-xs font-bold text-destructive  capitalize tracking-widest mb-2">Total Outstanding</p>
+                  <p className="text-xs font-bold text-destructive capitalize tracking-widest mb-2">Total Outstanding</p>
                   <p className="text-4xl font-black text-destructive mb-2">
                     {formatCurrency(selectedCustomerInfo.total_balance)}
                   </p>
@@ -365,22 +839,69 @@ export default function CreditRecordPage() {
                 <div className="h-px bg-border w-full"></div>
 
                 {/* Payment Form */}
-                <form onSubmit={handlePayment} className="space-y-5">
-                  <h4 className="font-black text-foreground flex items-center gap-2 capitalize">
-                    <CreditCard size={18} className="text-primary" />
-                    Record Payment
-                  </h4>
+                <form onSubmit={handlePayment} className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-black text-foreground flex items-center gap-2 capitalize">
+                      <CreditCard size={18} className="text-primary" />
+                      Record Payment
+                    </h4>
+                    {targetDebtId && (
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          setTargetDebtId(null);
+                          setPayAmount(String(selectedCustomerInfo.total_balance));
+                        }}
+                        className="text-[11px] font-bold text-primary hover:underline"
+                      >
+                        Reset to All
+                      </button>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-muted-foreground capitalize tracking-wider mb-1.5">Apply Payment To</label>
+                    <select
+                      value={targetDebtId || ''}
+                      onChange={e => {
+                        const debtId = e.target.value || null;
+                        setTargetDebtId(debtId);
+                        if (debtId) {
+                          const found = customerAllDebts.find(d => d.id === debtId);
+                          if (found) setPayAmount(String(found.balance_amount));
+                        } else {
+                          setPayAmount(String(selectedCustomerInfo.total_balance));
+                        }
+                      }}
+                      className="w-full px-3 py-2 h-10 rounded-xl border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all font-medium"
+                    >
+                      <option value="">All Open Debts (Auto FIFO)</option>
+                      {customerAllDebts.filter(d => Number(d.balance_amount) > 0).map(d => {
+                        const sale = d.sale_id ? sales.find(s => s.id === d.sale_id) : null;
+                        const label = sale ? `Receipt #${sale.receipt_no}` : (d.notes || 'Manual Credit');
+                        return (
+                          <option key={d.id} value={d.id}>
+                            {label} - Due: {formatCurrency(d.balance_amount)}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
                   
                   <div>
-                    <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Amount to pay</label>
+                    <label className="block text-xs font-bold text-muted-foreground capitalize tracking-wider mb-1.5">Amount to pay</label>
                     <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground font-black">$</span>
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground font-black text-xs">
+                        {currentStore?.currency || 'KSh'}
+                      </span>
                       <input 
                         type="number" 
+                        step="any"
+                        min="0.01"
                         value={payAmount} 
                         onChange={e => setPayAmount(e.target.value)} 
                         placeholder="0.00"
-                        className="w-full pl-8 pr-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all font-bold" 
+                        className="w-full pl-12 pr-4 py-2 h-10 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all font-bold" 
                         required
                       />
                     </div>
@@ -388,22 +909,22 @@ export default function CreditRecordPage() {
 
                   {paymentAccounts.length > 0 ? (
                     <div>
-                      <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Payment Account</label>
+                      <label className="block text-xs font-bold text-muted-foreground capitalize tracking-wider mb-1.5">Payment Account</label>
                       <select 
                         value={paymentAccountId || ''} 
                         onChange={e => setPaymentAccountId(e.target.value)}
-                        className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all appearance-none"
+                        className="w-full px-3 py-2 h-10 rounded-xl border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all appearance-none font-medium"
                       >
                         {paymentAccounts.map(pa => <option key={pa.id} value={pa.id}>{pa.account_name}</option>)}
                       </select>
                     </div>
                   ) : (
                     <div>
-                      <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Payment Method</label>
+                      <label className="block text-xs font-bold text-muted-foreground capitalize tracking-wider mb-1.5">Payment Method</label>
                       <select 
                         value={payMethod} 
                         onChange={e => setPayMethod(e.target.value)}
-                        className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all appearance-none"
+                        className="w-full px-3 py-2 h-10 rounded-xl border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all appearance-none font-medium"
                       >
                         <option value="cash">Cash</option>
                         <option value="mpesa">M-Pesa</option>
@@ -414,7 +935,8 @@ export default function CreditRecordPage() {
 
                   <button 
                     type="submit" 
-                    className="w-full h-11 mt-2 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90 transition-colors shadow-sm flex items-center justify-center gap-2 capitalize"
+                    disabled={selectedCustomerInfo.total_balance <= 0}
+                    className="w-full h-11 mt-2 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90 transition-colors shadow-sm flex items-center justify-center gap-2 capitalize disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Plus size={16} /> Submit Payment
                   </button>
@@ -425,6 +947,7 @@ export default function CreditRecordPage() {
 
           </div>
         </div>
+        <ReceiptModal />
       </div>
     );
   }
@@ -1040,8 +1563,8 @@ export default function CreditRecordPage() {
 
       {/* Add Credit Modal */}
       {showAdd && (
-        <div className="fixed inset-0 z-50 bg-foreground/20 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
-          <div className="w-full sm:max-w-md bg-card rounded-t-3xl sm:rounded-3xl border border-border shadow-2xl overflow-hidden animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-md bg-card rounded-2xl sm:rounded-3xl border border-border shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center px-6 py-5 border-b border-border bg-muted/10">
               <h3 className="text-xl font-bold text-foreground capitalize">Add Credit Record</h3>
               <button 
@@ -1122,6 +1645,7 @@ export default function CreditRecordPage() {
           </div>
         </div>
       )}
+      <ReceiptModal />
     </div>
   );
 }

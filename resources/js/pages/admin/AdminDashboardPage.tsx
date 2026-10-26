@@ -99,7 +99,7 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="space-y-6 p-[10px]">
+    <div className="p-4 sm:p-6 lg:px-8 space-y-6 max-w-7xl mx-auto w-full">
       <div>
                 <p className="text-muted-foreground text-sm mt-1">Monitor your entire platform at a glance</p>
       </div>

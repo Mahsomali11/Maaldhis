@@ -91,6 +91,8 @@ Route::middleware(['auth', 'block_admin'])->group(function () {
     Route::get('/start-sale', fn() => Inertia::render('StartSalePage'));
     Route::get('/customer-display', fn() => Inertia::render('CustomerDisplayPage'));
     Route::get('/receipt/{saleId}', fn($saleId) => Inertia::render('ReceiptPage', ['saleId' => $saleId]));
+    Route::get('/api/receipt-details/{identifier}', [\App\Http\Controllers\SaleController::class, 'getReceiptDetails']);
+    Route::get('/api/rest/v1/receipt-details/{identifier}', [\App\Http\Controllers\SaleController::class, 'getReceiptDetails']);
     Route::get('/expenses', fn() => Inertia::render('ExpensesPage'));
     Route::get('/cash-flow', fn() => Inertia::render('CashFlowPage'));
     Route::get('/credit-record', fn() => Inertia::render('CreditRecordPage'));

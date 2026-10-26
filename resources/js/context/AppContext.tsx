@@ -98,7 +98,7 @@ interface AppContextType extends Omit<AppState, 'session'> {
   updateCartPrice: (itemId: string, newPrice: number) => void;
   clearCart: () => void;
   completeSale: (saleType: 'cash' | 'credit' | 'mixed', customerId: string | null, paidAmount: number, paymentAccountId: string | null) => Promise<Sale | null>;
-  recordPayment: (payment: Omit<Payment, 'id' | 'created_at'>) => Promise<void>;
+  recordPayment: (payment: Omit<Payment, 'id' | 'created_at'>, specificDebtId?: string) => Promise<void>;
   recordReturn: (saleId: string, items: { item_id: string; sale_item_id: string; quantity: number; amount: number }[], refundMethod: string) => Promise<void>;
   addStore: (store: Omit<Store, 'id' | 'created_at'>) => Promise<Store | null>;
   deleteStore: (id: string) => Promise<boolean>;
@@ -163,7 +163,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const isLicenseActive = (() => {
     const ls = state.licenseStatus;
     if (!ls || ls.status === 'none') return true; // No license system = allow (first store / no stores)
+    if (ls.status === 'suspended' || ls.status === 'canceled' || ls.status === 'cancelled' || ls.status === 'expired') {
+      return false;
+    }
     if (ls.status !== 'active') return false;
+
+    // A store MUST be allowed full system access and checkout capabilities until the exact expiration timestamp (expires_at > now()).
+    if (ls.expiry_date) {
+      const expiryTime = new Date(ls.expiry_date).getTime();
+      if (!isNaN(expiryTime)) {
+        return expiryTime > Date.now();
+      }
+    }
+
     if (ls.days_remaining !== undefined && ls.days_remaining <= 0) return false;
     return true;
   })();
@@ -554,17 +566,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
     
     const storeTaxRate = state.currentStore?.tax_enabled ? (state.currentStore.tax_rate || 0) : 0;
     const tax = subtotal * (storeTaxRate / 100);
-    const total = subtotal + tax; // Discount is currently 0 in StartSalePage
+    const total = subtotal + tax;
 
-    const outstanding = total - paidAmount;
+    const outstanding = Math.max(0, Math.round((total - paidAmount) * 100) / 100);
     const receiptNo = `RCP-${Date.now()}`;
-    const userId = state.session?.user?.id || '';
+    
+    let userId = state.session?.user?.id || state.profile?.id || '';
+    if (!userId) {
+      try {
+        const { data: userData } = await apiClient.auth.getUser();
+        if (userData?.user?.id) {
+          userId = userData.user.id;
+        }
+      } catch (e) {}
+    }
+    if (!userId) {
+      throw new Error("User session not found. Please log in again to complete this sale.");
+    }
+
     const storeId = state.currentStore?.id || '';
+    if (!storeId) {
+      throw new Error("No active store selected.");
+    }
 
     const { data: saleData, error: saleError } = await apiClient.from('sales').insert({
       store_id: storeId,
       receipt_no: receiptNo,
-      customer_id: customerId,
+      customer_id: customerId || null,
       staff_user_id: userId,
       sale_type: saleType,
       subtotal,
@@ -575,45 +603,60 @@ export function AppProvider({ children }: { children: ReactNode }) {
       paid_amount: paidAmount,
       outstanding_amount: outstanding,
       status: 'completed',
-      payment_account_id: paymentAccountId,
+      payment_account_id: paymentAccountId || null,
     } as any).select().single();
 
-    if (saleError || !saleData) return null;
+    if (saleError || !saleData) {
+      console.error("Sale insertion error:", saleError);
+      throw new Error(saleError?.message || "Failed to record sale in database");
+    }
     const sale = saleData as unknown as Sale;
 
     const saleItemsData = state.cart.map(c => ({
       sale_id: saleData.id,
       item_id: c.item.id,
       item_name: c.item.name,
-      quantity: c.quantity,
-      cost_price: c.item.cost_price,
-      sell_price: c.item.sell_price,
-      line_total: c.line_total,
+      quantity: Number(c.quantity) || 1,
+      cost_price: Number(c.item.cost_price) || 0,
+      sell_price: Number(c.item.sell_price) || 0,
+      line_total: Number(c.line_total) || 0,
     }));
-    await apiClient.from('sale_items').insert(saleItemsData as any);
+    const { error: itemsError } = await apiClient.from('sale_items').insert(saleItemsData as any);
+    if (itemsError) {
+      console.error("Sale items insertion error:", itemsError);
+      throw new Error(itemsError.message || "Failed to record sale items in database");
+    }
 
     for (const c of state.cart) {
-      if (c.item.type === 'product') {
-        await apiClient.from('items').update({ quantity: Math.max(0, c.item.quantity - c.quantity) } as any).eq('id', c.item.id);
+      if (c.item.type === 'product' || !c.item.is_service) {
+        const newQty = Math.max(0, Number(c.item.quantity) - Number(c.quantity));
+        await apiClient.from('items').update({ quantity: newQty } as any).eq('id', c.item.id);
       }
     }
 
-    await apiClient.from('payments').insert({
-      store_id: storeId,
-      sale_id: sale.id,
-      customer_id: customerId,
-      payment_type: 'sale',
-      direction: 'in',
-      method: 'cash',
-      payment_account_id: paymentAccountId,
-      amount: paidAmount,
-      reference: receiptNo,
-      created_by: userId,
-    } as any);
+    let paymentRecord: Payment | null = null;
+    if (paidAmount > 0) {
+      const paymentPayload = {
+        store_id: storeId,
+        sale_id: sale.id,
+        customer_id: customerId || null,
+        payment_type: 'sale',
+        direction: 'in',
+        method: saleType === 'cash' ? 'cash' : (outstanding > 0 ? 'partial_cash' : 'split_payment'),
+        payment_account_id: paymentAccountId || null,
+        amount: paidAmount,
+        reference: receiptNo,
+        created_by: userId,
+      };
+      const { data: pData, error: pError } = await apiClient.from('payments').insert(paymentPayload as any).select().single();
+      if (pError) console.error("Payment record error:", pError);
+      paymentRecord = (pData || paymentPayload) as unknown as Payment;
+    }
 
+    let debtRecord: CustomerDebt | null = null;
     if (outstanding > 0 && customerId) {
       const customer = state.customers.find(c => c.id === customerId);
-      await apiClient.from('customer_debts').insert({
+      const debtPayload = {
         store_id: storeId,
         customer_id: customerId,
         customer_name: customer?.name || '',
@@ -621,16 +664,39 @@ export function AppProvider({ children }: { children: ReactNode }) {
         original_amount: outstanding,
         balance_amount: outstanding,
         status: 'open',
-      } as any);
+        notes: 'POS Sale Credit',
+      };
+      const { data: dData, error: dError } = await apiClient.from('customer_debts').insert(debtPayload as any).select().single();
+      if (dError) console.error("Customer debt record error:", dError);
+      debtRecord = (dData || debtPayload) as unknown as CustomerDebt;
     }
 
-    setState(prev => ({ ...prev, cart: [] }));
-    await loadStoreData(storeId);
+    setState(prev => ({
+      ...prev,
+      cart: [],
+      sales: [sale, ...prev.sales.filter(s => s.id !== sale.id)],
+      saleItems: [...saleItemsData.map((si, idx) => ({ ...si, id: `si-${Date.now()}-${idx}` } as unknown as SaleItem)), ...prev.saleItems],
+      payments: paymentRecord ? [paymentRecord, ...prev.payments] : prev.payments,
+      customerDebts: debtRecord ? [debtRecord, ...prev.customerDebts] : prev.customerDebts,
+      items: prev.items.map(it => {
+        const cartItem = state.cart.find(ci => ci.item.id === it.id);
+        if (cartItem && (it.type === 'product' || !it.is_service)) {
+          return { ...it, quantity: Math.max(0, Number(it.quantity) - Number(cartItem.quantity)) };
+        }
+        return it;
+      })
+    }));
+
+    try {
+      await loadStoreData(storeId);
+    } catch (e) {
+      console.warn("Background sync warning:", e);
+    }
 
     return sale;
-  }, [state.cart, state.currentStore, state.session, state.customers, loadStoreData]);
+  }, [state.cart, state.currentStore, state.session, state.profile, state.customers, loadStoreData]);
 
-  const recordPayment = useCallback(async (payment: Omit<Payment, 'id' | 'created_at'>) => {
+  const recordPayment = useCallback(async (payment: Omit<Payment, 'id' | 'created_at'>, specificDebtId?: string) => {
     const { error } = await apiClient.from('payments').insert(payment as any);
     if (error) {
       console.error("Payment insert failed:", error);
@@ -639,21 +705,60 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
     
     if (payment.customer_id && payment.direction === 'in') {
-      const { data: debts } = await apiClient
-        .from('customer_debts')
-        .select('*')
-        .eq('customer_id', payment.customer_id)
-        .neq('status', 'paid');
+      let debtsToProcess: any[] = [];
+      if (specificDebtId) {
+        const { data: specificDebt } = await apiClient
+          .from('customer_debts')
+          .select('*')
+          .eq('id', specificDebtId)
+          .single();
+        if (specificDebt) {
+          debtsToProcess = [specificDebt];
+        }
+      }
 
-      let remaining = payment.amount;
-      for (const debt of (debts || []) as any[]) {
+      if (debtsToProcess.length === 0) {
+        const { data: debts } = await apiClient
+          .from('customer_debts')
+          .select('*')
+          .eq('customer_id', payment.customer_id)
+          .neq('status', 'paid')
+          .order('created_at', { ascending: true });
+        debtsToProcess = debts || [];
+      }
+
+      let remaining = Number(payment.amount);
+      for (const debt of debtsToProcess) {
         if (remaining <= 0) break;
-        const deduction = Math.min(remaining, debt.balance_amount);
-        const newBalance = debt.balance_amount - deduction;
+        const currentBal = Number(debt.balance_amount || 0);
+        const deduction = Math.min(remaining, currentBal);
+        const newBalance = Math.max(0, Math.round((currentBal - deduction) * 100) / 100);
+
         await apiClient.from('customer_debts').update({
           balance_amount: newBalance,
           status: newBalance === 0 ? 'paid' : 'partial',
         } as any).eq('id', debt.id);
+
+        if (debt.sale_id) {
+          const { data: currentSale } = await apiClient
+            .from('sales')
+            .select('*')
+            .eq('id', debt.sale_id)
+            .single();
+
+          if (currentSale) {
+            const currentOut = Number(currentSale.outstanding_amount || 0);
+            const currentPaid = Number(currentSale.paid_amount || 0);
+            const newOutstanding = Math.max(0, Math.round((currentOut - deduction) * 100) / 100);
+            const newPaid = Math.round((currentPaid + deduction) * 100) / 100;
+
+            await apiClient.from('sales').update({
+              outstanding_amount: newOutstanding,
+              paid_amount: newPaid,
+            } as any).eq('id', debt.sale_id);
+          }
+        }
+
         remaining -= deduction;
       }
     }

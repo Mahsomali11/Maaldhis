@@ -9,9 +9,11 @@ import { api as apiClient } from '@/api';
 export default function ReceiptPage({ saleId }: { saleId?: string }) {
   const { sales, saleItems, customers, payments, currentStore, formatCurrency, user } = useApp();
   const navigate = (url: string) => router.visit(url);
-  const [showFormatPicker, setShowFormatPicker] = useState(false);
+  const [showFormatPicker, setShowFormatPicker] = useState(true);
   const [printAction, setPrintAction] = useState<'print' | 'download'>('print');
   const [paymentAccounts, setPaymentAccounts] = useState<any[]>([]);
+  const [fetchedSale, setFetchedSale] = useState<any>(null);
+  const [fetchedItems, setFetchedItems] = useState<any[]>([]);
 
   // Fetch payment accounts to correctly map the payment method name
   useEffect(() => {
@@ -21,10 +23,27 @@ export default function ReceiptPage({ saleId }: { saleId?: string }) {
     }
   }, [currentStore?.id]);
 
-  const sale = sales.find(s => s.id === saleId);
-  if (!sale) return <div className="min-h-screen bg-background flex flex-col items-center justify-center text-muted-foreground"><p className="text-lg font-semibold">Receipt not found</p><button onClick={() => navigate('/dashboard')} className="mt-4 px-6 py-2 rounded-xl bg-primary text-primary-foreground font-bold">Go to Dashboard</button></div>;
+  useEffect(() => {
+    if (!saleId) return;
+    const existing = sales.find(s => s.id === saleId);
+    if (!existing) {
+      apiClient.from('sales').select('*').eq('id', saleId).single()
+        .then(({ data }) => {
+          if (data) setFetchedSale(data);
+        });
+      apiClient.from('sale_items').select('*').eq('sale_id', saleId)
+        .then(({ data }) => {
+          if (data) setFetchedItems(data);
+        });
+    }
+  }, [saleId, sales]);
 
-  const items = saleItems.filter(si => si.sale_id === sale.id);
+  const sale = sales.find(s => s.id === saleId) || fetchedSale;
+  if (!sale) return <div className="min-h-screen bg-background flex flex-col items-center justify-center text-muted-foreground"><p className="text-lg font-semibold">Loading receipt...</p></div>;
+
+  const items = saleItems.filter(si => si.sale_id === sale.id).length > 0
+    ? saleItems.filter(si => si.sale_id === sale.id)
+    : fetchedItems;
   const customer = sale.customer_id ? customers.find(c => c.id === sale.customer_id) : null;
 
   const salePayment = payments.find(p => p.sale_id === sale.id && p.payment_type === 'sale');
@@ -267,8 +286,8 @@ export default function ReceiptPage({ saleId }: { saleId?: string }) {
 
       {/* Format Picker Modal */}
       {showFormatPicker && (
-        <div className="fixed inset-0 z-50 bg-foreground/20 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200" onClick={() => setShowFormatPicker(false)}>
-          <div className="w-full sm:w-[420px] bg-card rounded-t-3xl sm:rounded-3xl p-6 sm:p-8 space-y-4 shadow-2xl animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={() => setShowFormatPicker(false)}>
+          <div className="w-full max-w-[420px] bg-card rounded-2xl sm:rounded-3xl p-6 sm:p-8 space-y-4 shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-2">
                <h3 className="text-xl font-bold text-foreground capitalize">
                  {printAction === 'print' ? 'Print Format' : 'PDF Format'}

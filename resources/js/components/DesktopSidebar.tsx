@@ -171,7 +171,7 @@ export default function DesktopSidebar({ isMobile = false }: { isMobile?: boolea
 
   return (
     <>
-      <aside className={`shrink-0 h-[100dvh] sticky top-0 flex flex-col bg-background z-40 ${isMobile ? 'w-full' : 'w-[280px] border-r border-border'}`}>
+      <aside className={`shrink-0 h-[100dvh] sticky top-0 flex flex-col bg-background z-20 ${isMobile ? 'w-full' : 'w-[280px] border-r border-border'}`}>
         
         {/* Brand Header */}
         <div className="pt-8 pb-6 px-6 shrink-0 flex items-center gap-3 cursor-pointer" onClick={() => navigate('/dashboard')}>

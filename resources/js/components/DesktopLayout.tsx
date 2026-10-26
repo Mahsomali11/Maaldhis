@@ -57,7 +57,7 @@ export default function DesktopLayout({ children }: DesktopLayoutProps) {
     <div className="flex flex-col lg:flex-row h-screen w-full bg-[#F8F9FA] dark:bg-background overflow-hidden relative">
       
       {/* Desktop Sidebar (Hidden on mobile) */}
-      <div className="hidden lg:block h-full z-40 shrink-0 shadow-2xl shadow-black/5">
+      <div className="hidden lg:block h-full z-20 shrink-0 shadow-2xl shadow-black/5">
         <DesktopSidebar />
       </div>
 
@@ -99,18 +99,18 @@ export default function DesktopLayout({ children }: DesktopLayoutProps) {
       )}
 
       {/* Main Content Area */}
-      <main className="flex-1 min-w-0 flex flex-col overflow-y-auto relative z-10">
+      <main className="flex-1 min-w-0 flex flex-col overflow-y-auto">
         
 
         {licenseStatus?.status === 'active' && daysRemaining <= 7 && (
-          <div className="px-4 lg:px-8 pt-4 lg:pt-6 pb-2 shrink-0 relative z-20">
+          <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 lg:pt-6 pb-2 shrink-0">
             <LicenseExpiryBanner
               daysRemaining={daysRemaining}
               expiryDate={licenseStatus.expiry_date}
             />
           </div>
         )}
-        <div className="flex-1 flex flex-col min-h-0 relative z-10 pb-8">
+        <div className="flex-1 flex flex-col min-h-0 pb-8">
           {children}
         </div>
       </main>

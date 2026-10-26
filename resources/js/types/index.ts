@@ -219,6 +219,7 @@ export interface CustomerDebt {
   original_amount: number;
   balance_amount: number;
   status: 'open' | 'partial' | 'paid';
+  notes?: string | null;
   created_at: string;
 }
 

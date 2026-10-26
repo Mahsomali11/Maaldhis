@@ -61,8 +61,8 @@ export default function PaymentAccountLedger({ account, onClose }: { account: an
   const net = inflow - outflow;
 
   return (
-    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex justify-center items-center p-4 sm:p-6 animate-in fade-in duration-200">
-      <div className="bg-card w-full max-w-4xl max-h-[90vh] flex flex-col rounded-3xl border border-border shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex justify-center items-center p-4 sm:p-6 animate-in fade-in duration-200">
+      <div className="bg-card w-full max-w-4xl max-h-[90vh] flex flex-col rounded-2xl sm:rounded-3xl border border-border shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
         <div className="px-6 py-5 border-b border-border flex items-center justify-between bg-muted/10">
           <div className="flex items-center gap-3">
              <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center">

@@ -479,8 +479,8 @@ export default function InventoryPage() {
 
       {/* Add Form Modal */}
       {showForm && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4">
-           <div className="w-full max-w-lg bg-card rounded-2xl border border-border shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+           <div className="w-full max-w-lg bg-card rounded-2xl sm:rounded-3xl border border-border shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
              <div className="px-6 py-5 border-b border-border bg-muted/10 flex justify-between items-center">
                <h3 className="text-lg font-bold text-foreground capitalize">{editingItem ? 'Edit' : 'Add'} {tab === 'product' ? 'Product' : 'Service'}</h3>
                <button onClick={() => { setShowForm(false); setEditingItem(null); }} className="w-8 h-8 rounded-full flex items-center justify-center bg-background border border-border text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"><X size={16} /></button>

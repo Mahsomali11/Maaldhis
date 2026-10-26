@@ -33,7 +33,7 @@ export default function AdminSettingsPage() {
   if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div>;
 
   return (
-    <div className="space-y-6 p-[10px]">
+    <div className="p-4 sm:p-6 lg:px-8 space-y-6 max-w-7xl mx-auto w-full">
       <PageHeader title="System Settings" />
             <div className="bg-card rounded-xl border border-border divide-y divide-[hsl(220,15%,18%)]">
         {settings.map((s: any) => (

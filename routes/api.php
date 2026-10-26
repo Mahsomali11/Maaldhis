@@ -76,7 +76,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/rest/v1/process-return', [\App\Http\Controllers\ReturnController::class, 'processReturn']);
     Route::post('/rest/v1/process-purchase', [\App\Http\Controllers\PurchaseController::class, 'processPurchase']);
     Route::post('/rest/v1/pay-supplier-debt', [\App\Http\Controllers\PurchaseController::class, 'paySupplierDebt']);
-    Route::post('/rest/v1/process-transfer', [\App\Http\Controllers\TransferController::class, 'processTransfer']);
+    // Receipt Details Lookup (by ID, receipt_no RCP-..., or customer debt)
+    Route::get('/rest/v1/receipt-details/{identifier}', [\App\Http\Controllers\SaleController::class, 'getReceiptDetails']);
+    Route::get('/receipt-details/{identifier}', [\App\Http\Controllers\SaleController::class, 'getReceiptDetails']);
 
     // Dynamic REST API — protected by store access check for normal users
     // Admin users bypass store scoping (they can access all data)

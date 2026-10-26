@@ -236,7 +236,7 @@ export default function AdminMpesaSettingsPage() {
   );
 
   return (
-    <div className="space-y-6 p-[10px]">
+    <div className="p-4 sm:p-6 lg:px-8 space-y-6 max-w-7xl mx-auto w-full">
       <div className="flex items-center gap-3">
         <Smartphone size={24} className="text-[hsl(145,63%,50%)]" />
               </div>
