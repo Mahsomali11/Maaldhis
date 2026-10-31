@@ -949,6 +949,7 @@ export default function CreditRecordPage() {
 
                   <button 
                     type="submit" 
+                    data-submit-guard="true"
                     disabled={isSubmittingPayment || selectedCustomerInfo.total_balance <= 0}
                     className="w-full h-11 mt-2 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90 transition-colors shadow-sm flex items-center justify-center gap-2 capitalize disabled:opacity-50 disabled:cursor-not-allowed"
                   >
@@ -1183,6 +1184,7 @@ export default function CreditRecordPage() {
 
                   <button 
                     type="submit" 
+                    data-submit-guard="true"
                     disabled={isSubmittingPayment}
                     className="w-full h-11 mt-2 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90 transition-colors shadow-sm flex items-center justify-center gap-2 capitalize disabled:opacity-50 disabled:cursor-not-allowed"
                   >

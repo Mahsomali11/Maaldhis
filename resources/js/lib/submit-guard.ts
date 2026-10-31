@@ -9,11 +9,11 @@
 let activeButtons = new Set<HTMLElement>();
 
 /**
- * Checks if an element qualifies as a primary submit or action button.
+ * Checks if an element qualifies strictly as an interactive submit or primary action button.
+ * Completely ignores navigation links, sidebar menu items, tabs, cards, tables, and generic clickable elements.
  */
 function isActionButton(el: HTMLElement): boolean {
-  if (el.dataset.noGuard === 'true') return false;
-
+  // 1. Must be a BUTTON or an INPUT of type submit
   const tagName = el.tagName.toLowerCase();
   if (tagName !== 'button' && !(tagName === 'input' && (el as HTMLInputElement).type === 'submit')) {
     return false;
@@ -21,30 +21,142 @@ function isActionButton(el: HTMLElement): boolean {
 
   const button = el as HTMLButtonElement;
 
-  // Submit buttons
-  if (button.type === 'submit') return true;
-
-  // Buttons inside forms without explicit type (default is submit)
-  if (button.form && !button.getAttribute('type')) return true;
-
-  // Check class list for primary or destructive styling
-  const className = button.className || '';
+  // 2. Strict exclusions: disabled or explicitly opted-out
   if (
-    className.includes('bg-primary') ||
-    className.includes('bg-destructive') ||
-    className.includes('btn-primary') ||
-    button.dataset.actionButton === 'true'
+    button.disabled ||
+    button.dataset.noGuard === 'true' ||
+    button.hasAttribute('data-no-guard')
   ) {
-    // Exclude purely cancel/close/hold buttons
-    const text = (button.innerText || button.textContent || '').trim().toLowerCase();
-    if (['cancel', 'close', 'hold', 'back', 'reset', 'clear'].includes(text)) {
+    return false;
+  }
+
+  // 3. Strict exclusion: Navigation links (any button wrapped in or acting as an anchor)
+  if (button.closest('a') !== null) {
+    return false;
+  }
+
+  // 4. Strict exclusion: Sidebar menus & navigation bars
+  if (
+    button.closest('aside, nav, [role="navigation"], [data-sidebar], .sidebar, [data-sidebar-item]') !== null ||
+    button.classList.contains('sidebar-item') ||
+    button.classList.contains('nav-link') ||
+    button.classList.contains('nav-item')
+  ) {
+    return false;
+  }
+
+  // 5. Strict exclusion: Navigation tabs & filter tab lists
+  if (
+    button.closest('[role="tablist"], [role="tab"], [data-tab], [data-tabs], .tabs, .tab-list') !== null ||
+    button.getAttribute('role') === 'tab' ||
+    button.hasAttribute('aria-selected') ||
+    button.classList.contains('tab') ||
+    button.classList.contains('tab-btn')
+  ) {
+    return false;
+  }
+
+  // 6. Strict exclusion: Tables, table headers, table rows, and cells
+  // (unless the button explicitly carries [data-submit-guard] or [data-action-button])
+  const isExplicitGuard =
+    button.dataset.submitGuard === 'true' ||
+    button.hasAttribute('data-submit-guard') ||
+    button.dataset.actionButton === 'true' ||
+    button.hasAttribute('data-action-button') ||
+    button.classList.contains('submit-guard');
+
+  if (button.closest('table, thead, tbody, tfoot, tr, td, th, [role="table"], [role="grid"], [role="row"]') !== null) {
+    if (!isExplicitGuard) {
       return false;
     }
+  }
+
+  // 7. Strict exclusion: Clickable cards and list row wrappers
+  if (
+    button.closest('.card-clickable, [data-card-clickable]') !== null ||
+    button.classList.contains('card-clickable')
+  ) {
+    return false;
+  }
+
+  // 8. Strict exclusion: Dropdown triggers, popover toggles, and disclosure buttons
+  if (
+    button.getAttribute('aria-haspopup') === 'true' ||
+    button.getAttribute('aria-haspopup') === 'menu' ||
+    button.hasAttribute('aria-expanded') ||
+    button.hasAttribute('data-toggle') ||
+    button.hasAttribute('data-dropdown')
+  ) {
+    return false;
+  }
+
+  // 9. Strict exclusion: Passive buttons (cancel, close, back, hold, reset, view, edit, filter, search, etc.)
+  const rawText = (button.innerText || button.textContent || '').trim().toLowerCase();
+  const passiveWords = [
+    'cancel',
+    'close',
+    'back',
+    'reset',
+    'clear',
+    'hold',
+    'dismiss',
+    'details',
+    'print',
+    'download',
+    'export',
+    'share',
+    'copy',
+    'view',
+    'view receipt',
+    'edit',
+    'filter',
+    'search',
+    'today',
+    'this month',
+    'all time',
+    'custom',
+    'all',
+    'paid',
+    'unpaid',
+    'settled',
+    'open',
+  ];
+
+  if (
+    passiveWords.includes(rawText) ||
+    button.getAttribute('aria-label')?.toLowerCase() === 'close' ||
+    button.hasAttribute('data-dismiss')
+  ) {
+    return false;
+  }
+
+  // 10. Inclusion Rule A: Explicit attribute or class
+  if (isExplicitGuard) {
     return true;
   }
 
-  // Check text content for action keywords
-  const text = (button.innerText || button.textContent || '').trim().toLowerCase();
+  // 11. Inclusion Rule B: True HTML Form Submit Buttons
+  const btnType = button.getAttribute('type')?.toLowerCase();
+  if (btnType === 'submit') {
+    return true;
+  }
+  if (tagName === 'input' && (button as HTMLInputElement).type === 'submit') {
+    return true;
+  }
+  // Standard HTML: <button> inside a <form> without explicit type defaults to 'submit'
+  if (button.form && !btnType) {
+    return true;
+  }
+
+  // 12. Inclusion Rule C: Modal primary action buttons (e.g. AlertDialogAction)
+  const isInsideDialog = button.closest('[role="alertdialog"], [role="dialog"], .modal, .dialog') !== null;
+  const isDialogFooterAction = button.closest('[data-dialog-footer], .alert-dialog-footer, [role="alertdialog"] footer, [role="dialog"] footer') !== null;
+  if (isInsideDialog && isDialogFooterAction && !passiveWords.includes(rawText)) {
+    return true;
+  }
+
+  // 13. Inclusion Rule D: Primary Action Buttons with explicit action text keywords
+  // (POS Charge, Payment Submit, Purchase Process, Return Confirm, Transfer Initiate, Save Record)
   const actionKeywords = [
     'charge',
     'process purchase',
@@ -52,21 +164,20 @@ function isActionButton(el: HTMLElement): boolean {
     'process partial return',
     'return full receipt',
     'submit payment',
-    'submit',
-    'save',
-    'save changes',
     'save expense',
+    'save changes',
+    'initiate transfer',
+    'confirm return',
+    'record credit',
     'record payment',
     'record purchase',
-    'record credit',
-    'initiate transfer',
     'create store',
-    'confirm return',
-    'confirm',
   ];
 
   for (const keyword of actionKeywords) {
-    if (text.includes(keyword)) {
+    if (keyword === 'charge' || keyword === 'record credit') {
+      if (rawText.startsWith(keyword)) return true;
+    } else if (rawText === keyword || rawText.startsWith(keyword + ' ') || rawText.includes(keyword)) {
       return true;
     }
   }
@@ -138,9 +249,12 @@ export function initSubmitGuard() {
   // Intercept clicks in capture phase to precede any synthetic/bubbled events
   document.addEventListener('click', (e: MouseEvent) => {
     const target = e.target as HTMLElement | null;
-    if (!target) return;
+    if (!target || !(target instanceof Element)) return;
 
-    const button = target.closest('button, input[type="submit"]') as HTMLButtonElement | null;
+    // Immediately ignore clicks on navigation links / anchor elements
+    if (target.closest('a')) return;
+
+    const button = target.closest('button, input[type="submit"]') as HTMLButtonElement | HTMLInputElement | null;
     if (!button) return;
 
     // 1. If button is already submitting, IMMEDIATELY drop this click
@@ -151,13 +265,13 @@ export function initSubmitGuard() {
       return;
     }
 
-    // 2. Check if this is an action or submit button
+    // 2. Check if this is strictly an action or submit button
     if (!isActionButton(button)) {
       return;
     }
 
     // 3. If within a form, check HTML5 validation first
-    if (button.form && typeof button.form.checkValidity === 'function') {
+    if ('form' in button && button.form && typeof button.form.checkValidity === 'function') {
       if (!button.form.checkValidity()) {
         // Let standard browser form validation show missing field errors
         return;

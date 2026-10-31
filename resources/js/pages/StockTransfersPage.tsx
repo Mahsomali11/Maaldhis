@@ -392,6 +392,7 @@ export default function StockTransfersPage() {
                 Cancel
               </button>
               <button 
+                data-submit-guard="true"
                 onClick={handleCreateTransfer} 
                 disabled={isSubmitting || selectedItems.length === 0 || !destStoreId}
                 className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed shadow-sm capitalize"

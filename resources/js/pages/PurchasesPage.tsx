@@ -680,6 +680,7 @@ export default function PurchasesPage() {
                 </button>
                 <button 
                   type="button" 
+                  data-submit-guard="true"
                   onClick={handleSubmit}
                   disabled={isSubmitting}
                   className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"

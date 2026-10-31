@@ -464,6 +464,7 @@ export default function StartSalePage() {
           </button>
         </div>
         <button 
+          data-submit-guard="true"
           onClick={handleComplete} 
           disabled={isSubmitting || cart.length === 0 || !isLicenseActive}
           className="w-full py-2.5 rounded-xl bg-primary text-primary-foreground font-black text-xs sm:text-sm hover:opacity-90 shadow-md transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none capitalize">

@@ -316,6 +316,7 @@ export default function ExpensesPage() {
                 </button>
                 <button 
                   type="submit" 
+                  data-submit-guard="true"
                   disabled={isSubmitting}
                   className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-sm hover:opacity-90 transition-opacity capitalize disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >

@@ -336,6 +336,7 @@ export default function ReturnsPage() {
           <AlertDialogFooter className="flex-col sm:flex-row gap-2 mt-6">
             <AlertDialogCancel className="w-full sm:w-1/2 h-11 rounded-xl text-sm font-bold border-border hover:bg-muted mt-0">Cancel</AlertDialogCancel>
             <AlertDialogAction 
+              data-submit-guard="true"
               onClick={handleReturn} 
               disabled={isSubmitting}
               className="w-full sm:w-1/2 h-11 rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90 text-sm font-bold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
