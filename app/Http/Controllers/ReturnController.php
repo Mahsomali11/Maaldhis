@@ -29,6 +29,19 @@ class ReturnController extends Controller
                 return $sum + $i['amount'];
             }, 0);
 
+            // Rapid duplicate check (2 seconds)
+            $recentReturn = DB::table('returns')
+                ->where('store_id', $request->storeId)
+                ->where('sale_id', $request->saleId)
+                ->where('refund_amount', $totalRefund)
+                ->where('created_at', '>=', now()->subSeconds(2))
+                ->first();
+            if ($recentReturn) {
+                DB::rollBack();
+                \Illuminate\Support\Facades\Log::info("ReturnController: Deduplicated duplicate return for sale {$request->saleId}");
+                return response()->json(['success' => true, 'return_id' => $recentReturn->id]);
+            }
+
             // 1. Create Return
             $returnId = (string) Str::uuid();
             DB::table('returns')->insert([

@@ -27,13 +27,25 @@ const getCsrfToken = () => {
   return '';
 };
 
-const getHeaders = () => {
+const inFlightRequests = new Map<string, Promise<any>>();
+
+export function generateIdempotencyKey(payloadStr: string): string {
+  let hash = 0;
+  for (let i = 0; i < payloadStr.length; i++) {
+    hash = ((hash << 5) - hash) + payloadStr.charCodeAt(i);
+    hash |= 0;
+  }
+  return `idemp_${Date.now()}_${Math.abs(hash)}`;
+}
+
+const getHeaders = (extraHeaders?: Record<string, string>): Record<string, string> => {
   const csrf = getCsrfToken();
   return {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
     'X-Requested-With': 'XMLHttpRequest',
-    ...(csrf ? { 'X-XSRF-TOKEN': csrf } : {})
+    ...(csrf ? { 'X-XSRF-TOKEN': csrf } : {}),
+    ...(extraHeaders || {})
   };
 };
 
@@ -122,60 +134,90 @@ class QueryBuilder {
   }
 
   async then(resolve: any, reject: any) {
-    try {
-      const q = new URLSearchParams(this.query).toString();
-      const url = `${API_URL}/rest/v1/${this.table}${q ? '?' + q : ''}`;
-      
-      let method = 'GET';
-      if (this.action === 'insert') method = 'POST';
-      if (this.action === 'update') method = 'PATCH';
-      if (this.action === 'delete') method = 'DELETE';
+    const q = new URLSearchParams(this.query).toString();
+    const url = `${API_URL}/rest/v1/${this.table}${q ? '?' + q : ''}`;
+    
+    let method = 'GET';
+    if (this.action === 'insert') method = 'POST';
+    if (this.action === 'update') method = 'PATCH';
+    if (this.action === 'delete') method = 'DELETE';
 
-      const res = await fetch(url, {
-        method,
-        credentials: 'same-origin',
-        headers: getHeaders(),
-        body: this.payload ? JSON.stringify(this.payload) : undefined
-      });
+    const isMutating = method === 'POST' || method === 'PATCH';
+    const payloadStr = this.payload ? JSON.stringify(this.payload) : '';
+    const requestKey = `${method}:${url}:${payloadStr}`;
 
-      if (res.status === 401 || res.status === 419) {
+    // Return in-flight promise if an identical mutating request is already executing
+    if (isMutating && inFlightRequests.has(requestKey)) {
+      return inFlightRequests.get(requestKey)!.then(resolve, reject);
+    }
+
+    const executeRequest = async () => {
+      try {
+        const extraHeaders: Record<string, string> = {};
+        if (isMutating) {
+          extraHeaders['X-Idempotency-Key'] = generateIdempotencyKey(requestKey);
+        }
+
+        const res = await fetch(url, {
+          method,
+          credentials: 'same-origin',
+          headers: getHeaders(extraHeaders),
+          body: this.payload ? JSON.stringify(this.payload) : undefined
+        });
+
+        if (res.status === 401 || res.status === 419) {
           // Force a reload to trigger Inertia redirect to login if session expires
           window.location.reload();
-          return;
-      }
-
-      if (!res.ok) {
-        let errMsg = `HTTP error ${res.status}`;
-        try {
-          const errBody = await res.json();
-          errMsg = errBody.message || errBody.error || errMsg;
-        } catch (_) {}
-        throw new Error(errMsg);
-      }
-
-      let data = null;
-      let count = null;
-      
-      if (res.status !== 204) {
-        data = await res.json();
-      }
-
-      const contentRange = res.headers.get('Content-Range');
-      if (contentRange) {
-        const parts = contentRange.split('/');
-        if (parts.length > 1) {
-          count = parseInt(parts[1], 10);
+          return { data: null, error: new Error('Session expired') };
         }
-      }
 
-      if (this.isSingle && Array.isArray(data)) {
-        data = data[0] || null;
-      }
+        if (!res.ok) {
+          let errMsg = `HTTP error ${res.status}`;
+          try {
+            const errBody = await res.json();
+            errMsg = errBody.message || errBody.error || errMsg;
+          } catch (_) {}
+          throw new Error(errMsg);
+        }
 
-      resolve({ data, count, error: null });
-    } catch (error) {
-      resolve({ data: null, error });
+        let data = null;
+        let count = null;
+        
+        if (res.status !== 204) {
+          data = await res.json();
+        }
+
+        const contentRange = res.headers.get('Content-Range');
+        if (contentRange) {
+          const parts = contentRange.split('/');
+          if (parts.length > 1) {
+            count = parseInt(parts[1], 10);
+          }
+        }
+
+        if (this.isSingle && Array.isArray(data)) {
+          data = data[0] || null;
+        }
+
+        const result = { data, count, error: null };
+        window.dispatchEvent(new CustomEvent('action-complete'));
+        return result;
+      } catch (error) {
+        window.dispatchEvent(new CustomEvent('action-error', { detail: error }));
+        return { data: null, error };
+      } finally {
+        setTimeout(() => {
+          inFlightRequests.delete(requestKey);
+        }, 1500);
+      }
+    };
+
+    const promise = executeRequest();
+    if (isMutating) {
+      inFlightRequests.set(requestKey, promise);
     }
+
+    return promise.then(resolve, reject);
   }
 }
 
@@ -394,19 +436,39 @@ export const api = {
 
   },
   post: async (path: string, body: any) => {
-    try {
-      const res = await fetch(`${API_URL}${path}`, {
-        method: 'POST',
-        headers: getHeaders(),
-        credentials: 'same-origin',
-        body: JSON.stringify(body)
-      });
-      const data = await res.json();
-      if (!res.ok) return { data: { error: data.error || data.message || 'Error' }, error: null };
-      return { data, error: null };
-    } catch (e) {
-      return { data: { error: (e as Error).message }, error: e };
+    const requestKey = `POST:${API_URL}${path}:${JSON.stringify(body || '')}`;
+    if (inFlightRequests.has(requestKey)) {
+      return inFlightRequests.get(requestKey)!;
     }
+
+    const exec = async () => {
+      try {
+        const extraHeaders: Record<string, string> = {
+          'X-Idempotency-Key': generateIdempotencyKey(requestKey)
+        };
+        const res = await fetch(`${API_URL}${path}`, {
+          method: 'POST',
+          headers: getHeaders(extraHeaders),
+          credentials: 'same-origin',
+          body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        window.dispatchEvent(new CustomEvent('action-complete'));
+        if (!res.ok) return { data: { error: data.error || data.message || 'Error' }, error: null };
+        return { data, error: null };
+      } catch (e) {
+        window.dispatchEvent(new CustomEvent('action-error', { detail: e }));
+        return { data: { error: (e as Error).message }, error: e };
+      } finally {
+        setTimeout(() => {
+          inFlightRequests.delete(requestKey);
+        }, 1500);
+      }
+    };
+
+    const promise = exec();
+    inFlightRequests.set(requestKey, promise);
+    return promise;
   },
   functions: {
     invoke: async (fn: string, options: any) => {

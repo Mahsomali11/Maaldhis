@@ -12,6 +12,7 @@ export default function StockTransfersPage() {
   const [selectedItems, setSelectedItems] = useState<{ item_id: string; quantity: number }[]>([]);
   const [addItemId, setAddItemId] = useState('');
   const [addQty, setAddQty] = useState('1');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const otherStores = stores.filter(s => s.id !== currentStore?.id);
 
@@ -33,38 +34,46 @@ export default function StockTransfersPage() {
   };
 
   const handleCreateTransfer = async () => {
+    if (isSubmitting) return;
     if (!destStoreId) { toast.error('Select destination store'); return; }
     if (selectedItems.length === 0) { toast.error('Add at least one item'); return; }
 
-    const { data: transfer, error } = await apiClient.from('stock_transfers').insert({
-      source_store_id: currentStore?.id || '',
-      destination_store_id: destStoreId,
-      requested_by: user?.id || '',
-      status: 'pending',
-    } as any).select().single();
+    setIsSubmitting(true);
+    try {
+      const { data: transfer, error } = await apiClient.from('stock_transfers').insert({
+        source_store_id: currentStore?.id || '',
+        destination_store_id: destStoreId,
+        requested_by: user?.id || '',
+        status: 'pending',
+      } as any).select().single();
 
-    if (error || !transfer) {
-      toast.error('Failed to create transfer: ' + (error?.message || 'Unknown error'));
-      return;
+      if (error || !transfer) {
+        toast.error('Failed to create transfer: ' + (error?.message || 'Unknown error'));
+        return;
+      }
+
+      const transferItems = selectedItems.map(si => ({
+        stock_transfer_id: (transfer as any).id,
+        item_id: si.item_id,
+        quantity: si.quantity,
+      }));
+
+      const { error: itemsError } = await apiClient.from('stock_transfer_items').insert(transferItems as any);
+      if (itemsError) {
+        toast.error('Failed to add transfer items: ' + itemsError.message);
+        return;
+      }
+
+      toast.success('Stock transfer created successfully');
+      setShowAdd(false);
+      setDestStoreId('');
+      setSelectedItems([]);
+      await refreshData();
+    } catch (err: any) {
+      toast.error(err.message || 'Error creating transfer');
+    } finally {
+      setIsSubmitting(false);
     }
-
-    const transferItems = selectedItems.map(si => ({
-      stock_transfer_id: (transfer as any).id,
-      item_id: si.item_id,
-      quantity: si.quantity,
-    }));
-
-    const { error: itemsError } = await apiClient.from('stock_transfer_items').insert(transferItems as any);
-    if (itemsError) {
-      toast.error('Failed to add transfer items: ' + itemsError.message);
-      return;
-    }
-
-    toast.success('Stock transfer created successfully');
-    setShowAdd(false);
-    setDestStoreId('');
-    setSelectedItems([]);
-    await refreshData();
   };
   
   const getStatusBadge = (status: string) => {
@@ -384,10 +393,19 @@ export default function StockTransfersPage() {
               </button>
               <button 
                 onClick={handleCreateTransfer} 
-                disabled={selectedItems.length === 0 || !destStoreId}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-50 shadow-sm capitalize"
+                disabled={isSubmitting || selectedItems.length === 0 || !destStoreId}
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed shadow-sm capitalize"
               >
-                <Truck size={16} /> Initiate Transfer
+                {isSubmitting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                    <span>Processing...</span>
+                  </>
+                ) : (
+                  <>
+                    <Truck size={16} /> Initiate Transfer
+                  </>
+                )}
               </button>
             </div>
 

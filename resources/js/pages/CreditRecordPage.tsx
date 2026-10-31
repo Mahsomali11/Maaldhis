@@ -51,6 +51,8 @@ export default function CreditRecordPage() {
   const [addCustomerId, setAddCustomerId] = useState('');
   const [addAmount, setAddAmount] = useState('');
   const [addNote, setAddNote] = useState('');
+  const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
+  const [isSubmittingCredit, setIsSubmittingCredit] = useState(false);
   
   const [selectedCustomer, setSelectedCustomer] = useState<string | null>(null);
 
@@ -326,6 +328,7 @@ export default function CreditRecordPage() {
 
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmittingPayment) return;
     if (!selectedCustomer) return;
     const amountNum = Number(payAmount);
     if (isNaN(amountNum) || amountNum <= 0) {
@@ -339,6 +342,7 @@ export default function CreditRecordPage() {
 
     const targetDebt = targetDebtId ? customerAllDebts.find(d => d.id === targetDebtId) : null;
 
+    setIsSubmittingPayment(true);
     try {
       await recordPayment({
         store_id: currentStore?.id || '',
@@ -361,35 +365,45 @@ export default function CreditRecordPage() {
     } catch (err: any) {
       console.error('Payment error:', err);
       toast.error(err.message || 'Failed to record payment');
+    } finally {
+      setIsSubmittingPayment(false);
     }
   };
 
   const handleAddCredit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmittingCredit) return;
     if (!addCustomerId || !addAmount || Number(addAmount) <= 0) {
       toast.error('Select a customer and enter a valid amount');
       return;
     }
     const customer = customers.find(c => c.id === addCustomerId);
-    const { error } = await apiClient.from('customer_debts').insert({
-      store_id: currentStore?.id || '',
-      customer_id: addCustomerId,
-      customer_name: customer?.name || '',
-      original_amount: Number(addAmount),
-      balance_amount: Number(addAmount),
-      status: 'open',
-      notes: addNote.trim() || null,
-    } as any);
-    if (error) {
-      toast.error('Failed to add credit record: ' + error.message);
-      return;
+    setIsSubmittingCredit(true);
+    try {
+      const { error } = await apiClient.from('customer_debts').insert({
+        store_id: currentStore?.id || '',
+        customer_id: addCustomerId,
+        customer_name: customer?.name || '',
+        original_amount: Number(addAmount),
+        balance_amount: Number(addAmount),
+        status: 'open',
+        notes: addNote.trim() || null,
+      } as any);
+      if (error) {
+        toast.error('Failed to add credit record: ' + error.message);
+        return;
+      }
+      toast.success('Credit record added');
+      setShowAdd(false);
+      setAddCustomerId('');
+      setAddAmount('');
+      setAddNote('');
+      await refreshData();
+    } catch (err: any) {
+      toast.error('Failed to add credit record: ' + (err.message || String(err)));
+    } finally {
+      setIsSubmittingCredit(false);
     }
-    toast.success('Credit record added');
-    setShowAdd(false);
-    setAddCustomerId('');
-    setAddAmount('');
-    setAddNote('');
-    await refreshData();
   };
 
   const ReceiptModal = () => {
@@ -935,10 +949,19 @@ export default function CreditRecordPage() {
 
                   <button 
                     type="submit" 
-                    disabled={selectedCustomerInfo.total_balance <= 0}
+                    disabled={isSubmittingPayment || selectedCustomerInfo.total_balance <= 0}
                     className="w-full h-11 mt-2 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90 transition-colors shadow-sm flex items-center justify-center gap-2 capitalize disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Plus size={16} /> Submit Payment
+                    {isSubmittingPayment ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                        <span>Processing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Plus size={16} /> Submit Payment
+                      </>
+                    )}
                   </button>
                 </form>
 
@@ -1160,9 +1183,19 @@ export default function CreditRecordPage() {
 
                   <button 
                     type="submit" 
-                    className="w-full h-11 mt-2 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90 transition-colors shadow-sm flex items-center justify-center gap-2 capitalize"
+                    disabled={isSubmittingPayment}
+                    className="w-full h-11 mt-2 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:bg-primary/90 transition-colors shadow-sm flex items-center justify-center gap-2 capitalize disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Plus size={16} /> Submit Payment
+                    {isSubmittingPayment ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                        <span>Processing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Plus size={16} /> Submit Payment
+                      </>
+                    )}
                   </button>
                 </form>
 
@@ -1634,9 +1667,19 @@ export default function CreditRecordPage() {
                     </button>
                     <button 
                       type="submit" 
-                      className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2 capitalize"
+                      disabled={isSubmittingCredit}
+                      className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-sm hover:opacity-90 transition-opacity flex items-center justify-center gap-2 capitalize disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <Plus size={16} /> Add Record
+                      {isSubmittingCredit ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                          <span>Processing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Plus size={16} /> Add Record
+                        </>
+                      )}
                     </button>
                   </div>
                 </form>

@@ -58,6 +58,7 @@ export default function InventoryPage() {
   const [showScanner, setShowScanner] = useState(false);
   const [form, setForm] = useState({ name: '', category: '', sub_category_id: '', barcode: '', cost_price: '', sell_price: '', quantity: '', low_stock_threshold: '5', image_path: '' });
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const storeItems = items.filter(i => i.store_id === currentStore?.id && i.type === tab && i.is_active);
   const storeCategories = categories.filter(c => c.store_id === currentStore?.id);
@@ -100,6 +101,8 @@ export default function InventoryPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       if (editingItem) {
         await updateItem(editingItem, {
@@ -138,6 +141,8 @@ export default function InventoryPage() {
       setEditingItem(null);
     } catch (err: any) {
       toast.error(err.message || 'Failed to save item');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -611,7 +616,20 @@ export default function InventoryPage() {
 
                 <div className="flex gap-3 pt-6 border-t border-border mt-6">
                   <button type="button" onClick={() => { setShowForm(false); setEditingItem(null); setForm({ name: '', category: '', sub_category_id: '', barcode: '', cost_price: '', sell_price: '', quantity: '', low_stock_threshold: '5', image_path: '' }); }} className="flex-1 py-3 rounded-xl bg-muted text-foreground text-sm font-bold hover:bg-accent transition-colors">Cancel</button>
-                  <button type="submit" className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:opacity-90 transition-opacity shadow-sm capitalize">{editingItem ? 'Save Changes' : 'Add Item'}</button>
+                  <button 
+                    type="submit" 
+                    disabled={isSubmitting}
+                    className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:opacity-90 transition-opacity shadow-sm capitalize disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                        <span>Processing...</span>
+                      </>
+                    ) : (
+                      editingItem ? 'Save Changes' : 'Add Item'
+                    )}
+                  </button>
                 </div>
                </form>
              </div>

@@ -11,6 +11,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppProvider } from '@/context/AppContext';
 import { AdminProvider } from '@/context/AdminContext';
 import DesktopLayout from '@/components/DesktopLayout';
+import { initSubmitGuard } from '@/lib/submit-guard';
+
+// Initialize global double-click & duplicate submission guard
+initSubmitGuard();
 
 const queryClient = new QueryClient();
 

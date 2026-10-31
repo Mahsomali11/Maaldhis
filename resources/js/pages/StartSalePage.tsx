@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { router } from '@inertiajs/react';
 import { Search, Plus, Minus, ShoppingCart, ScanBarcode, LayoutGrid, Pencil, Monitor, ArrowLeft, X, Tag } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
@@ -25,6 +25,7 @@ export default function StartSalePage() {
   const [paidAmount, setPaidAmount] = useState('');
   const [paymentAccounts, setPaymentAccounts] = useState<PaymentAccount[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
   const [editingPrice, setEditingPrice] = useState<string | null>(null);
   const [tempPrice, setTempPrice] = useState('');
   
@@ -171,7 +172,7 @@ export default function StartSalePage() {
   useBarcodeScanner({ onScan: handleBarcodeScan });
 
   const handleComplete = async () => {
-    if (isSubmitting) return;
+    if (isSubmitting || isSubmittingRef.current) return;
     if (cart.length === 0) {
       toast.error('Cart is empty');
       return;
@@ -184,6 +185,7 @@ export default function StartSalePage() {
       toast.error('Please select a customer for credit sales');
       return;
     }
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     try {
       const paid = saleType === 'cash' ? cartTotal : parsedPaid;
@@ -198,6 +200,9 @@ export default function StartSalePage() {
       toast.error(err.message || 'Failed to complete sale.');
     } finally {
       setIsSubmitting(false);
+      setTimeout(() => {
+        isSubmittingRef.current = false;
+      }, 1000);
     }
   };
 

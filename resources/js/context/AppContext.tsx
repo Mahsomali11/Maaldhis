@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode, useRef } from 'react';
 import { api as apiClient } from '@/api';
 import type { User as SupabaseUser, Session } from '@/api';
 import type { Store, Item, Customer, Supplier, Expense, Sale, SaleItem, CustomerDebt, CashSession, CashMovement, Payment, Return, StockTransfer, CartItem, StaffAccount, Category, Purchase, PurchaseItem } from '@/types';
@@ -123,6 +123,14 @@ interface AppContextType extends Omit<AppState, 'session'> {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
+  // Action mutexes to prevent concurrent double submissions
+  const isCompletingSaleRef = useRef(false);
+  const isRecordingPaymentRef = useRef(false);
+  const isRecordingPurchaseRef = useRef(false);
+  const isRecordingTransferRef = useRef(false);
+  const isRecordingReturnRef = useRef(false);
+  const isAddingExpenseRef = useRef(false);
+
   const [state, setState] = useState<AppState>({
     session: null,
     profile: null,
@@ -498,9 +506,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addExpense = useCallback(async (expense: Omit<Expense, 'id' | 'created_at'>) => {
-    const { data, error } = await apiClient.from('expenses').insert(expense as any).select().single();
-    if (!error && data) {
-      setState(prev => ({ ...prev, expenses: [data as unknown as Expense, ...prev.expenses] }));
+    if (isAddingExpenseRef.current) return;
+    isAddingExpenseRef.current = true;
+    try {
+      const { data, error } = await apiClient.from('expenses').insert(expense as any).select().single();
+      if (!error && data) {
+        setState(prev => ({ ...prev, expenses: [data as unknown as Expense, ...prev.expenses] }));
+      }
+    } finally {
+      setTimeout(() => { isAddingExpenseRef.current = false; }, 1000);
     }
   }, []);
 
@@ -555,8 +569,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const completeSale = useCallback(async (saleType: 'cash' | 'credit' | 'mixed', customerId: string | null, paidAmount: number, paymentAccountId: string | null) => {
-    const subtotal = state.cart.reduce((sum, c) => sum + c.line_total, 0);
-    if (subtotal === 0) return null;
+    if (isCompletingSaleRef.current) {
+      console.warn("Sale completion already in progress, blocking duplicate execution");
+      return null;
+    }
+    isCompletingSaleRef.current = true;
+
+    try {
+      const subtotal = state.cart.reduce((sum, c) => sum + c.line_total, 0);
+      if (subtotal === 0) return null;
 
     // Backend constraint: Prevent checkout if any item's selling price is less than its cost price
     const invalidItem = state.cart.find(c => c.item.sell_price < c.item.cost_price);
@@ -694,15 +715,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     return sale;
+    } finally {
+      setTimeout(() => { isCompletingSaleRef.current = false; }, 1000);
+    }
   }, [state.cart, state.currentStore, state.session, state.profile, state.customers, loadStoreData]);
 
   const recordPayment = useCallback(async (payment: Omit<Payment, 'id' | 'created_at'>, specificDebtId?: string) => {
-    const { error } = await apiClient.from('payments').insert(payment as any);
-    if (error) {
-      console.error("Payment insert failed:", error);
-      alert("Error recording payment: " + (error.message || String(error)));
+    if (isRecordingPaymentRef.current) {
+      console.warn("Payment recording already in progress, blocking duplicate execution");
       return;
     }
+    isRecordingPaymentRef.current = true;
+
+    try {
+      const { error } = await apiClient.from('payments').insert(payment as any);
+      if (error) {
+        console.error("Payment insert failed:", error);
+        alert("Error recording payment: " + (error.message || String(error)));
+        return;
+      }
     
     if (payment.customer_id && payment.direction === 'in') {
       let debtsToProcess: any[] = [];
@@ -763,6 +794,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     }
     if (state.currentStore) await loadStoreData(state.currentStore.id);
+    } finally {
+      setTimeout(() => { isRecordingPaymentRef.current = false; }, 1000);
+    }
   }, [state.currentStore, loadStoreData]);
 
   const getCsrfToken = () => {
@@ -778,6 +812,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const recordTransfer = useCallback(async (transfer: Omit<AccountTransfer, 'id' | 'created_at' | 'employee_user_id' | 'employee_name' | 'reference'>) => {
+    if (isRecordingTransferRef.current) {
+      console.warn("Transfer recording already in progress, blocking duplicate execution");
+      return;
+    }
+    isRecordingTransferRef.current = true;
+
     const storeId = state.currentStore?.id || '';
     
     try {
@@ -805,10 +845,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch (e: any) {
       console.error('Process transfer failed:', e);
       throw e;
+    } finally {
+      setTimeout(() => { isRecordingTransferRef.current = false; }, 1000);
     }
   }, [state.currentStore, loadStoreData]);
 
   const recordReturn = useCallback(async (saleId: string, items: { item_id: string; sale_item_id: string; quantity: number; amount: number }[], refundMethod: string) => {
+    if (isRecordingReturnRef.current) {
+      console.warn("Return recording already in progress, blocking duplicate execution");
+      return;
+    }
+    isRecordingReturnRef.current = true;
+
     const storeId = state.currentStore?.id || '';
     
     try {
@@ -836,12 +884,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch (e: any) {
       console.error(e);
       throw e;
+    } finally {
+      setTimeout(() => { isRecordingReturnRef.current = false; }, 1000);
     }
 
     if (state.currentStore) await loadStoreData(state.currentStore.id);
   }, [state.currentStore, loadStoreData]);
 
   const recordPurchase = useCallback(async (purchaseData: any) => {
+    if (isRecordingPurchaseRef.current) {
+      console.warn("Purchase recording already in progress, blocking duplicate execution");
+      return;
+    }
+    isRecordingPurchaseRef.current = true;
+
     try {
       const res = await fetch('/api/rest/v1/process-purchase', {
         method: 'POST',
@@ -864,6 +920,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch (e: any) {
       console.error(e);
       throw e;
+    } finally {
+      setTimeout(() => { isRecordingPurchaseRef.current = false; }, 1000);
     }
   }, [state.currentStore, loadStoreData]);
 

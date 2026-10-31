@@ -20,6 +20,7 @@ export default function ReturnsPage() {
   const [foundSale, setFoundSale] = useState<string | null>(null);
   const [selectedItems, setSelectedItems] = useState<Record<string, number>>({});
   const [confirmReturn, setConfirmReturn] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const sale = foundSale ? sales.find(s => s.id === foundSale) : null;
   const sItems = sale ? saleItems.filter(si => si.sale_id === sale.id) : [];
@@ -54,22 +55,29 @@ export default function ReturnsPage() {
     .filter(si => selectedItems[si.id])
     .reduce((sum, si) => sum + (si.sell_price * (selectedItems[si.id] || 0)), 0);
 
-  const handleReturn = () => {
-    if (!sale || Object.keys(selectedItems).length === 0) return;
-    const returnItems = sItems
-      .filter(si => selectedItems[si.id])
-      .map(si => ({
-        item_id: si.item_id,
-        sale_item_id: si.id,
-        quantity: selectedItems[si.id],
-        amount: si.sell_price * selectedItems[si.id],
-      }));
-    recordReturn(sale.id, returnItems, 'cash');
-    toast.success(isFullReturn ? 'Full receipt returned & cancelled' : 'Partial return processed');
-    setFoundSale(null);
-    setReceiptSearch('');
-    setSelectedItems({});
-    setConfirmReturn(false);
+  const handleReturn = async () => {
+    if (isSubmitting || !sale || Object.keys(selectedItems).length === 0) return;
+    setIsSubmitting(true);
+    try {
+      const returnItems = sItems
+        .filter(si => selectedItems[si.id])
+        .map(si => ({
+          item_id: si.item_id,
+          sale_item_id: si.id,
+          quantity: selectedItems[si.id],
+          amount: si.sell_price * selectedItems[si.id],
+        }));
+      await recordReturn(sale.id, returnItems, 'cash');
+      toast.success(isFullReturn ? 'Full receipt returned & cancelled' : 'Partial return processed');
+      setFoundSale(null);
+      setReceiptSearch('');
+      setSelectedItems({});
+      setConfirmReturn(false);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to process return');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -327,8 +335,19 @@ export default function ReturnsPage() {
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col sm:flex-row gap-2 mt-6">
             <AlertDialogCancel className="w-full sm:w-1/2 h-11 rounded-xl text-sm font-bold border-border hover:bg-muted mt-0">Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleReturn} className="w-full sm:w-1/2 h-11 rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90 text-sm font-bold shadow-sm">
-              Confirm Return
+            <AlertDialogAction 
+              onClick={handleReturn} 
+              disabled={isSubmitting}
+              className="w-full sm:w-1/2 h-11 rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90 text-sm font-bold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {isSubmitting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-destructive-foreground/30 border-t-destructive-foreground rounded-full animate-spin" />
+                  <span>Processing...</span>
+                </>
+              ) : (
+                'Confirm Return'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

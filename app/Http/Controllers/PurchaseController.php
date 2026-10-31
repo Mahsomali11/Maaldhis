@@ -47,6 +47,18 @@ class PurchaseController extends Controller
                 ];
             }
 
+            // Rapid duplicate check (2 seconds)
+            $recentPurchase = Purchase::where('store_id', $request->store_id)
+                ->where('supplier_id', $request->supplier_id)
+                ->where('total_amount', $totalAmount)
+                ->where('created_at', '>=', now()->subSeconds(2))
+                ->first();
+            if ($recentPurchase) {
+                DB::rollBack();
+                \Illuminate\Support\Facades\Log::info("PurchaseController: Deduplicated duplicate purchase for store {$request->store_id}");
+                return response()->json(Purchase::with('items')->find($recentPurchase->id), 201);
+            }
+
             $paidAmount = $request->paid_amount ?? 0;
             if ($paidAmount >= $totalAmount) {
                 $status = 'Completed';
@@ -142,6 +154,19 @@ class PurchaseController extends Controller
 
             $amountToPay = $request->amount;
             $supplierId = $request->supplier_id;
+
+            // Rapid duplicate check (2 seconds)
+            $recentExpense = Expense::where('store_id', $request->store_id)
+                ->where('supplier_id', $supplierId)
+                ->where('amount', $amountToPay)
+                ->where('expense_type', 'Supplier Payment')
+                ->where('created_at', '>=', now()->subSeconds(2))
+                ->first();
+            if ($recentExpense) {
+                DB::rollBack();
+                \Illuminate\Support\Facades\Log::info("PurchaseController: Deduplicated duplicate supplier debt payment for supplier {$supplierId}");
+                return response()->json(['success' => true]);
+            }
 
             $query = Purchase::where('supplier_id', $supplierId)
                 ->where('store_id', $request->store_id)

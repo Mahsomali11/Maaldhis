@@ -13,6 +13,7 @@ export default function ExpensesPage() {
   const [method, setMethod] = useState('cash'); // Keeps legacy method string
   const [paymentAccountId, setPaymentAccountId] = useState<string | null>(null);
   const [paymentAccounts, setPaymentAccounts] = useState<any[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [tab, setTab] = useState<'today' | 'month' | 'all' | 'custom'>('today');
   const [fromDate, setFromDate] = useState('');
@@ -53,20 +54,26 @@ export default function ExpensesPage() {
   const filteredExpenses = expenses.filter(e => e.store_id === currentStore?.id && filterByDate(e.created_at));
   const filteredTotal = filteredExpenses.reduce((s, e) => s + e.amount, 0);
 
-  const handleAdd = (e: React.FormEvent) => {
+  const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    addExpense({
-      store_id: currentStore?.id || '',
-      expense_type: type,
-      amount: Number(amount),
-      note,
-      employee_user_id: user?.id || null,
-      employee_name: user?.full_name,
-      payment_method: method,
-      payment_account_id: paymentAccountId,
-      created_by: user?.id || '',
-    });
-    setType(''); setAmount(''); setNote(''); setShowForm(false);
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await addExpense({
+        store_id: currentStore?.id || '',
+        expense_type: type,
+        amount: Number(amount),
+        note,
+        employee_user_id: user?.id || null,
+        employee_name: user?.full_name,
+        payment_method: method,
+        payment_account_id: paymentAccountId,
+        created_by: user?.id || '',
+      });
+      setType(''); setAmount(''); setNote(''); setShowForm(false);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -309,9 +316,17 @@ export default function ExpensesPage() {
                 </button>
                 <button 
                   type="submit" 
-                  className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-sm hover:opacity-90 transition-opacity capitalize"
+                  disabled={isSubmitting}
+                  className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-sm hover:opacity-90 transition-opacity capitalize disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  Save Expense
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                      <span>Processing...</span>
+                    </>
+                  ) : (
+                    'Save Expense'
+                  )}
                 </button>
               </div>
             </form>

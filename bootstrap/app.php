@@ -15,6 +15,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->api(prepend: [
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
         ]);
+        $middleware->api(append: [
+            \App\Http\Middleware\PreventDuplicateSubmissions::class,
+        ]);
         $middleware->api(remove: [
             \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
         ]);
@@ -31,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
             'block_admin' => \App\Http\Middleware\BlockAdminMiddleware::class,
+            'prevent_duplicates' => \App\Http\Middleware\PreventDuplicateSubmissions::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

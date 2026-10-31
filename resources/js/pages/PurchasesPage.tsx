@@ -20,6 +20,7 @@ export default function PurchasesPage() {
   const [notes, setNotes] = useState('');
   const [purchaseItems, setPurchaseItems] = useState<{ item_id: string; quantity: number; cost_price: number; sell_price: number }[]>([]);
   const [updateCostPrice, setUpdateCostPrice] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Quick Add Product State
   const [showQuickAddProduct, setShowQuickAddProduct] = useState(false);
@@ -156,6 +157,7 @@ export default function PurchasesPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     if (!currentStore) return;
     if (purchaseItems.length === 0) {
       alert("Please add at least one item to the purchase.");
@@ -168,6 +170,7 @@ export default function PurchasesPage() {
       return;
     }
 
+    setIsSubmitting(true);
     try {
       await recordPurchase({
         store_id: currentStore.id,
@@ -194,6 +197,8 @@ export default function PurchasesPage() {
 
     } catch (err: any) {
       alert(err.message || "Failed to record purchase.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -676,9 +681,17 @@ export default function PurchasesPage() {
                 <button 
                   type="button" 
                   onClick={handleSubmit}
-                  className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-sm hover:opacity-90 transition-opacity"
+                  disabled={isSubmitting}
+                  className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                 >
-                  Process Purchase
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                      <span>Processing...</span>
+                    </>
+                  ) : (
+                    'Process Purchase'
+                  )}
                 </button>
             </div>
           </div>

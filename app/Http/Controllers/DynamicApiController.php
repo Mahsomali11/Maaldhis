@@ -160,6 +160,15 @@ class DynamicApiController extends Controller
         \Illuminate\Support\Facades\Log::info("DynamicAPI Store Payload: $table", $body);
 
         if (is_array($body) && isset($body[0]) && is_array($body[0])) {
+            // Check for rapid duplicate bulk insert (e.g. sale_items for the same sale)
+            if ($table === 'sale_items' && isset($body[0]['sale_id'])) {
+                $existingCount = \Illuminate\Support\Facades\DB::table('sale_items')->where('sale_id', $body[0]['sale_id'])->count();
+                if ($existingCount > 0) {
+                    \Illuminate\Support\Facades\Log::info("DynamicAPI Deduplicated duplicate sale_items insert for sale: " . $body[0]['sale_id']);
+                    return response()->json($body, 201);
+                }
+            }
+
             // Bulk insert (array of objects)
             $data = $body;
             $now = now()->format('Y-m-d H:i:s');
@@ -192,6 +201,64 @@ class DynamicApiController extends Controller
             } catch (\Exception $e) {
                 \Illuminate\Support\Facades\Log::error("DynamicAPI Bulk Insert Error: " . $e->getMessage());
                 return response()->json(['error' => $e->getMessage()], 500);
+            }
+        }
+
+        // Rapid duplicate checks (within 2 seconds) for single transaction records
+        if ($table === 'sales' && isset($body['store_id'], $body['total'])) {
+            $recentSale = \App\Models\Sale::where('store_id', $body['store_id'])
+                ->where('total', $body['total'])
+                ->where('created_at', '>=', now()->subSeconds(2))
+                ->first();
+            if ($recentSale) {
+                \Illuminate\Support\Facades\Log::info("DynamicAPI Deduplicated duplicate sale insert for store: {$body['store_id']}");
+                return response()->json($recentSale, 201);
+            }
+        }
+
+        if ($table === 'payments' && isset($body['store_id'], $body['amount'])) {
+            $paymentQuery = \App\Models\Payment::where('store_id', $body['store_id'])
+                ->where('amount', $body['amount'])
+                ->where('created_at', '>=', now()->subSeconds(2));
+            if (!empty($body['sale_id'])) {
+                $paymentQuery->where('sale_id', $body['sale_id']);
+            }
+            if (!empty($body['customer_id'])) {
+                $paymentQuery->where('customer_id', $body['customer_id']);
+            }
+            $recentPayment = $paymentQuery->first();
+            if ($recentPayment) {
+                \Illuminate\Support\Facades\Log::info("DynamicAPI Deduplicated duplicate payment insert for store: {$body['store_id']}");
+                return response()->json($recentPayment, 201);
+            }
+        }
+
+        if ($table === 'expenses' && isset($body['store_id'], $body['amount'])) {
+            $expenseQuery = \App\Models\Expense::where('store_id', $body['store_id'])
+                ->where('amount', $body['amount'])
+                ->where('created_at', '>=', now()->subSeconds(2));
+            if (!empty($body['expense_type'])) {
+                $expenseQuery->where('expense_type', $body['expense_type']);
+            }
+            $recentExpense = $expenseQuery->first();
+            if ($recentExpense) {
+                \Illuminate\Support\Facades\Log::info("DynamicAPI Deduplicated duplicate expense insert for store: {$body['store_id']}");
+                return response()->json($recentExpense, 201);
+            }
+        }
+
+        if ($table === 'customer_debts' && isset($body['store_id'], $body['customer_id'], $body['original_amount'])) {
+            $debtQuery = \App\Models\CustomerDebt::where('store_id', $body['store_id'])
+                ->where('customer_id', $body['customer_id'])
+                ->where('original_amount', $body['original_amount'])
+                ->where('created_at', '>=', now()->subSeconds(2));
+            if (!empty($body['sale_id'])) {
+                $debtQuery->where('sale_id', $body['sale_id']);
+            }
+            $recentDebt = $debtQuery->first();
+            if ($recentDebt) {
+                \Illuminate\Support\Facades\Log::info("DynamicAPI Deduplicated duplicate customer_debt insert for store: {$body['store_id']}");
+                return response()->json($recentDebt, 201);
             }
         }
 

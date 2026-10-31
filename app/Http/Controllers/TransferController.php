@@ -24,6 +24,19 @@ class TransferController extends Controller
         try {
             DB::beginTransaction();
 
+            // Rapid duplicate check (2 seconds)
+            $recentTransfer = AccountTransfer::where('store_id', $request->store_id)
+                ->where('from_account_id', $request->from_account_id)
+                ->where('to_account_id', $request->to_account_id)
+                ->where('amount', $request->amount)
+                ->where('created_at', '>=', now()->subSeconds(2))
+                ->first();
+            if ($recentTransfer) {
+                DB::rollBack();
+                \Illuminate\Support\Facades\Log::info("TransferController: Deduplicated duplicate transfer for store {$request->store_id}");
+                return response()->json(['success' => true, 'transfer' => $recentTransfer]);
+            }
+
             $refNo = 'TRF-' . strtoupper(Str::random(8));
             $userId = $request->user()->id;
             $userName = $request->user()->full_name ?? $request->user()->name ?? 'Unknown';
