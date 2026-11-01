@@ -6,6 +6,7 @@ import { api as apiClient } from '@/api';
 import BarcodeScanner from '@/components/BarcodeScanner';
 import { useBarcodeScanner } from '@/hooks/useBarcodeScanner';
 import { toast } from 'sonner';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 
 interface PaymentAccount {
   id: string;
@@ -337,14 +338,19 @@ export default function StartSalePage() {
                    <label className="text-[10px] font-bold text-foreground block mb-0.5">
                      Customer <span className="text-destructive">*</span>
                    </label>
-                   <select 
+                   <SearchableSelect 
                      value={selectedCustomer || ''} 
-                     onChange={(e) => setSelectedCustomer(e.target.value || null)}
-                     className="w-full px-2 py-1 h-8 rounded-lg border border-input text-xs font-medium bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary shadow-2xs"
-                   >
-                     <option value="">Select customer to attach debt...</option>
-                     {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                   </select>
+                     onChange={(val) => setSelectedCustomer(val || null)}
+                     options={customers.map((c) => ({
+                       value: c.id,
+                       label: c.name,
+                       subLabel: c.phone ? `Phone: ${c.phone}` : undefined
+                     }))}
+                     placeholder="Select customer to attach debt..."
+                     searchPlaceholder="Search customer by name or phone..."
+                     triggerClassName="h-8 text-xs rounded-lg py-1 px-2.5 font-medium shadow-2xs"
+                     required
+                   />
                 </div>
              )}
 
@@ -418,13 +424,18 @@ export default function StartSalePage() {
                    <label className="text-[10px] font-bold text-foreground block mb-0.5">
                      {saleType === 'cash' ? 'Payment Method / Account' : 'Deposit Down Payment Into'}
                    </label>
-                   <select 
+                   <SearchableSelect 
                      value={paymentAccountId || ''} 
-                     onChange={(e) => setPaymentAccountId(e.target.value)}
-                     className="w-full px-2 py-1 h-8 rounded-lg border border-input text-xs font-medium bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary shadow-2xs"
-                   >
-                     {paymentAccounts.map((pa) => <option key={pa.id} value={pa.id}>{pa.account_name}</option>)}
-                   </select>
+                     onChange={(val) => setPaymentAccountId(val || null)}
+                     options={paymentAccounts.map((pa) => ({
+                       value: pa.id,
+                       label: pa.account_name,
+                       subLabel: pa.account_type
+                     }))}
+                     placeholder="Select payment account..."
+                     searchPlaceholder="Search account..."
+                     triggerClassName="h-8 text-xs rounded-lg py-1 px-2.5 font-medium shadow-2xs"
+                   />
                 </div>
              )}
           </div>

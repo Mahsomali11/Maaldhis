@@ -18,6 +18,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import type { Expense } from '@/types';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 
 export default function ExpensesPage() {
   const { expenses, addExpense, refundExpense, updateExpense, deleteExpense, currentStore, formatCurrency, user } = useApp();
@@ -680,15 +681,16 @@ export default function ExpensesPage() {
               {paymentAccounts.length > 0 ? (
                 <div>
                   <label className="block text-xs font-bold text-muted-foreground capitalize tracking-wider mb-2">Payment Account</label>
-                  <select 
+                  <SearchableSelect 
                     value={paymentAccountId || ''} 
-                    onChange={e => setPaymentAccountId(e.target.value)}
-                    className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all appearance-none"
-                  >
-                    {paymentAccounts.map(pa => (
-                      <option key={pa.id} value={pa.id}>{pa.account_name} ({pa.account_type})</option>
-                    ))}
-                  </select>
+                    onChange={setPaymentAccountId}
+                    options={paymentAccounts.map(pa => ({
+                      value: pa.id,
+                      label: `${pa.account_name} (${pa.account_type})`
+                    }))}
+                    placeholder="Select Payment Account"
+                    searchPlaceholder="Search payment account..."
+                  />
                 </div>
               ) : (
                 <div>
@@ -819,18 +821,17 @@ export default function ExpensesPage() {
                 <label className="block text-xs font-bold text-muted-foreground capitalize tracking-wider mb-2">
                   Credit Refund Into Account <span className="text-destructive">*</span>
                 </label>
-                <select 
+                <SearchableSelect 
                   value={refundAccountId || ''} 
-                  onChange={e => setRefundAccountId(e.target.value)}
-                  className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all appearance-none"
+                  onChange={setRefundAccountId}
+                  options={paymentAccounts.map(pa => ({
+                    value: pa.id,
+                    label: `${pa.account_name} (${pa.account_type}) ${pa.id === refundTarget.payment_account_id ? '— (Original)' : ''}`
+                  }))}
+                  placeholder="Select Refund Account"
+                  searchPlaceholder="Search account name..."
                   required
-                >
-                  {paymentAccounts.map(pa => (
-                    <option key={pa.id} value={pa.id}>
-                      {pa.account_name} ({pa.account_type}) {pa.id === refundTarget.payment_account_id ? '— (Original)' : ''}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
 
               {/* Predefined Reversal Reason */}
@@ -948,15 +949,16 @@ export default function ExpensesPage() {
               {paymentAccounts.length > 0 && (
                 <div>
                   <label className="block text-xs font-bold text-muted-foreground capitalize tracking-wider mb-2">Payment Account</label>
-                  <select 
+                  <SearchableSelect 
                     value={editAccountId || ''} 
-                    onChange={e => setEditAccountId(e.target.value)}
-                    className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all appearance-none"
-                  >
-                    {paymentAccounts.map(pa => (
-                      <option key={pa.id} value={pa.id}>{pa.account_name} ({pa.account_type})</option>
-                    ))}
-                  </select>
+                    onChange={setEditAccountId}
+                    options={paymentAccounts.map(pa => ({
+                      value: pa.id,
+                      label: `${pa.account_name} (${pa.account_type})`
+                    }))}
+                    placeholder="Select Payment Account"
+                    searchPlaceholder="Search payment account..."
+                  />
                 </div>
               )}
 

@@ -17,6 +17,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 
 interface PaymentAccount {
   id: string;
@@ -633,44 +634,36 @@ export default function PaymentAccountsPage() {
             <form onSubmit={handleTransferSubmit} className="p-6 sm:p-8 space-y-5">
               <div>
                 <label className="block text-xs font-bold text-muted-foreground capitalize tracking-wider mb-2">From Account <span className="text-destructive">*</span></label>
-                <select
+                <SearchableSelect
                   value={transferForm.fromAccountId}
-                  onChange={(e) => setTransferForm({ ...transferForm, fromAccountId: e.target.value })}
-                  className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm appearance-none"
+                  onChange={(val) => setTransferForm({ ...transferForm, fromAccountId: val })}
+                  options={accounts.filter(a => a.is_active).map(a => ({
+                    value: a.id,
+                    label: `${a.account_name} (${a.account_type})`,
+                    subLabel: a.id === transferForm.toAccountId ? '(Selected as Destination)' : undefined,
+                    disabled: a.id === transferForm.toAccountId
+                  }))}
+                  placeholder="Select Source Account"
+                  searchPlaceholder="Search account..."
                   required
-                >
-                  <option value="">Select Source Account</option>
-                  {accounts.filter(a => a.is_active).map(a => (
-                    <option 
-                      key={a.id} 
-                      value={a.id} 
-                      disabled={a.id === transferForm.toAccountId}
-                    >
-                      {a.account_name} ({a.account_type}) {a.id === transferForm.toAccountId ? '(Selected as Destination)' : ''}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-muted-foreground capitalize tracking-wider mb-2">To Account <span className="text-destructive">*</span></label>
-                <select
+                <SearchableSelect
                   value={transferForm.toAccountId}
-                  onChange={(e) => setTransferForm({ ...transferForm, toAccountId: e.target.value })}
-                  className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm appearance-none"
+                  onChange={(val) => setTransferForm({ ...transferForm, toAccountId: val })}
+                  options={accounts.filter(a => a.is_active).map(a => ({
+                    value: a.id,
+                    label: `${a.account_name} (${a.account_type})`,
+                    subLabel: a.id === transferForm.fromAccountId ? '(Selected as Source)' : undefined,
+                    disabled: a.id === transferForm.fromAccountId
+                  }))}
+                  placeholder="Select Destination Account"
+                  searchPlaceholder="Search account..."
                   required
-                >
-                  <option value="">Select Destination Account</option>
-                  {accounts.filter(a => a.is_active).map(a => (
-                    <option 
-                      key={a.id} 
-                      value={a.id} 
-                      disabled={a.id === transferForm.fromAccountId}
-                    >
-                      {a.account_name} ({a.account_type}) {a.id === transferForm.fromAccountId ? '(Selected as Source)' : ''}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
 
               <div>

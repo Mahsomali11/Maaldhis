@@ -4,6 +4,7 @@ import { api as apiClient } from '@/api';
 import PageHeader from '@/components/PageHeader';
 import { Plus, X, Package, Search, PlusCircle, Trash2, CheckCircle2, Clock, FileText, ScanBarcode } from 'lucide-react';
 import BarcodeScanner from '@/components/BarcodeScanner';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 export default function PurchasesPage() {
   const { purchases, purchaseItems: globalPurchaseItems, suppliers, items, categories, currentStore, formatCurrency, recordPurchase, refreshData } = useApp();
   const [showForm, setShowForm] = useState(false);
@@ -450,15 +451,14 @@ export default function PurchasesPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
                         <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Supplier <span className="text-destructive">*</span></label>
-                        <select 
+                        <SearchableSelect 
                             value={supplierId} 
-                            onChange={e => setSupplierId(e.target.value)} 
-                            className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm appearance-none" 
+                            onChange={setSupplierId}
+                            options={suppliers.map(s => ({ value: s.id, label: s.name }))}
+                            placeholder="Select Supplier"
+                            searchPlaceholder="Search supplier name..."
                             required
-                        >
-                            <option value="">Select Supplier</option>
-                            {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                        </select>
+                        />
                     </div>
                     <div>
                         <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Date <span className="text-destructive">*</span></label>
@@ -527,17 +527,20 @@ export default function PurchasesPage() {
                         {purchaseItems.map((item, index) => (
                             <div key={index} className="flex flex-wrap sm:flex-nowrap items-center gap-3 bg-background p-3 rounded-xl border border-border shadow-sm">
                                 <div className="flex-1 min-w-[200px]">
-                                    <select 
+                                    <SearchableSelect 
                                         value={item.item_id}
-                                        onChange={e => handleItemChange(index, 'item_id', e.target.value)}
-                                        className="w-full px-3 py-2 h-10 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                                        onChange={val => handleItemChange(index, 'item_id', val)}
+                                        options={items.filter(i => i.type === 'product').map(i => ({
+                                            value: i.id,
+                                            label: i.name,
+                                            subLabel: `Stock: ${i.quantity}`,
+                                            badge: i.barcode ? `Barcode: ${i.barcode}` : undefined
+                                        }))}
+                                        placeholder="Select Inventory Item"
+                                        searchPlaceholder="Search item name or barcode..."
+                                        triggerClassName="h-10 text-xs sm:text-sm rounded-lg"
                                         required
-                                    >
-                                        <option value="">Select Inventory Item</option>
-                                        {items.filter(i => i.type === 'product').map(i => (
-                                            <option key={i.id} value={i.id}>{i.name} (Current Stock: {i.quantity})</option>
-                                        ))}
-                                    </select>
+                                    />
                                 </div>
                                 <div className="w-24 shrink-0">
                                     <input 
@@ -650,17 +653,17 @@ export default function PurchasesPage() {
                                 {Number(paidAmount) > 0 && paymentAccounts.length > 0 && (
                                     <div>
                                         <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Payment Account</label>
-                                        <select 
+                                        <SearchableSelect 
                                             value={paymentAccountId} 
-                                            onChange={e => setPaymentAccountId(e.target.value)} 
-                                            className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm appearance-none" 
+                                            onChange={setPaymentAccountId}
+                                            options={paymentAccounts.map(pa => ({
+                                                value: pa.id,
+                                                label: `${pa.account_name} (${pa.account_type})`
+                                            }))}
+                                            placeholder="Select Account"
+                                            searchPlaceholder="Search payment account..."
                                             required
-                                        >
-                                            <option value="">Select Account</option>
-                                            {paymentAccounts.map(pa => (
-                                                <option key={pa.id} value={pa.id}>{pa.account_name} ({pa.account_type})</option>
-                                            ))}
-                                        </select>
+                                        />
                                     </div>
                                 )}
                             </div>
@@ -727,16 +730,15 @@ export default function PurchasesPage() {
 
               <div>
                 <label className="block text-xs font-bold text-muted-foreground capitalize tracking-wider mb-2">Category</label>
-                <select 
+                <SearchableSelect 
                   value={quickAddCategory} 
-                  onChange={e => { setQuickAddCategory(e.target.value); setQuickAddSubCategory(''); }}
-                  className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all appearance-none"
-                >
-                  <option value="">Select Category (Optional)</option>
-                  {allCategoryNames.map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
+                  onChange={val => { setQuickAddCategory(val); setQuickAddSubCategory(''); }}
+                  options={allCategoryNames}
+                  placeholder="Select Category (Optional)"
+                  searchPlaceholder="Search category..."
+                  clearLabel="No Category"
+                  allowClear
+                />
               </div>
 
               {/* Sub-Category dynamic rendering */}
@@ -749,16 +751,15 @@ export default function PurchasesPage() {
                 return (
                   <div>
                     <label className="block text-xs font-bold text-muted-foreground capitalize tracking-wider mb-2">Sub-Category</label>
-                    <select 
+                    <SearchableSelect 
                       value={quickAddSubCategory} 
-                      onChange={e => setQuickAddSubCategory(e.target.value)}
-                      className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all appearance-none"
-                    >
-                      <option value="">Select Sub-Category (Optional)</option>
-                      {availableSubcategories.map(sub => (
-                        <option key={sub.id} value={sub.id}>{sub.name}</option>
-                      ))}
-                    </select>
+                      onChange={setQuickAddSubCategory}
+                      options={availableSubcategories.map(sub => ({ value: sub.id, label: sub.name }))}
+                      placeholder="Select Sub-Category (Optional)"
+                      searchPlaceholder="Search sub-category..."
+                      clearLabel="No Sub-Category"
+                      allowClear
+                    />
                   </div>
                 );
               })()}

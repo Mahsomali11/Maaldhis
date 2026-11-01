@@ -4,6 +4,7 @@ import { useApp } from '@/context/AppContext';
 import { X, ArrowRight, Plus, Package, MapPin, Truck, Store, ArrowRightLeft, Clock, CheckCircle2, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import { api as apiClient } from '@/api';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 
 export default function StockTransfersPage() {
   const { stores, items, currentStore, user, stockTransfers, refreshData, formatCurrency } = useApp();
@@ -282,16 +283,15 @@ export default function StockTransfersPage() {
 
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-bold text-muted-foreground  capitalize tracking-widest block">To (Destination) <span className="text-destructive">*</span></label>
-                  <select 
+                  <SearchableSelect 
                     value={destStoreId} 
-                    onChange={e => setDestStoreId(e.target.value)}
-                    className="w-full px-4 h-12 rounded-xl border border-input bg-background text-sm text-foreground font-bold focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
-                  >
-                    <option value="" disabled>Select Destination Store...</option>
-                    {otherStores.map(s => (
-                      <option key={s.id} value={s.id}>{s.store_name} - {s.location}</option>
-                    ))}
-                  </select>
+                    onChange={setDestStoreId}
+                    options={otherStores.map(s => ({ value: s.id, label: s.store_name, subLabel: s.location }))}
+                    placeholder="Select Destination Store..."
+                    searchPlaceholder="Search store name or location..."
+                    triggerClassName="h-12 font-bold"
+                    required
+                  />
                 </div>
               </div>
 
@@ -304,16 +304,19 @@ export default function StockTransfersPage() {
                 
                 <div className="flex flex-col sm:flex-row gap-3">
                   <div className="flex-1 relative">
-                     <select 
+                     <SearchableSelect 
                        value={addItemId} 
-                       onChange={e => setAddItemId(e.target.value)}
-                       className="w-full px-4 h-12 rounded-xl border border-input bg-background text-sm text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
-                     >
-                       <option value="">Select an item from inventory...</option>
-                       {items.filter(i => i.type === 'product' && i.quantity > 0).map(i => (
-                         <option key={i.id} value={i.id}>{i.name} (In stock: {i.quantity})</option>
-                       ))}
-                     </select>
+                       onChange={setAddItemId}
+                       options={items.filter(i => i.type === 'product' && i.quantity > 0).map(i => ({
+                         value: i.id,
+                         label: i.name,
+                         subLabel: `In stock: ${i.quantity}`,
+                         badge: i.barcode ? `Barcode: ${i.barcode}` : undefined
+                       }))}
+                       placeholder="Select an item from inventory..."
+                       searchPlaceholder="Search item name or barcode..."
+                       triggerClassName="h-12 font-medium"
+                     />
                   </div>
                   
                   <div className="flex gap-3">

@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import BarcodeScanner from '@/components/BarcodeScanner';
 import { toast } from 'sonner';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 
 type StockFilter = 'all' | 'in_stock' | 'low_stock' | 'out_of_stock';
 
@@ -353,16 +354,19 @@ export default function InventoryPage() {
                   className="w-full pl-9 pr-3 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm" />
               </div>
               
-              <select 
-                value={categoryFilter} 
-                onChange={e => setCategoryFilter(e.target.value)}
-                className="h-11 px-4 rounded-xl border border-input bg-background text-sm text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm hidden sm:block appearance-none"
-              >
-                <option value="all">All Categories</option>
-                {allCategoryNames.map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
+              <div className="hidden sm:block w-48">
+                <SearchableSelect 
+                  value={categoryFilter} 
+                  onChange={setCategoryFilter}
+                  options={[
+                    { value: 'all', label: 'All Categories' },
+                    ...allCategoryNames.map(c => ({ value: c, label: c }))
+                  ]}
+                  placeholder="All Categories"
+                  searchPlaceholder="Filter category..."
+                  triggerClassName="h-11 rounded-xl font-medium"
+                />
+              </div>
               
               {(stockFilter !== 'all' || categoryFilter !== 'all') && (
                 <button
@@ -538,16 +542,15 @@ export default function InventoryPage() {
                 
                 <div>
                   <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Category</label>
-                  <select 
+                  <SearchableSelect 
                     value={form.category} 
-                    onChange={e => setForm(f => ({ ...f, category: e.target.value, sub_category_id: '' }))}
-                    className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all appearance-none"
-                  >
-                    <option value="">Select Category (Optional)</option>
-                    {allCategoryNames.map(c => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
+                    onChange={val => setForm(f => ({ ...f, category: val, sub_category_id: '' }))}
+                    options={allCategoryNames}
+                    placeholder="Select Category (Optional)"
+                    searchPlaceholder="Search category..."
+                    clearLabel="No Category"
+                    allowClear
+                  />
                 </div>
 
                 {/* Sub-Category dynamic rendering */}
@@ -560,16 +563,15 @@ export default function InventoryPage() {
                   return (
                     <div>
                       <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Sub-Category</label>
-                      <select 
+                      <SearchableSelect 
                         value={form.sub_category_id} 
-                        onChange={e => setForm(f => ({ ...f, sub_category_id: e.target.value }))}
-                        className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all appearance-none"
-                      >
-                        <option value="">Select Sub-Category (Optional)</option>
-                        {availableSubcategories.map(sub => (
-                          <option key={sub.id} value={sub.id}>{sub.name}</option>
-                        ))}
-                      </select>
+                        onChange={val => setForm(f => ({ ...f, sub_category_id: val }))}
+                        options={availableSubcategories.map(sub => ({ value: sub.id, label: sub.name }))}
+                        placeholder="Select Sub-Category (Optional)"
+                        searchPlaceholder="Search sub-category..."
+                        clearLabel="No Sub-Category"
+                        allowClear
+                      />
                     </div>
                   );
                 })()}

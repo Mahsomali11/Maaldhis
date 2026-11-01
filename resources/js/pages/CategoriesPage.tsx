@@ -13,6 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 
 export default function CategoriesPage() {
   const { categories, addCategory, updateCategory, deleteCategory, currentStore } = useApp();
@@ -247,18 +248,17 @@ export default function CategoriesPage() {
 
               <div>
                 <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Parent Category (Optional)</label>
-                <select 
+                <SearchableSelect 
                   value={form.parent_id} 
-                  onChange={e => setForm(f => ({ ...f, parent_id: e.target.value }))} 
-                  className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all"
-                >
-                  <option value="">None (Top-Level Category)</option>
-                  {storeCategories
-                    .filter(c => c.id !== editingId && !c.parent_id) // Only allow top-level categories as parents, prevent circular
-                    .map(c => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
+                  onChange={val => setForm(f => ({ ...f, parent_id: val }))}
+                  options={storeCategories
+                    .filter(c => c.id !== editingId && !c.parent_id)
+                    .map(c => ({ value: c.id, label: c.name }))}
+                  placeholder="None (Top-Level Category)"
+                  searchPlaceholder="Search parent category..."
+                  clearLabel="None (Top-Level Category)"
+                  allowClear
+                />
               </div>
               
               <div>

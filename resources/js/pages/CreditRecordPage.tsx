@@ -5,6 +5,7 @@ import { Search, X, ChevronLeft, Receipt, Plus, Users, Building2, CreditCard, Us
 import { printReceipt, shareReceipt } from '@/lib/receipt-printer';
 import { toast } from 'sonner';
 import { api as apiClient } from '@/api';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 
 interface AggregatedDebt {
   customer_id: string;
@@ -875,10 +876,10 @@ export default function CreditRecordPage() {
 
                   <div>
                     <label className="block text-xs font-bold text-muted-foreground capitalize tracking-wider mb-1.5">Apply Payment To</label>
-                    <select
+                    <SearchableSelect
                       value={targetDebtId || ''}
-                      onChange={e => {
-                        const debtId = e.target.value || null;
+                      onChange={val => {
+                        const debtId = val || null;
                         setTargetDebtId(debtId);
                         if (debtId) {
                           const found = customerAllDebts.find(d => d.id === debtId);
@@ -887,19 +888,22 @@ export default function CreditRecordPage() {
                           setPayAmount(String(selectedCustomerInfo.total_balance));
                         }
                       }}
-                      className="w-full px-3 py-2 h-10 rounded-xl border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all font-medium"
-                    >
-                      <option value="">All Open Debts (Auto FIFO)</option>
-                      {customerAllDebts.filter(d => Number(d.balance_amount) > 0).map(d => {
-                        const sale = d.sale_id ? sales.find(s => s.id === d.sale_id) : null;
-                        const label = sale ? `Receipt #${sale.receipt_no}` : (d.notes || 'Manual Credit');
-                        return (
-                          <option key={d.id} value={d.id}>
-                            {label} - Due: {formatCurrency(d.balance_amount)}
-                          </option>
-                        );
-                      })}
-                    </select>
+                      options={[
+                        { value: '', label: 'All Open Debts (Auto FIFO)' },
+                        ...customerAllDebts.filter(d => Number(d.balance_amount) > 0).map(d => {
+                          const sale = d.sale_id ? sales.find(s => s.id === d.sale_id) : null;
+                          const label = sale ? `Receipt #${sale.receipt_no}` : (d.notes || 'Manual Credit');
+                          return {
+                            value: d.id,
+                            label: label,
+                            subLabel: `Due: ${formatCurrency(d.balance_amount)}`
+                          };
+                        })
+                      ]}
+                      placeholder="All Open Debts (Auto FIFO)"
+                      searchPlaceholder="Search debt by receipt # or note..."
+                      triggerClassName="h-10 text-xs rounded-xl"
+                    />
                   </div>
                   
                   <div>
@@ -924,13 +928,17 @@ export default function CreditRecordPage() {
                   {paymentAccounts.length > 0 ? (
                     <div>
                       <label className="block text-xs font-bold text-muted-foreground capitalize tracking-wider mb-1.5">Payment Account</label>
-                      <select 
+                      <SearchableSelect 
                         value={paymentAccountId || ''} 
-                        onChange={e => setPaymentAccountId(e.target.value)}
-                        className="w-full px-3 py-2 h-10 rounded-xl border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all appearance-none font-medium"
-                      >
-                        {paymentAccounts.map(pa => <option key={pa.id} value={pa.id}>{pa.account_name}</option>)}
-                      </select>
+                        onChange={setPaymentAccountId}
+                        options={paymentAccounts.map(pa => ({
+                          value: pa.id,
+                          label: `${pa.account_name} (${pa.account_type})`
+                        }))}
+                        placeholder="Select Account"
+                        searchPlaceholder="Search payment account..."
+                        triggerClassName="h-10 text-xs rounded-xl"
+                      />
                     </div>
                   ) : (
                     <div>
@@ -1159,13 +1167,16 @@ export default function CreditRecordPage() {
                   {paymentAccounts.length > 0 ? (
                     <div>
                       <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Payment Account</label>
-                      <select 
+                      <SearchableSelect 
                         value={paymentAccountId || ''} 
-                        onChange={e => setPaymentAccountId(e.target.value)}
-                        className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all appearance-none"
-                      >
-                        {paymentAccounts.map(pa => <option key={pa.id} value={pa.id}>{pa.account_name}</option>)}
-                      </select>
+                        onChange={setPaymentAccountId}
+                        options={paymentAccounts.map(pa => ({
+                          value: pa.id,
+                          label: `${pa.account_name} (${pa.account_type})`
+                        }))}
+                        placeholder="Select Account"
+                        searchPlaceholder="Search payment account..."
+                      />
                     </div>
                   ) : (
                     <div>

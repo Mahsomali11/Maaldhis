@@ -5,6 +5,7 @@ import { useAdmin } from '@/context/AdminContext';
 import { toast } from 'sonner';
 import { Plus, Search, RefreshCw, Users, Store } from 'lucide-react';
 import { format, addDays, addMonths, addYears, differenceInDays } from 'date-fns';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 
 export default function AdminLicensesPage() {
   const { admin } = useAdmin();
@@ -490,17 +491,21 @@ export default function AdminLicensesPage() {
             <div className="space-y-4">
               <div>
                 <label className={labelClass}>Owner Account</label>
-                <select value={form.owner_user_id} onChange={e => setForm({ ...form, owner_user_id: e.target.value })} className={inputClass}>
-                  <option value="">Select owner</option>
-                  {allOwners.map((p: any) => {
+                <SearchableSelect 
+                  value={form.owner_user_id} 
+                  onChange={val => setForm({ ...form, owner_user_id: val })}
+                  options={allOwners.map((p: any) => {
                     const hasLicense = licenses.some((l: any) => l.owner_user_id === p.id);
-                    return (
-                      <option key={p.id} value={p.id}>
-                        {p.full_name || p.email} ({p.email}){hasLicense ? ' — has license' : ''}
-                      </option>
-                    );
+                    return {
+                      value: p.id,
+                      label: `${p.full_name || p.email} (${p.email})`,
+                      subLabel: hasLicense ? 'Has active license' : undefined
+                    };
                   })}
-                </select>
+                  placeholder="Select owner..."
+                  searchPlaceholder="Search owner by name or email..."
+                  required
+                />
                 {form.owner_user_id && (() => {
                   const ownerStores = allStores.filter((s: any) => s.owner_user_id === form.owner_user_id);
                   return (
@@ -512,10 +517,18 @@ export default function AdminLicensesPage() {
               </div>
               <div>
                 <label className={labelClass}>Plan</label>
-                <select value={form.plan_id} onChange={e => setForm({ ...form, plan_id: e.target.value })} className={inputClass}>
-                  <option value="">Select plan</option>
-                  {plans.map((p: any) => <option key={p.id} value={p.id}>{p.name} (${p.monthly_price}/mo)</option>)}
-                </select>
+                <SearchableSelect 
+                  value={form.plan_id} 
+                  onChange={val => setForm({ ...form, plan_id: val })}
+                  options={plans.map((p: any) => ({
+                    value: p.id,
+                    label: p.name,
+                    subLabel: `$${p.monthly_price}/mo`
+                  }))}
+                  placeholder="Select plan..."
+                  searchPlaceholder="Search plan..."
+                  required
+                />
               </div>
               <div>
                 <label className={labelClass}>Duration (days)</label>
@@ -628,11 +641,17 @@ export default function AdminLicensesPage() {
 
             <div className="mb-4">
               <label className={labelClass}>New Plan</label>
-              <select value={changePlanId} onChange={e => setChangePlanId(e.target.value)} className={inputClass}>
-                {plans.map((p: any) => (
-                  <option key={p.id} value={p.id}>{p.name} (${p.monthly_price}/mo) — {p.max_users} users, {p.max_stores} stores</option>
-                ))}
-              </select>
+              <SearchableSelect 
+                value={changePlanId} 
+                onChange={setChangePlanId}
+                options={plans.map((p: any) => ({
+                  value: p.id,
+                  label: `${p.name} ($${p.monthly_price}/mo)`,
+                  subLabel: `${p.max_users} users, ${p.max_stores} stores`
+                }))}
+                placeholder="Select plan..."
+                searchPlaceholder="Search plan..."
+              />
             </div>
 
             <div className="space-y-3 mb-4">
