@@ -164,9 +164,9 @@ export default function SalesReportPage() {
   const grossProfit = totalRevenue - totalCogs;
   const grossMarginPct = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
 
-  // 4. Operating Expenses
+  // 4. Operating Expenses (excluding reversed/refunded expenses)
   const totalExpenses = filteredExpenses
-    .filter(e => e.expense_type !== 'Purchase' && e.expense_type !== 'Supplier Payment')
+    .filter(e => e.status !== 'reversed' && e.expense_type !== 'Purchase' && e.expense_type !== 'Supplier Payment')
     .reduce((s, e) => s + Number(e.amount || 0), 0);
 
   // 5. Net Profit: Strictly Gross Profit - Expenses (Net Profit <= Gross Profit when expenses >= 0)

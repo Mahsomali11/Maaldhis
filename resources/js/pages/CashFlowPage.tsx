@@ -69,14 +69,15 @@ export default function CashFlowPage() {
 
   const totalSales = filteredSales.reduce((s, sale) => s + sale.paid_amount, 0);
   
-  // Expenses breakdown by payment account
+  // Expenses breakdown by payment account (excluding reversed/refunded expenses)
   const expensesByAccount = paymentAccounts.map(acc => {
     const total = filteredExpenses
-      .filter(e => (e.payment_account_id === acc.id || e.payment_method === acc.account_name))
+      .filter(e => e.status !== 'reversed' && (e.payment_account_id === acc.id || e.payment_method === acc.account_name))
       .reduce((s, e) => s + e.amount, 0);
     return { account: acc, total };
   });
-  const totalExpensesAmount = filteredExpenses.reduce((s, e) => s + e.amount, 0);
+  const totalExpensesAmount = filteredExpenses.filter(e => e.status !== 'reversed').reduce((s, e) => s + e.amount, 0);
+  const totalReversedExpenses = filteredExpenses.filter(e => e.status === 'reversed').reduce((s, e) => s + Number(e.refund_amount || e.amount), 0);
 
   const transfersInByAccount = paymentAccounts.map(acc => {
     const total = filteredPayments
@@ -95,12 +96,12 @@ export default function CashFlowPage() {
   const manualIn = filteredCashMovements.filter(m => m.direction === 'in').reduce((s, m) => s + m.amount, 0);
   const manualOut = filteredCashMovements.filter(m => m.direction === 'out').reduce((s, m) => s + m.amount, 0);
 
-  // Closing cash only counts "Cash" type accounts
+  // Closing cash only counts "Cash" type accounts (excluding reversed expenses so cash is credited back)
   const cashAccountSales = filteredPayments
     .filter(p => (p.payment_type === 'sale' || p.payment_type === 'debt_collection') && paymentAccounts.some(a => (p.payment_account_id === a.id || p.method === a.account_name) && a.account_type === 'Cash'))
     .reduce((s, p) => s + p.amount, 0);
   const cashExpenses = filteredExpenses
-    .filter(e => paymentAccounts.some(a => (e.payment_account_id === a.id || e.payment_method === a.account_name) && a.account_type === 'Cash'))
+    .filter(e => e.status !== 'reversed' && paymentAccounts.some(a => (e.payment_account_id === a.id || e.payment_method === a.account_name) && a.account_type === 'Cash'))
     .reduce((s, e) => s + e.amount, 0);
   
   const cashTransfersIn = filteredPayments

@@ -299,6 +299,15 @@ class DynamicApiController extends Controller
     {
         $class = $this->getModelClass($table);
 
+        if ($table === 'expenses') {
+            $user = $request->user() ?? auth()->user();
+            $isAdmin = $user && \Illuminate\Support\Facades\DB::table('admin_roles')->where('user_id', $user->id)->where('is_active', true)->exists();
+            $isOwner = $user && \Illuminate\Support\Facades\DB::table('stores')->where('owner_user_id', $user->id)->exists();
+            if (!$isAdmin && !$isOwner) {
+                return response()->json(['error' => 'Forbidden: Only Store Owners and Admins are permitted to edit expenses.'], 403);
+            }
+        }
+
         // Use only JSON body data, or fallback to POST
         $body = $request->json()->all();
         if (empty($body)) {
@@ -361,6 +370,15 @@ class DynamicApiController extends Controller
     public function destroy(Request $request, $table, $id = null)
     {
         $class = $this->getModelClass($table);
+
+        if ($table === 'expenses') {
+            $user = $request->user() ?? auth()->user();
+            $isAdmin = $user && \Illuminate\Support\Facades\DB::table('admin_roles')->where('user_id', $user->id)->where('is_active', true)->exists();
+            $isOwner = $user && \Illuminate\Support\Facades\DB::table('stores')->where('owner_user_id', $user->id)->exists();
+            if (!$isAdmin && !$isOwner) {
+                return response()->json(['error' => 'Forbidden: Only Store Owners and Admins are permitted to delete expenses.'], 403);
+            }
+        }
         
         if ($id) {
             $record = $class::findOrFail($id);

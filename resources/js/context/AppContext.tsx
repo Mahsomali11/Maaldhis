@@ -1,8 +1,26 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode, useRef } from 'react';
+import { toast } from 'sonner';
 import { api as apiClient } from '@/api';
 import type { User as SupabaseUser, Session } from '@/api';
 import type { Store, Item, Customer, Supplier, Expense, Sale, SaleItem, CustomerDebt, CashSession, CashMovement, Payment, Return, StockTransfer, CartItem, StaffAccount, Category, Purchase, PurchaseItem } from '@/types';
 import { getDeviceId } from '@/lib/device';
+
+export function getCsrfToken(): string {
+  if (typeof document === 'undefined') return '';
+  const name = 'XSRF-TOKEN=';
+  const decodedCookie = decodeURIComponent(document.cookie);
+  const ca = decodedCookie.split(';');
+  for (let i = 0; i < ca.length; i++) {
+    let c = ca[i];
+    while (c.charAt(0) === ' ') {
+      c = c.substring(1);
+    }
+    if (c.indexOf(name) === 0) {
+      return c.substring(name.length, c.length);
+    }
+  }
+  return '';
+}
 
 export interface AccountTransfer {
   id: string;
@@ -91,8 +109,10 @@ interface AppContextType extends Omit<AppState, 'session'> {
   addCustomer: (customer: Omit<Customer, 'id' | 'created_at'>) => Promise<void>;
   updateCustomer: (id: string, updates: Partial<Customer>) => Promise<void>;
   addSupplier: (supplier: Omit<Supplier, 'id' | 'created_at'>) => Promise<void>;
-  deleteSupplier: (id: string) => Promise<void>;
   addExpense: (expense: Omit<Expense, 'id' | 'created_at'>) => Promise<void>;
+  refundExpense: (id: string, reason: string, refundAmount?: number, paymentAccountId?: string) => Promise<boolean>;
+  updateExpense: (id: string, updates: Partial<Expense>) => Promise<boolean>;
+  deleteExpense: (id: string) => Promise<boolean>;
   addToCart: (item: Item, qty: number) => void;
   removeFromCart: (itemId: string) => void;
   updateCartPrice: (itemId: string, newPrice: number) => void;
@@ -517,6 +537,202 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setTimeout(() => { isAddingExpenseRef.current = false; }, 1000);
     }
   }, []);
+
+  const refundExpense = useCallback(async (id: string, reason: string, refundAmount?: number, paymentAccountId?: string) => {
+    try {
+      const csrf = getCsrfToken();
+      const res = await fetch('/api/rest/v1/refund-expense', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          ...(csrf ? { 'X-XSRF-TOKEN': csrf } : {}),
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          expenseId: id,
+          reason,
+          refundAmount,
+          paymentAccountId,
+        }),
+      });
+
+      if (!res.ok) {
+        if (res.status === 403) {
+          const err = await res.json().catch(() => ({}));
+          toast.error(err.message || err.error || 'Forbidden: Only Store Owners and Admins have permission to refund or reverse expenses.');
+          return false;
+        }
+        // Fallback: Try updating via apiClient directly if custom endpoint failed
+        const { data: fallbackData, error: fallbackError } = await apiClient
+          .from('expenses')
+          .update({
+            status: 'reversed',
+            refund_reason: reason,
+            refund_amount: refundAmount,
+            refunded_at: new Date().toISOString(),
+            ...(paymentAccountId ? { payment_account_id: paymentAccountId } : {})
+          } as any)
+          .eq('id', id)
+          .select()
+          .single();
+
+        if (fallbackError) {
+          const err = await res.json().catch(() => ({}));
+          toast.error(err.message || err.error || fallbackError.message || 'Failed to refund expense');
+          return false;
+        }
+
+        setState(prev => ({
+          ...prev,
+          expenses: prev.expenses.map(e => e.id === id ? { ...e, ...(fallbackData as any), status: 'reversed' } : e),
+        }));
+        toast.success('Expense reversed and refunded successfully');
+        if (state.currentStore?.id) {
+          loadStoreData(state.currentStore.id).catch(console.warn);
+        }
+        return true;
+      }
+
+      const resData = await res.json().catch(() => ({}));
+      const updatedExpense = resData.expense;
+
+      setState(prev => ({
+        ...prev,
+        expenses: prev.expenses.map(e => e.id === id ? { ...e, ...updatedExpense, status: 'reversed' } : e),
+      }));
+      toast.success('Expense reversed and refunded successfully');
+
+      if (state.currentStore?.id) {
+        loadStoreData(state.currentStore.id).catch(console.warn);
+      }
+      return true;
+    } catch (err: any) {
+      toast.error(err?.message || 'Error processing expense refund');
+      return false;
+    } finally {
+      window.dispatchEvent(new CustomEvent('action-complete'));
+    }
+  }, [state.currentStore, loadStoreData]);
+
+  const updateExpense = useCallback(async (id: string, updates: Partial<Expense>) => {
+    try {
+      const csrf = getCsrfToken();
+      const res = await fetch(`/api/rest/v1/expenses/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          ...(csrf ? { 'X-XSRF-TOKEN': csrf } : {}),
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify(updates),
+      });
+
+      if (!res.ok) {
+        if (res.status === 403) {
+          const err = await res.json().catch(() => ({}));
+          toast.error(err.message || err.error || 'Forbidden: Only Store Owners and Admins have permission to edit expenses.');
+          return false;
+        }
+        // Fallback: Try updating via apiClient directly
+        const { data: fallbackData, error: fallbackError } = await apiClient
+          .from('expenses')
+          .update(updates as any)
+          .eq('id', id)
+          .select()
+          .single();
+
+        if (fallbackError) {
+          const err = await res.json().catch(() => ({}));
+          toast.error(err.message || err.error || fallbackError.message || 'Failed to update expense');
+          return false;
+        }
+
+        setState(prev => ({
+          ...prev,
+          expenses: prev.expenses.map(e => e.id === id ? { ...e, ...updates, ...(fallbackData as any || {}) } : e),
+        }));
+        toast.success('Expense updated successfully');
+        if (state.currentStore?.id) {
+          loadStoreData(state.currentStore.id).catch(console.warn);
+        }
+        return true;
+      }
+
+      const resData = await res.json().catch(() => ({}));
+      const updatedExpense = resData.expense || { ...updates, id };
+
+      setState(prev => ({
+        ...prev,
+        expenses: prev.expenses.map(e => e.id === id ? { ...e, ...updatedExpense } : e),
+      }));
+      toast.success('Expense updated successfully');
+
+      if (state.currentStore?.id) {
+        loadStoreData(state.currentStore.id).catch(console.warn);
+      }
+      return true;
+    } catch (err: any) {
+      toast.error(err?.message || 'Error updating expense');
+      return false;
+    } finally {
+      window.dispatchEvent(new CustomEvent('action-complete'));
+    }
+  }, [state.currentStore, loadStoreData]);
+
+  const deleteExpense = useCallback(async (id: string) => {
+    try {
+      const csrf = getCsrfToken();
+      const res = await fetch(`/api/rest/v1/expenses/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          ...(csrf ? { 'X-XSRF-TOKEN': csrf } : {}),
+        },
+        credentials: 'same-origin',
+      });
+
+      if (!res.ok) {
+        if (res.status === 403) {
+          const err = await res.json().catch(() => ({}));
+          toast.error(err.message || err.error || 'Forbidden: Only Store Owners and Admins have permission to delete expenses.');
+          return false;
+        }
+        // Fallback: Try deleting via apiClient directly
+        const { error: fallbackError } = await apiClient
+          .from('expenses')
+          .delete()
+          .eq('id', id);
+
+        if (fallbackError) {
+          const err = await res.json().catch(() => ({}));
+          toast.error(err.message || err.error || fallbackError.message || 'Failed to delete expense');
+          return false;
+        }
+      }
+
+      setState(prev => ({
+        ...prev,
+        expenses: prev.expenses.filter(e => e.id !== id),
+      }));
+      toast.success('Expense deleted successfully');
+
+      if (state.currentStore?.id) {
+        loadStoreData(state.currentStore.id).catch(console.warn);
+      }
+      return true;
+    } catch (err: any) {
+      toast.error(err?.message || 'Error deleting expense');
+      return false;
+    } finally {
+      window.dispatchEvent(new CustomEvent('action-complete'));
+    }
+  }, [state.currentStore, loadStoreData]);
 
   // Cart operations (local only)
   const addToCart = useCallback((item: Item, qty: number) => {
@@ -1167,7 +1383,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     full_name: state.profile.full_name,
     phone: state.profile.phone,
     created_at: '',
-    role: (state.session?.user as any)?.role,
+    role: (state.session?.user as any)?.role || (state.stores.some(s => s.owner_user_id === state.profile?.id) ? 'owner' : 'staff'),
     assigned_store_id: (state.session?.user as any)?.assigned_store_id,
   } : null;
 
@@ -1213,7 +1429,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       login, logout, signup, resetPassword, setCurrentStore,
       addItem, addItemsBulk, updateItem, deleteItem,
       addCustomer, updateCustomer, addSupplier, deleteSupplier,
-      addExpense, addToCart, removeFromCart, updateCartPrice, clearCart,
+      addExpense, refundExpense, updateExpense, deleteExpense,
+      addToCart, removeFromCart, updateCartPrice, clearCart,
       completeSale, recordPayment, recordReturn,
       addStore, deleteStore, updateStore, addCashMovement,
       addStaffAccount, deleteStaffAccount, updateStaffAccount,

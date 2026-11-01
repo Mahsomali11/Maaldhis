@@ -24,15 +24,30 @@ export default function PaymentAccountLedger({ account, onClose }: { account: an
         amount: s.paid_amount,
         isOutflow: false
       })),
-      ...accExpenses.map(e => ({
-        id: e.id,
-        date: new Date(e.created_at),
-        type: 'Expense',
-        reference: '-',
-        description: e.expense_type + (e.note ? ` - ${e.note}` : ''),
-        amount: e.amount,
-        isOutflow: true
-      })),
+      ...accExpenses.flatMap(e => {
+        const items = [{
+          id: e.id,
+          date: new Date(e.created_at),
+          type: 'Expense',
+          reference: '-',
+          description: e.expense_type + (e.status === 'reversed' ? ' (Reversed)' : '') + (e.note ? ` - ${e.note}` : ''),
+          amount: e.amount,
+          isOutflow: true
+        }];
+
+        if (e.status === 'reversed') {
+          items.push({
+            id: `${e.id}_refund`,
+            date: new Date(e.refunded_at || e.created_at),
+            type: 'Expense Refund',
+            reference: 'REV',
+            description: `Refund: ${e.expense_type}${e.refund_reason ? ` (${e.refund_reason})` : ''}`,
+            amount: Number(e.refund_amount || e.amount),
+            isOutflow: false
+          });
+        }
+        return items;
+      }),
       ...accPayments.map(p => ({
         id: p.id,
         date: new Date(p.created_at),

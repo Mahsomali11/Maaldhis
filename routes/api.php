@@ -72,11 +72,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::post('/auth/v1/create-staff', [AuthController::class, 'createStaff']);
     Route::post('/auth/v1/update-staff-password', [AuthController::class, 'updateStaffPassword']);
 
-    // Process Return, Purchase, and Transfers
+    // Process Return, Purchase, Transfers, and Expense Reversals
     Route::post('/rest/v1/process-return', [\App\Http\Controllers\ReturnController::class, 'processReturn']);
     Route::post('/rest/v1/process-purchase', [\App\Http\Controllers\PurchaseController::class, 'processPurchase']);
     Route::post('/rest/v1/pay-supplier-debt', [\App\Http\Controllers\PurchaseController::class, 'paySupplierDebt']);
     Route::post('/rest/v1/process-transfer', [\App\Http\Controllers\TransferController::class, 'processTransfer']);
+    Route::post('/rest/v1/refund-expense', [\App\Http\Controllers\ExpenseController::class, 'refundExpense']);
+    Route::post('/rest/v1/expenses/{id}/refund', [\App\Http\Controllers\ExpenseController::class, 'refundExpense']);
+    Route::patch('/rest/v1/expenses/{id}', [\App\Http\Controllers\ExpenseController::class, 'update']);
+    Route::delete('/rest/v1/expenses/{id}', [\App\Http\Controllers\ExpenseController::class, 'destroy']);
     // Receipt Details Lookup (by ID, receipt_no RCP-..., or customer debt)
     Route::get('/rest/v1/receipt-details/{identifier}', [\App\Http\Controllers\SaleController::class, 'getReceiptDetails']);
     Route::get('/receipt-details/{identifier}', [\App\Http\Controllers\SaleController::class, 'getReceiptDetails']);
@@ -101,7 +105,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
                 'items' => \App\Models\Item::with(['subCategory'])->where('store_id', $storeId)->get(),
                 'customers' => \App\Models\Customer::where('store_id', $storeId)->get(),
                 'suppliers' => \App\Models\Supplier::where('store_id', $storeId)->get(),
-                'expenses' => \App\Models\Expense::with('user')->where('store_id', $storeId)->orderBy('created_at', 'desc')->take(500)->get(),
+                'expenses' => \App\Models\Expense::with(['user', 'refunder'])->where('store_id', $storeId)->orderBy('created_at', 'desc')->take(500)->get(),
                 'sales' => $recentSales,
                 // sale_items doesn't have store_id directly, get via sales
                 'saleItems' => \App\Models\SaleItem::whereIn('sale_id', $recentSalesIds)->get(),

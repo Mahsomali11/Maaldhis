@@ -91,7 +91,7 @@ export default function StaffActivityDashboard({ staff, onClose }: Props) {
   // Outflow by Payment Account
   const outflowByAccount = useMemo(() => {
     const map: Record<string, number> = {};
-    staffExpenses.forEach(e => {
+    staffExpenses.filter(e => e.status !== 'reversed').forEach(e => {
       const accId = e.payment_account_id || 'cash';
       map[accId] = (map[accId] || 0) + Number(e.amount);
     });
@@ -110,7 +110,14 @@ export default function StaffActivityDashboard({ staff, onClose }: Props) {
   const activityLog = useMemo(() => {
     const log: any[] = [];
     staffPayments.forEach(p => log.push({ type: p.direction === 'in' ? 'Collection' : 'Payout', id: p.reference || 'PAY-'+p.id.slice(0,5), time: p.created_at, amount: p.amount, method: p.payment_account_id || p.method }));
-    staffExpenses.forEach(e => log.push({ type: 'Expense', id: 'EXP-'+e.id.slice(0,5), time: e.created_at, amount: e.amount, method: e.payment_account_id || 'cash' }));
+    staffExpenses.forEach(e => log.push({ 
+      type: e.status === 'reversed' ? 'Expense (Reversed)' : 'Expense', 
+      id: 'EXP-'+e.id.slice(0,5), 
+      time: e.created_at, 
+      amount: e.amount, 
+      method: e.payment_account_id || 'cash',
+      isReversed: e.status === 'reversed'
+    }));
     
     return log.sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime());
   }, [staffPayments, staffExpenses]);

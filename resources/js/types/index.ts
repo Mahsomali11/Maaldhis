@@ -136,6 +136,11 @@ export interface Expense {
   store_id: string;
   expense_type: string;
   amount: number;
+  status?: 'active' | 'reversed';
+  refund_amount?: number;
+  refund_reason?: string | null;
+  refunded_at?: string | null;
+  refunded_by?: string | null;
   note: string;
   employee_user_id: string | null;
   employee_name?: string;
@@ -144,6 +149,8 @@ export interface Expense {
   payment_account_id?: string | null;
   created_by: string;
   created_at: string;
+  user?: { name?: string; full_name?: string };
+  refunder?: { name?: string; full_name?: string };
 }
 
 export interface Return {

@@ -40,7 +40,7 @@ export default function DashboardPage() {
   
   const todayRevenue = todaySales.reduce((sum, s) => sum + s.total, 0);
   const openDebts = customerDebts.filter(d => d.status !== 'paid').reduce((sum, d) => sum + d.balance_amount, 0);
-  const todayExpenses = expenses.filter(e => new Date(e.created_at).toDateString() === new Date().toDateString() && e.expense_type !== 'Purchase' && e.expense_type !== 'Supplier Payment').reduce((sum, e) => sum + e.amount, 0);
+  const todayExpenses = expenses.filter(e => e.status !== 'reversed' && new Date(e.created_at).toDateString() === new Date().toDateString() && e.expense_type !== 'Purchase' && e.expense_type !== 'Supplier Payment').reduce((sum, e) => sum + e.amount, 0);
 
   const startSale = () => {
     if (!hasFeature('pos_sales')) {
