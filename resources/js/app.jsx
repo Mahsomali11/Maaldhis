@@ -12,6 +12,7 @@ import { AppProvider } from '@/context/AppContext';
 import { AdminProvider } from '@/context/AdminContext';
 import DesktopLayout from '@/components/DesktopLayout';
 import { initSubmitGuard } from '@/lib/submit-guard';
+import { getPlatformName, syncDocumentBranding } from '@/hooks/usePlatformName';
 
 // Initialize global double-click & duplicate submission guard
 initSubmitGuard();
@@ -31,7 +32,7 @@ if (appEl && appEl.dataset.page) {
 }
 
 createInertiaApp({
-    title: (title) => `${title} - Maaldhis`,
+    title: (title) => title ? `${title} - ${getPlatformName()}` : getPlatformName(),
     page: initialPageData,
     resolve: (name) => {
         const pages = import.meta.glob('./pages/**/*.tsx', { eager: true });
@@ -40,26 +41,27 @@ createInertiaApp({
             console.error(`Page not found: ./pages/${name}.tsx`);
             return;
         }
-        
+
         // If it has a default export
         if (page.default) {
             // Apply Layouts
             const isAdmin = name.startsWith('admin/');
-            
-            if (!name.startsWith('LoginPage') && 
-                !name.startsWith('SignupPage') && 
+
+            if (!name.startsWith('LoginPage') &&
+                !name.startsWith('SignupPage') &&
                 !name.startsWith('ResetPasswordPage') &&
                 !name.startsWith('CustomerDisplayPage') &&
                 !name.startsWith('admin/AdminLoginPage') &&
-                !name.startsWith('NotFound') && 
+                !name.startsWith('NotFound') &&
                 !page.default.layout) {
-                
+
                 page.default.layout = (pageElement) => <DesktopLayout>{pageElement}</DesktopLayout>;
             }
         }
         return page;
     },
     setup({ el, App, props }) {
+        syncDocumentBranding();
         const root = createRoot(el);
         root.render(
             <QueryClientProvider client={queryClient}>

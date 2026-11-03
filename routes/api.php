@@ -18,6 +18,34 @@ Route::post('/signup', [AuthController::class, 'signup']);
 Route::post('/auth/v1/signup-with-store', [AuthController::class, 'signupWithStore']);
 Route::post('/auth/v1/logout', [AuthController::class, 'logout'])->middleware('auth:sanctum');
 
+// Public endpoint to retrieve system branding (name, logo, favicon)
+Route::get('/system-branding', function () {
+    $branding = [
+        'system_name' => config('app.name', 'Maaldhis'),
+        'system_logo' => '',
+        'system_favicon' => '',
+    ];
+    try {
+        $settings = \App\Models\SystemSetting::whereIn('setting_key', [
+            'platform_name', 'system_name',
+            'platform_logo', 'system_logo',
+            'platform_favicon', 'system_favicon',
+        ])->pluck('setting_value', 'setting_key');
+
+        if (!empty($settings['system_name'])) {
+            $branding['system_name'] = $settings['system_name'];
+        } elseif (!empty($settings['platform_name'])) {
+            $branding['system_name'] = $settings['platform_name'];
+        }
+
+        $branding['system_logo'] = $settings['system_logo'] ?? $settings['platform_logo'] ?? '';
+        $branding['system_favicon'] = $settings['system_favicon'] ?? $settings['platform_favicon'] ?? '';
+    } catch (\Throwable $e) {
+        // Fallback to defaults if table is unavailable
+    }
+    return response()->json($branding);
+});
+
 // ============================================================
 // AUTHENTICATED USER API ROUTES
 // ============================================================
@@ -132,18 +160,41 @@ Route::middleware(['auth:sanctum'])->group(function () {
         
         Route::post('/upload-image', function (Request $request) {
             $request->validate([
-                'image' => 'required|file|mimes:jpeg,png,jpg,svg,webp|max:2048',
-                'folder' => 'required|string|in:store-logos,product-images',
+                'image' => [
+                    'required',
+                    'file',
+                    'max:350',
+                    function ($attribute, $value, $fail) {
+                        if ($value->getSize() > 350000) {
+                            $fail('Image size must not exceed 350KB.');
+                            return;
+                        }
+                        $ext = strtolower($value->getClientOriginalExtension());
+                        $allowedExts = ['jpeg', 'png', 'jpg', 'svg', 'webp', 'ico'];
+                        if (!in_array($ext, $allowedExts)) {
+                            $fail('The image must be a file of type: jpeg, png, jpg, svg, webp, ico.');
+                        }
+                    },
+                ],
+                'folder' => 'required|string|in:store-logos,product-images,system-branding',
+            ], [
+                'image.max' => 'Image size must not exceed 350KB.',
             ]);
             
             $file = $request->file('image');
             $folder = $request->input('folder');
             
+            $ext = strtolower(preg_replace('/[^a-zA-Z0-9]/', '', $file->getClientOriginalExtension()));
             // Create a unique filename
-            $filename = uniqid() . '_' . time() . '.' . $file->getClientOriginalExtension();
+            $filename = uniqid() . '_' . time() . '.' . $ext;
             
+            $destinationDir = public_path('uploads/' . $folder);
+            if (!is_dir($destinationDir)) {
+                mkdir($destinationDir, 0755, true);
+            }
+
             // Move directly to public/uploads folder to avoid storage symlink issues on shared hosting
-            $file->move(public_path('uploads/' . $folder), $filename);
+            $file->move($destinationDir, $filename);
             
             // Use relative path for URL so it works regardless of APP_URL config
             $path = 'uploads/' . $folder . '/' . $filename;

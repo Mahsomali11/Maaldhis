@@ -57,8 +57,9 @@ export default function StoreLogoUpload({ storeId, currentLogoUrl, storeName, on
       return;
     }
 
-    if (file.size > 150 * 1024) {
-      toast.error('Logo must be under 150KB.');
+    if (file.size > 350000) {
+      toast.error('Image size must not exceed 350KB.');
+      if (fileRef.current) fileRef.current.value = '';
       return;
     }
 
@@ -75,7 +76,7 @@ export default function StoreLogoUpload({ storeId, currentLogoUrl, storeName, on
       formData.append('folder', 'store-logos');
 
       const csrfToken = document.cookie.split('; ').find(row => row.startsWith('XSRF-TOKEN='))?.split('=')[1] || '';
-      
+
       const response = await fetch('/api/upload-image', {
         method: 'POST',
         headers: {
@@ -137,7 +138,7 @@ export default function StoreLogoUpload({ storeId, currentLogoUrl, storeName, on
         <input
           ref={fileRef}
           type="file"
-          accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+          accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"
           onChange={handleUpload}
           className="hidden"
         />
@@ -161,7 +162,7 @@ export default function StoreLogoUpload({ storeId, currentLogoUrl, storeName, on
             Remove
           </button>
         )}
-        <p className="text-[11px] text-muted-foreground">PNG, JPG, SVG · Min 100×100px · Max 150KB</p>
+        <p className="text-[11px] text-muted-foreground">PNG, JPG, SVG, WEBP · Min 100×100px · Max 350KB</p>
       </div>
     </div>
   );

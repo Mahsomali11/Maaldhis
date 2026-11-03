@@ -263,6 +263,17 @@ class DynamicApiController extends Controller
         }
 
         // Single insert
+        if ($table === 'system_settings' && isset($body['setting_key'])) {
+            $existing = \App\Models\SystemSetting::where('setting_key', $body['setting_key'])->first();
+            if ($existing) {
+                $existing->update([
+                    'setting_value' => $body['setting_value'] ?? $existing->setting_value,
+                    'description' => $body['description'] ?? $existing->description,
+                ]);
+                return response()->json($existing, 200);
+            }
+        }
+
         if (!isset($body['id']) || empty($body['id'])) {
             $body['id'] = (string) Str::uuid();
         }
@@ -343,6 +354,25 @@ class DynamicApiController extends Controller
         }
         
         if ($filtered) {
+            if ($table === 'system_settings' && (clone $query)->count() === 0) {
+                $settingKey = $body['setting_key'] ?? null;
+                if (!$settingKey) {
+                    foreach ($request->query() as $k => $v) {
+                        if ($k === 'setting_key' && is_string($v) && str_starts_with($v, 'eq.')) {
+                            $settingKey = substr($v, 3);
+                            break;
+                        }
+                    }
+                }
+                if ($settingKey) {
+                    $record = \App\Models\SystemSetting::create(array_merge($body, [
+                        'id' => (string) Str::uuid(),
+                        'setting_key' => $settingKey,
+                    ]));
+                    return response()->json($record);
+                }
+            }
+
             $query->update($body);
             
             if ($table === 'plans' && isset($body['features'])) {

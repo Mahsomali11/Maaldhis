@@ -1,7 +1,9 @@
 import { Store as StoreIcon } from 'lucide-react';
 import { useForm, Head, Link } from '@inertiajs/react';
+import { useSystemBranding } from '@/hooks/usePlatformName';
 
 export default function LoginPage() {
+  const { systemName, systemLogo } = useSystemBranding();
   const { data, setData, post, processing, errors } = useForm({
     email: '',
     password: '',
@@ -16,14 +18,21 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen w-full flex bg-background">
       <Head title="Sign In" />
-      
+
       {/* Left Panel: Form */}
       <div className="w-full lg:w-1/2 flex flex-col justify-center items-center p-6 sm:p-12 lg:p-24 relative z-10">
         <div className="w-full max-w-[420px] space-y-8">
-          
+
           <div className="flex flex-col items-start mb-8">
-            <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-6">
-               <StoreIcon size={24} className="text-primary" />
+            <div className="flex items-center gap-3 mb-6">
+              {systemLogo ? (
+                <img src={systemLogo} alt={systemName} className="w-12 h-12 rounded-lg object-contain border border-border p-1 bg-card" />
+              ) : (
+                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <StoreIcon size={24} className="text-primary" />
+                </div>
+              )}
+              <span className="text-xl font-black text-foreground tracking-tight">{systemName}</span>
             </div>
             <h1 className="text-3xl font-light text-foreground tracking-tight capitalize">Welcome <span className="font-semibold">Back</span></h1>
             <p className="text-sm text-muted-foreground mt-2">Sign in to your point of sale system.</p>
@@ -35,7 +44,7 @@ export default function LoginPage() {
                 {errors.email}
               </div>
             )}
-            
+
             <div className="space-y-2">
               <label className="text-xs font-bold text-muted-foreground  capitalize tracking-wider">Email Address</label>
               <input
@@ -100,8 +109,8 @@ export default function LoginPage() {
                 Create one
               </Link>
             </p>
-            <Link 
-              href="/admin/login" 
+            <Link
+              href="/admin/login"
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               Admin Access &rarr;
@@ -115,7 +124,7 @@ export default function LoginPage() {
         {/* Subtle architectural/geometric pattern or gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-background/50"></div>
         <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, black 1px, transparent 0)', backgroundSize: '32px 32px' }}></div>
-        
+
         <div className="relative z-10 max-w-lg p-12">
           <h2 className="text-4xl font-light text-foreground leading-tight tracking-tight mb-6 capitalize">
             Empower your <span className="font-semibold">business</span> with modern point of sale.

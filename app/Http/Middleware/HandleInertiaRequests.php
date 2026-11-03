@@ -52,8 +52,34 @@ class HandleInertiaRequests extends Middleware
             }
         }
 
+        $systemBranding = [
+            'system_name' => config('app.name', 'Maaldhis'),
+            'system_logo' => '',
+            'system_favicon' => '',
+        ];
+
+        try {
+            $settings = \App\Models\SystemSetting::whereIn('setting_key', [
+                'platform_name', 'system_name',
+                'platform_logo', 'system_logo',
+                'platform_favicon', 'system_favicon',
+            ])->pluck('setting_value', 'setting_key');
+
+            if (!empty($settings['system_name'])) {
+                $systemBranding['system_name'] = $settings['system_name'];
+            } elseif (!empty($settings['platform_name'])) {
+                $systemBranding['system_name'] = $settings['platform_name'];
+            }
+
+            $systemBranding['system_logo'] = $settings['system_logo'] ?? $settings['platform_logo'] ?? '';
+            $systemBranding['system_favicon'] = $settings['system_favicon'] ?? $settings['platform_favicon'] ?? '';
+        } catch (\Throwable $e) {
+            // Fallback to defaults if table is unavailable
+        }
+
         return [
             ...parent::share($request),
+            'systemBranding' => $systemBranding,
             'auth' => [
                 'user' => $user ? array_merge($user->toArray(), [
                     'role' => $role,

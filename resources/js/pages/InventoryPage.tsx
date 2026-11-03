@@ -66,9 +66,9 @@ export default function InventoryPage() {
   const existingItemCategories = Array.from(new Set(storeItems.map(i => i.category).filter(Boolean)));
   const allCategoryNames = Array.from(new Set([...storeCategories.filter(c => !c.parent_id).map(c => c.name), ...existingItemCategories]));
 
-  let filtered = storeItems.filter(i => 
-    i.name.toLowerCase().includes(search.toLowerCase()) || 
-    (i.category || '').toLowerCase().includes(search.toLowerCase()) || 
+  let filtered = storeItems.filter(i =>
+    i.name.toLowerCase().includes(search.toLowerCase()) ||
+    (i.category || '').toLowerCase().includes(search.toLowerCase()) ||
     (i.barcode || '').includes(search)
   );
 
@@ -163,7 +163,7 @@ export default function InventoryPage() {
       Quantity: item.quantity || 0,
       LowStockThreshold: item.low_stock_threshold || 5,
     }));
-    
+
     const ws = XLSX.utils.json_to_sheet(dataToExport);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Inventory");
@@ -173,7 +173,7 @@ export default function InventoryPage() {
   const handleUploadExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
+
     const reader = new FileReader();
     reader.onload = async (evt) => {
       try {
@@ -182,7 +182,7 @@ export default function InventoryPage() {
         const wsname = wb.SheetNames[0];
         const ws = wb.Sheets[wsname];
         const data = XLSX.utils.sheet_to_json(ws);
-        
+
         if (!data || data.length === 0) {
           toast.error('No valid data found in file');
           return;
@@ -194,7 +194,7 @@ export default function InventoryPage() {
             const subCat = storeCategories.find(c => c.name.toLowerCase() === String(row.SubCategory).toLowerCase() && c.parent_id);
             if (subCat) subCategoryId = subCat.id;
           }
-          
+
           return {
             store_id: currentStore?.id || '',
             type: (row.Type || 'product').toLowerCase(),
@@ -208,13 +208,13 @@ export default function InventoryPage() {
             low_stock_threshold: Number(row.LowStockThreshold) || 5,
             is_active: true
           };
-        }).filter((item: any) => item.name); 
-        
+        }).filter((item: any) => item.name);
+
         if (newItems.length === 0) {
           toast.error('No valid items found to import');
           return;
         }
-        
+
         await addItemsBulk(newItems);
         toast.success(`Successfully imported ${newItems.length} items`);
       } catch (err: any) {
@@ -256,15 +256,15 @@ export default function InventoryPage() {
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] dark:bg-background pb-12">
-      <PageHeader 
-        title="Inventory Management" 
+      <PageHeader
+        title="Inventory Management"
         rightAction={
           <button onClick={handleDownloadExcel} className="p-2 text-muted-foreground hover:text-foreground transition-colors hidden sm:block capitalize">
             <Download size={20} />
           </button>
-        } 
+        }
       />
-      
+
       <div className="p-6 md:px-8 space-y-8 max-w-7xl mx-auto w-full">
 
         {/* Stock Summary Cards */}
@@ -272,42 +272,39 @@ export default function InventoryPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <button
               onClick={() => setStockFilter(stockFilter === 'in_stock' ? 'all' : 'in_stock')}
-              className={`rounded-2xl p-6 text-left transition-all border shadow-sm ${
-                stockFilter === 'in_stock' ? 'border-primary bg-primary/5 ring-1 ring-primary/20' : 'border-border bg-card hover:border-primary/50'
-              }`}
+              className={`rounded-2xl p-6 text-left transition-all border shadow-sm ${stockFilter === 'in_stock' ? 'border-primary bg-primary/5 ring-1 ring-primary/20' : 'border-border bg-card hover:border-primary/50'
+                }`}
             >
               <div className="flex justify-between items-start mb-4">
-                 <div className={`p-2.5 rounded-xl ${stockFilter === 'in_stock' ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                    <Box size={20} />
-                 </div>
+                <div className={`p-2.5 rounded-xl ${stockFilter === 'in_stock' ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                  <Box size={20} />
+                </div>
               </div>
               <p className="text-sm font-semibold text-muted-foreground mb-1">In Stock</p>
               <p className="text-3xl font-bold text-foreground">{inStockItems.length}</p>
             </button>
             <button
               onClick={() => setStockFilter(stockFilter === 'low_stock' ? 'all' : 'low_stock')}
-              className={`rounded-2xl p-6 text-left transition-all border shadow-sm ${
-                stockFilter === 'low_stock' ? 'border-warning bg-warning/5 ring-1 ring-warning/20' : 'border-border bg-card hover:border-warning/50'
-              }`}
+              className={`rounded-2xl p-6 text-left transition-all border shadow-sm ${stockFilter === 'low_stock' ? 'border-warning bg-warning/5 ring-1 ring-warning/20' : 'border-border bg-card hover:border-warning/50'
+                }`}
             >
               <div className="flex justify-between items-start mb-4">
-                 <div className={`p-2.5 rounded-xl ${stockFilter === 'low_stock' ? 'bg-warning/20 text-warning' : 'bg-warning/10 text-warning'}`}>
-                    <BarChart2 size={20} />
-                 </div>
+                <div className={`p-2.5 rounded-xl ${stockFilter === 'low_stock' ? 'bg-warning/20 text-warning' : 'bg-warning/10 text-warning'}`}>
+                  <BarChart2 size={20} />
+                </div>
               </div>
               <p className="text-sm font-semibold text-muted-foreground mb-1">Low Stock</p>
               <p className="text-3xl font-bold text-warning">{lowStockItems.length}</p>
             </button>
             <button
               onClick={() => setStockFilter(stockFilter === 'out_of_stock' ? 'all' : 'out_of_stock')}
-              className={`rounded-2xl p-6 text-left transition-all border shadow-sm ${
-                stockFilter === 'out_of_stock' ? 'border-destructive bg-destructive/5 ring-1 ring-destructive/20' : 'border-border bg-card hover:border-destructive/50'
-              }`}
+              className={`rounded-2xl p-6 text-left transition-all border shadow-sm ${stockFilter === 'out_of_stock' ? 'border-destructive bg-destructive/5 ring-1 ring-destructive/20' : 'border-border bg-card hover:border-destructive/50'
+                }`}
             >
               <div className="flex justify-between items-start mb-4">
-                 <div className={`p-2.5 rounded-xl ${stockFilter === 'out_of_stock' ? 'bg-destructive/20 text-destructive' : 'bg-destructive/10 text-destructive'}`}>
-                    <AlertTriangle size={20} />
-                 </div>
+                <div className={`p-2.5 rounded-xl ${stockFilter === 'out_of_stock' ? 'bg-destructive/20 text-destructive' : 'bg-destructive/10 text-destructive'}`}>
+                  <AlertTriangle size={20} />
+                </div>
               </div>
               <p className="text-sm font-semibold text-muted-foreground mb-1">Out of Stock</p>
               <p className="text-3xl font-bold text-destructive">{outOfStockItems.length}</p>
@@ -335,7 +332,7 @@ export default function InventoryPage() {
         <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden flex flex-col">
           {/* Controls Bar */}
           <div className="p-4 border-b border-border bg-muted/20 flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
-            
+
             <div className="flex bg-muted/50 p-1 rounded-xl">
               <button onClick={() => { setTab('product'); setStockFilter('all'); }}
                 className={`px-5 py-2 rounded-lg text-sm font-bold transition-colors ${tab === 'product' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'}`}>
@@ -353,10 +350,10 @@ export default function InventoryPage() {
                 <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search inventory..."
                   className="w-full pl-9 pr-3 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm" />
               </div>
-              
+
               <div className="hidden sm:block w-48">
-                <SearchableSelect 
-                  value={categoryFilter} 
+                <SearchableSelect
+                  value={categoryFilter}
                   onChange={setCategoryFilter}
                   options={[
                     { value: 'all', label: 'All Categories' },
@@ -367,7 +364,7 @@ export default function InventoryPage() {
                   triggerClassName="h-11 rounded-xl font-medium"
                 />
               </div>
-              
+
               {(stockFilter !== 'all' || categoryFilter !== 'all') && (
                 <button
                   onClick={() => { setStockFilter('all'); setCategoryFilter('all'); }}
@@ -376,7 +373,7 @@ export default function InventoryPage() {
                   Clear
                 </button>
               )}
-              
+
               <button onClick={handleDownloadSample} className="hidden lg:flex h-11 items-center gap-2 px-4 rounded-xl bg-background text-foreground hover:bg-accent border border-input text-sm font-bold cursor-pointer transition-colors shadow-sm capitalize">
                 <Download size={16} /> Sample
               </button>
@@ -384,7 +381,7 @@ export default function InventoryPage() {
                 <Upload size={16} /> Import Excel
                 <input type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleUploadExcel} />
               </label>
-              
+
               <button onClick={() => setShowForm(true)} className="h-11 flex items-center gap-2 px-5 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-sm hover:opacity-90 transition-opacity ml-auto md:ml-0">
                 <Plus size={18} /> <span className="hidden sm:inline">Add Item</span>
               </button>
@@ -450,7 +447,7 @@ export default function InventoryPage() {
                         </td>
                         <td className="px-6 py-4 text-sm text-muted-foreground">{item.category || '—'}</td>
                         <td className="px-6 py-4 text-sm text-muted-foreground">
-                          {item.sub_category_id 
+                          {item.sub_category_id
                             ? (storeCategories.find(c => c.id === item.sub_category_id)?.name || item.sub_category?.name || '—')
                             : (item.sub_category?.name || '—')}
                         </td>
@@ -458,11 +455,10 @@ export default function InventoryPage() {
                         <td className="px-6 py-4 text-sm font-bold text-foreground text-right">{formatCurrency(item.sell_price)}</td>
                         {tab === 'product' && (
                           <>
-                            <td className={`px-6 py-4 text-sm font-bold text-right ${
-                              status === 'out_of_stock' ? 'text-destructive' :
-                              status === 'low_stock' ? 'text-warning' :
-                              'text-foreground'
-                            }`}>
+                            <td className={`px-6 py-4 text-sm font-bold text-right ${status === 'out_of_stock' ? 'text-destructive' :
+                                status === 'low_stock' ? 'text-warning' :
+                                  'text-foreground'
+                              }`}>
                               {item.quantity}
                             </td>
                             <td className="px-6 py-4 text-center">
@@ -489,61 +485,68 @@ export default function InventoryPage() {
       {/* Add Form Modal */}
       {showForm && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-           <div className="w-full max-w-lg bg-card rounded-2xl sm:rounded-3xl border border-border shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-             <div className="px-6 py-5 border-b border-border bg-muted/10 flex justify-between items-center">
-               <h3 className="text-lg font-bold text-foreground capitalize">{editingItem ? 'Edit' : 'Add'} {tab === 'product' ? 'Product' : 'Service'}</h3>
-               <button onClick={() => { setShowForm(false); setEditingItem(null); }} className="w-8 h-8 rounded-full flex items-center justify-center bg-background border border-border text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"><X size={16} /></button>
-             </div>
-             <div className="p-6 max-h-[75vh] overflow-y-auto">
-               <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="w-full max-w-lg bg-card rounded-2xl sm:rounded-3xl border border-border shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="px-6 py-5 border-b border-border bg-muted/10 flex justify-between items-center">
+              <h3 className="text-lg font-bold text-foreground capitalize">{editingItem ? 'Edit' : 'Add'} {tab === 'product' ? 'Product' : 'Service'}</h3>
+              <button onClick={() => { setShowForm(false); setEditingItem(null); }} className="w-8 h-8 rounded-full flex items-center justify-center bg-background border border-border text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"><X size={16} /></button>
+            </div>
+            <div className="p-6 max-h-[75vh] overflow-y-auto">
+              <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
                   <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Item Name <span className="text-destructive">*</span></label>
                   <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Wireless Mouse"
                     className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all" required />
                 </div>
-                
+
                 <div>
-                  <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Product Image (Max 2MB)</label>
-                  <input type="file" accept="image/png, image/jpeg, image/jpg, image/webp, image/svg+xml" 
+                  <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Product Image (Max 350KB)</label>
+                  <input type="file" accept="image/png, image/jpeg, image/jpg, image/webp, image/svg+xml"
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
-                      if (file.size > 2 * 1024 * 1024) { toast.error('Image must be under 2MB.'); return; }
-                      
+                      if (file.size > 350000) {
+                        toast.error('Image size must not exceed 350KB.');
+                        e.target.value = '';
+                        return;
+                      }
+
                       const toastId = toast.loading('Uploading image...');
                       try {
                         const formData = new FormData();
                         formData.append('image', file);
                         formData.append('folder', 'product-images');
                         const csrfToken = document.cookie.split('; ').find(row => row.startsWith('XSRF-TOKEN='))?.split('=')[1] || '';
-                        
+
                         const response = await fetch('/api/upload-image', {
                           method: 'POST',
                           headers: { 'X-XSRF-TOKEN': decodeURIComponent(csrfToken), 'Accept': 'application/json' },
                           body: formData
                         });
-                        
-                        if (!response.ok) throw new Error('Upload failed');
+
+                        if (!response.ok) {
+                          const errData = await response.json().catch(() => ({}));
+                          throw new Error(errData.message || 'Upload failed');
+                        }
                         const { url } = await response.json();
                         setForm(f => ({ ...f, image_path: url }));
                         toast.success('Image uploaded', { id: toastId });
-                      } catch (err) {
-                        toast.error('Upload failed', { id: toastId });
+                      } catch (err: any) {
+                        toast.error(err?.message || 'Upload failed', { id: toastId });
                       }
                     }}
                     className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all file:mr-4 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20" />
-                    {form.image_path && (
-                      <div className="mt-2 relative inline-block">
-                        <img src={form.image_path} alt="Preview" className="w-16 h-16 object-cover rounded-md border border-border" />
-                        <button type="button" onClick={() => setForm(f => ({ ...f, image_path: '' }))} className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1"><X size={12} /></button>
-                      </div>
-                    )}
+                  {form.image_path && (
+                    <div className="mt-2 relative inline-block">
+                      <img src={form.image_path} alt="Preview" className="w-16 h-16 object-cover rounded-md border border-border" />
+                      <button type="button" onClick={() => setForm(f => ({ ...f, image_path: '' }))} className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1"><X size={12} /></button>
+                    </div>
+                  )}
                 </div>
-                
+
                 <div>
                   <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Category</label>
-                  <SearchableSelect 
-                    value={form.category} 
+                  <SearchableSelect
+                    value={form.category}
                     onChange={val => setForm(f => ({ ...f, category: val, sub_category_id: '' }))}
                     options={allCategoryNames}
                     placeholder="Select Category (Optional)"
@@ -559,12 +562,12 @@ export default function InventoryPage() {
                   if (!selectedCatObj) return null;
                   const availableSubcategories = storeCategories.filter(c => c.parent_id === selectedCatObj.id);
                   if (availableSubcategories.length === 0) return null;
-                  
+
                   return (
                     <div>
                       <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Sub-Category</label>
-                      <SearchableSelect 
-                        value={form.sub_category_id} 
+                      <SearchableSelect
+                        value={form.sub_category_id}
                         onChange={val => setForm(f => ({ ...f, sub_category_id: val }))}
                         options={availableSubcategories.map(sub => ({ value: sub.id, label: sub.name }))}
                         placeholder="Select Sub-Category (Optional)"
@@ -618,8 +621,8 @@ export default function InventoryPage() {
 
                 <div className="flex gap-3 pt-6 border-t border-border mt-6">
                   <button type="button" onClick={() => { setShowForm(false); setEditingItem(null); setForm({ name: '', category: '', sub_category_id: '', barcode: '', cost_price: '', sell_price: '', quantity: '', low_stock_threshold: '5', image_path: '' }); }} className="flex-1 py-3 rounded-xl bg-muted text-foreground text-sm font-bold hover:bg-accent transition-colors">Cancel</button>
-                  <button 
-                    type="submit" 
+                  <button
+                    type="submit"
                     disabled={isSubmitting}
                     className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold hover:opacity-90 transition-opacity shadow-sm capitalize disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
@@ -633,12 +636,12 @@ export default function InventoryPage() {
                     )}
                   </button>
                 </div>
-               </form>
-             </div>
-           </div>
+              </form>
+            </div>
+          </div>
         </div>
       )}
-      
+
       {showScanner && (
         <BarcodeScanner
           onScan={(code) => {
