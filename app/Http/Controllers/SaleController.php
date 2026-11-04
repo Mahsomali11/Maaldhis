@@ -66,26 +66,32 @@ class SaleController extends Controller
         // Check user access to this store
         $user = $request->user();
         if ($user) {
-            $isAdmin = DB::table('admin_roles')->where('user_id', $user->id)->where('is_active', true)->exists();
-            $isOwner = DB::table('stores')->where('id', $sale->store_id)->where('owner_user_id', $user->id)->exists();
-            $isStaff = DB::table('staff_accounts')->where('store_id', $sale->store_id)->where('user_id', $user->id)->where('is_active', true)->exists();
+            $access = \App\Support\PerformanceCache::getUserAccessContext($user->id, $user->email);
+            $isAdmin = $access['is_admin'];
+            $isOwner = in_array($sale->store_id, $access['owned_store_ids'] ?? [], true);
+            $isStaff = in_array($sale->store_id, $access['staff_store_ids'] ?? [], true);
 
             if (!$isAdmin && !$isOwner && !$isStaff) {
                 return response()->json(['error' => 'Unauthorized access to this store receipt'], 403);
             }
         }
 
-        // 4. Fetch line items
+        // 4. Fetch line items (preload missing item names in one query instead of N+1)
         $items = DB::table('sale_items')->where('sale_id', $sale->id)->get();
+        $missingItemIds = $items->filter(fn($it) => empty($it->item_name) && !empty($it->item_id))
+            ->pluck('item_id')
+            ->unique()
+            ->values();
+        $itemNamesById = $missingItemIds->isEmpty()
+            ? collect()
+            : DB::table('items')->whereIn('id', $missingItemIds)->pluck('name', 'id');
+
         $formattedItems = [];
 
         foreach ($items as $it) {
             $itemName = $it->item_name;
             if (empty($itemName) && !empty($it->item_id)) {
-                $prod = DB::table('items')->where('id', $it->item_id)->first();
-                if ($prod) {
-                    $itemName = $prod->name;
-                }
+                $itemName = $itemNamesById[$it->item_id] ?? null;
             }
 
             $qty = (float)($it->quantity ?? 1);

@@ -37,53 +37,50 @@ class HandleInertiaRequests extends Middleware
     {
         $user = $request->user();
         $role = null;
+        $admin_role = null;
         $assigned_store_id = null;
+        $initialStores = [];
 
         if ($user) {
-            $isOwner = \App\Models\Store::where('owner_user_id', $user->id)->exists();
-            if ($isOwner) {
-                $role = 'owner';
-            } else {
-                $staff = \App\Models\StaffAccount::where('user_id', $user->id)->orWhere('email', $user->email)->first();
-                if ($staff) {
-                    $role = $staff->role;
-                    $assigned_store_id = $staff->store_id;
+            $ctx = \App\Support\PerformanceCache::getUserAccessContext($user->id, $user->email ?? null);
+            $role = $ctx['role'];
+            $admin_role = $ctx['admin_role'];
+            $assigned_store_id = $ctx['assigned_store_id'];
+
+            if (!$ctx['is_admin']) {
+                $storeFields = [
+                    'id', 'owner_user_id', 'store_name', 'store_code', 'location', 'phone',
+                    'currency', 'logo_url', 'show_logo_on_receipt', 'receipt_thank_you_message',
+                    'receipt_footer_text', 'receipt_template', 'primary_color', 'secondary_color',
+                    'country', 'tax_enabled', 'tax_rate', 'low_stock_threshold', 'created_at',
+                ];
+                try {
+                    if ($ctx['is_owner']) {
+                        $initialStores = \App\Models\Store::select($storeFields)
+                            ->where('owner_user_id', $user->id)
+                            ->get();
+                    } elseif ($assigned_store_id) {
+                        $initialStores = \App\Models\Store::select($storeFields)
+                            ->where('id', $assigned_store_id)
+                            ->get();
+                    }
+                } catch (\Throwable $e) {
                 }
             }
         }
 
-        $systemBranding = [
-            'system_name' => config('app.name', 'Maaldhis'),
-            'system_logo' => '',
-            'system_favicon' => '',
-        ];
-
-        try {
-            $settings = \App\Models\SystemSetting::whereIn('setting_key', [
-                'platform_name', 'system_name',
-                'platform_logo', 'system_logo',
-                'platform_favicon', 'system_favicon',
-            ])->pluck('setting_value', 'setting_key');
-
-            if (!empty($settings['system_name'])) {
-                $systemBranding['system_name'] = $settings['system_name'];
-            } elseif (!empty($settings['platform_name'])) {
-                $systemBranding['system_name'] = $settings['platform_name'];
-            }
-
-            $systemBranding['system_logo'] = $settings['system_logo'] ?? $settings['platform_logo'] ?? '';
-            $systemBranding['system_favicon'] = $settings['system_favicon'] ?? $settings['platform_favicon'] ?? '';
-        } catch (\Throwable $e) {
-            // Fallback to defaults if table is unavailable
-        }
+        $systemBranding = \App\Support\PerformanceCache::getSystemBranding();
 
         return [
             ...parent::share($request),
             'systemBranding' => $systemBranding,
+            'initialStores' => $initialStores,
             'auth' => [
-                'user' => $user ? array_merge($user->toArray(), [
+                'user' => $user ? array_merge($user->only(['id', 'name', 'full_name', 'email', 'phone', 'created_at']), [
+                    'full_name' => $user->full_name ?? $user->name,
                     'role' => $role,
-                    'assigned_store_id' => $assigned_store_id
+                    'admin_role' => $admin_role,
+                    'assigned_store_id' => $assigned_store_id,
                 ]) : null,
             ],
             'flash' => [

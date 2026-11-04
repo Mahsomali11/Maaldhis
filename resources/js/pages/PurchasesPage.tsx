@@ -1,10 +1,11 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import { useApp } from '@/context/AppContext';
 import { api as apiClient } from '@/api';
 import PageHeader from '@/components/PageHeader';
 import { Plus, X, Package, Search, PlusCircle, Trash2, CheckCircle2, Clock, FileText, ScanBarcode } from 'lucide-react';
-import BarcodeScanner from '@/components/BarcodeScanner';
 import { SearchableSelect } from '@/components/ui/searchable-select';
+
+const BarcodeScanner = lazy(() => import('@/components/BarcodeScanner'));
 export default function PurchasesPage() {
   const { purchases, purchaseItems: globalPurchaseItems, suppliers, items, categories, currentStore, formatCurrency, recordPurchase, refreshData } = useApp();
   const [showForm, setShowForm] = useState(false);
@@ -40,8 +41,8 @@ export default function PurchasesPage() {
   const storeItems = useMemo(() => items.filter(i => i.store_id === currentStore?.id && i.type === 'product' && i.is_active), [items, currentStore]);
   const storeCategories = useMemo(() => categories.filter(c => c.store_id === currentStore?.id), [categories, currentStore]);
   const allCategoryNames = useMemo(() => {
-      const existingItemCategories = Array.from(new Set(storeItems.map(i => i.category).filter(Boolean)));
-      return Array.from(new Set([...storeCategories.filter(c => !c.parent_id).map(c => c.name), ...existingItemCategories]));
+    const existingItemCategories = Array.from(new Set(storeItems.map(i => i.category).filter(Boolean)));
+    return Array.from(new Set([...storeCategories.filter(c => !c.parent_id).map(c => c.name), ...existingItemCategories]));
   }, [storeCategories, storeItems]);
 
   useEffect(() => {
@@ -64,7 +65,7 @@ export default function PurchasesPage() {
     return purchases.filter(p => {
       const sup = suppliers.find(s => s.id === p.supplier_id);
       const matchesSearch = p.reference_no.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                            (sup && sup.name.toLowerCase().includes(searchTerm.toLowerCase()));
+        (sup && sup.name.toLowerCase().includes(searchTerm.toLowerCase()));
       return matchesSearch;
     });
   }, [purchases, searchTerm, suppliers]);
@@ -85,8 +86,8 @@ export default function PurchasesPage() {
     const newItems = [...purchaseItems];
     if (field === 'item_id') {
       const selectedItem = items.find(i => i.id === value);
-      newItems[index] = { 
-        ...newItems[index], 
+      newItems[index] = {
+        ...newItems[index],
         item_id: value,
         cost_price: selectedItem ? selectedItem.cost_price : 0,
         sell_price: selectedItem ? selectedItem.sell_price : 0
@@ -101,58 +102,58 @@ export default function PurchasesPage() {
     e.preventDefault();
     if (!currentStore || isSubmittingProduct) return;
     setIsSubmittingProduct(true);
-    
+
     try {
-        const { data, error } = await apiClient.from('items').insert({
-            store_id: currentStore.id,
-            name: quickAddName,
-            type: 'product',
-            category: quickAddCategory || 'General',
-            sub_category_id: quickAddSubCategory || null,
-            barcode: quickAddBarcode,
-            low_stock_threshold: Number(quickAddLowStock) || 5,
-            cost_price: Number(quickAddCostPrice) || 0,
-            sell_price: Number(quickAddSellingPrice) || 0,
-            quantity: 0,
-            is_active: true
+      const { data, error } = await apiClient.from('items').insert({
+        store_id: currentStore.id,
+        name: quickAddName,
+        type: 'product',
+        category: quickAddCategory || 'General',
+        sub_category_id: quickAddSubCategory || null,
+        barcode: quickAddBarcode,
+        low_stock_threshold: Number(quickAddLowStock) || 5,
+        cost_price: Number(quickAddCostPrice) || 0,
+        sell_price: Number(quickAddSellingPrice) || 0,
+        quantity: 0,
+        is_active: true
+      });
+
+      if (error) throw new Error(error.message || 'Failed to add product');
+
+      // Ensure data exists
+      const newItem = Array.isArray(data) ? data[0] : data;
+
+      // Add to global items temporarily so dropdown finds it immediately
+      if (newItem) {
+        items.push(newItem);
+
+        // Add to purchase line items
+        const newItems = [...purchaseItems];
+        newItems.push({
+          item_id: newItem.id,
+          quantity: Number(quickAddInitialQuantity) || 1,
+          cost_price: Number(quickAddCostPrice) || 0,
+          sell_price: Number(quickAddSellingPrice) || 0
         });
+        setPurchaseItems(newItems);
+      }
 
-        if (error) throw new Error(error.message || 'Failed to add product');
-        
-        // Ensure data exists
-        const newItem = Array.isArray(data) ? data[0] : data;
-        
-        // Add to global items temporarily so dropdown finds it immediately
-        if (newItem) {
-           items.push(newItem);
-           
-           // Add to purchase line items
-           const newItems = [...purchaseItems];
-           newItems.push({
-               item_id: newItem.id,
-               quantity: Number(quickAddInitialQuantity) || 1,
-               cost_price: Number(quickAddCostPrice) || 0,
-               sell_price: Number(quickAddSellingPrice) || 0
-           });
-           setPurchaseItems(newItems);
-        }
+      // trigger global data refresh in background
+      if (refreshData) refreshData();
 
-        // trigger global data refresh in background
-        if (refreshData) refreshData();
-        
-        setShowQuickAddProduct(false);
-        setQuickAddName('');
-        setQuickAddCategory('');
-        setQuickAddSubCategory('');
-        setQuickAddBarcode('');
-        setQuickAddCostPrice('');
-        setQuickAddSellingPrice('');
-        setQuickAddInitialQuantity('');
-        setQuickAddLowStock('5');
+      setShowQuickAddProduct(false);
+      setQuickAddName('');
+      setQuickAddCategory('');
+      setQuickAddSubCategory('');
+      setQuickAddBarcode('');
+      setQuickAddCostPrice('');
+      setQuickAddSellingPrice('');
+      setQuickAddInitialQuantity('');
+      setQuickAddLowStock('5');
     } catch (err: any) {
-        alert(err.message || 'Error saving product');
+      alert(err.message || 'Error saving product');
     } finally {
-        setIsSubmittingProduct(false);
+      setIsSubmittingProduct(false);
     }
   };
 
@@ -185,7 +186,7 @@ export default function PurchasesPage() {
         notes
       });
       setShowForm(false);
-      
+
       // Reset form
       setSupplierId('');
       setDate(new Date().toISOString().split('T')[0]);
@@ -205,10 +206,10 @@ export default function PurchasesPage() {
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] dark:bg-background pb-12">
-      <PageHeader 
-        title="Purchases" 
+      <PageHeader
+        title="Purchases"
         rightAction={
-          <button 
+          <button
             onClick={() => setShowForm(true)}
             className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-bold hover:bg-primary/90 transition-all shadow-sm"
           >
@@ -217,35 +218,35 @@ export default function PurchasesPage() {
           </button>
         }
       />
-      
+
       <div className="p-4 sm:p-6 md:px-8 space-y-6 max-w-7xl mx-auto w-full">
         {/* Search Bar */}
         <div className="flex items-center bg-card rounded-2xl border border-border px-4 py-2 shadow-sm max-w-md">
-            <Search size={18} className="text-muted-foreground mr-3" />
-            <input 
-              type="text" 
-              placeholder="Search by reference or supplier..." 
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="bg-transparent border-none outline-none text-sm w-full h-10 text-foreground"
-            />
+          <Search size={18} className="text-muted-foreground mr-3" />
+          <input
+            type="text"
+            placeholder="Search by reference or supplier..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="bg-transparent border-none outline-none text-sm w-full h-10 text-foreground"
+          />
         </div>
 
         {/* Purchases Table */}
         {filteredPurchases.length === 0 ? (
-           <div className="bg-card rounded-3xl border border-border p-16 text-center shadow-sm flex flex-col items-center">
-             <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
-               <Package size={32} className="text-primary" />
-             </div>
-             <h3 className="text-xl font-bold text-foreground mb-2">No purchases found</h3>
-             <p className="text-muted-foreground text-sm max-w-sm">Record new incoming stock from your suppliers.</p>
-             <button 
-                onClick={() => setShowForm(true)}
-                className="mt-6 px-6 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-bold shadow-sm"
-              >
-                Add Purchase
-              </button>
-           </div>
+          <div className="bg-card rounded-3xl border border-border p-16 text-center shadow-sm flex flex-col items-center">
+            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+              <Package size={32} className="text-primary" />
+            </div>
+            <h3 className="text-xl font-bold text-foreground mb-2">No purchases found</h3>
+            <p className="text-muted-foreground text-sm max-w-sm">Record new incoming stock from your suppliers.</p>
+            <button
+              onClick={() => setShowForm(true)}
+              className="mt-6 px-6 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-bold shadow-sm"
+            >
+              Add Purchase
+            </button>
+          </div>
         ) : (
           <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden overflow-x-auto">
             <table className="w-full text-left border-collapse min-w-[800px]">
@@ -263,31 +264,31 @@ export default function PurchasesPage() {
                 {filteredPurchases.map(purchase => {
                   const sup = suppliers.find(s => s.id === purchase.supplier_id);
                   return (
-                    <tr 
-                      key={purchase.id} 
+                    <tr
+                      key={purchase.id}
                       className="hover:bg-muted/30 transition-colors group cursor-pointer"
                       onClick={() => setSelectedPurchase(purchase)}
                     >
                       <td className="px-6 py-4">
-                         <span className="font-bold text-foreground text-sm">{purchase.reference_no}</span>
+                        <span className="font-bold text-foreground text-sm">{purchase.reference_no}</span>
                       </td>
                       <td className="px-6 py-4 text-sm font-medium text-muted-foreground">
                         {new Date(purchase.date).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 text-sm font-medium text-foreground">
-                         {sup?.name || 'Unknown Supplier'}
+                        {sup?.name || 'Unknown Supplier'}
                       </td>
                       <td className="px-6 py-4 text-sm font-medium">
                         {(purchase.status === 'completed' || purchase.status === 'Completed') ? (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-xs font-bold">
-                               <CheckCircle2 size={12} />
-                               Completed
-                            </span>
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-500 text-xs font-bold">
+                            <CheckCircle2 size={12} />
+                            Completed
+                          </span>
                         ) : (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-500 text-xs font-bold">
-                               <Clock size={12} />
-                               Pending
-                            </span>
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-500 text-xs font-bold">
+                            <Clock size={12} />
+                            Pending
+                          </span>
                         )}
                       </td>
                       <td className="px-6 py-4 text-sm font-bold text-foreground text-right">
@@ -318,13 +319,13 @@ export default function PurchasesPage() {
                 <p className="text-sm font-mono text-muted-foreground mt-1">Ref: {selectedPurchase.reference_no}</p>
               </div>
               <div className="flex items-center gap-2">
-                <button 
+                <button
                   onClick={() => window.print()}
                   className="px-4 py-2 rounded-lg bg-primary/10 text-primary text-sm font-bold hover:bg-primary/20 transition-colors"
                 >
                   Print
                 </button>
-                <button 
+                <button
                   onClick={() => setSelectedPurchase(null)}
                   className="w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                 >
@@ -332,9 +333,9 @@ export default function PurchasesPage() {
                 </button>
               </div>
             </div>
-            
+
             <div className="flex-1 overflow-y-auto p-6 space-y-6">
-              
+
               {/* Summary Info */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 rounded-2xl bg-muted/30 border border-border">
                 <div>
@@ -353,13 +354,13 @@ export default function PurchasesPage() {
                   <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Status</p>
                   <div className="font-medium text-sm text-foreground">
                     {(selectedPurchase.status === 'completed' || selectedPurchase.status === 'Completed') ? (
-                        <span className="inline-flex items-center gap-1.5 text-emerald-500 font-bold">
-                           <CheckCircle2 size={12} /> Completed
-                        </span>
+                      <span className="inline-flex items-center gap-1.5 text-emerald-500 font-bold">
+                        <CheckCircle2 size={12} /> Completed
+                      </span>
                     ) : (
-                        <span className="inline-flex items-center gap-1.5 text-amber-500 font-bold">
-                           <Clock size={12} /> Pending
-                        </span>
+                      <span className="inline-flex items-center gap-1.5 text-amber-500 font-bold">
+                        <Clock size={12} /> Pending
+                      </span>
                     )}
                   </div>
                 </div>
@@ -437,266 +438,266 @@ export default function PurchasesPage() {
           <div className="w-full max-w-4xl max-h-[90vh] bg-card rounded-2xl sm:rounded-3xl border border-border shadow-2xl flex flex-col animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center px-6 py-5 border-b border-border bg-muted/10 shrink-0">
               <h3 className="text-xl font-bold text-foreground">Record Purchase</h3>
-              <button 
+              <button
                 onClick={() => setShowForm(false)}
                 className="w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
               >
                 <X size={16} />
               </button>
             </div>
-            
+
             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6">
-                
-                {/* Header Information */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div>
-                        <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Supplier <span className="text-destructive">*</span></label>
-                        <SearchableSelect 
-                            value={supplierId} 
-                            onChange={setSupplierId}
-                            options={suppliers.map(s => ({ value: s.id, label: s.name }))}
-                            placeholder="Select Supplier"
-                            searchPlaceholder="Search supplier name..."
-                            required
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Date <span className="text-destructive">*</span></label>
-                        <input 
-                            type="date" 
-                            value={date} 
-                            onChange={e => setDate(e.target.value)} 
-                            className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm" 
-                            required
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Status <span className="text-destructive">*</span></label>
-                        <select 
-                            value={status} 
-                            onChange={e => setStatus(e.target.value as any)} 
-                            className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm appearance-none" 
-                            required
-                        >
-                            <option value="pending">Pending</option>
-                            <option value="completed">Completed (Updates Stock)</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Notes</label>
-                        <input 
-                            type="text" 
-                            value={notes} 
-                            onChange={e => setNotes(e.target.value)} 
-                            placeholder="Optional notes"
-                            className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm" 
-                        />
-                    </div>
+
+              {/* Header Information */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Supplier <span className="text-destructive">*</span></label>
+                  <SearchableSelect
+                    value={supplierId}
+                    onChange={setSupplierId}
+                    options={suppliers.map(s => ({ value: s.id, label: s.name }))}
+                    placeholder="Select Supplier"
+                    searchPlaceholder="Search supplier name..."
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Date <span className="text-destructive">*</span></label>
+                  <input
+                    type="date"
+                    value={date}
+                    onChange={e => setDate(e.target.value)}
+                    className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Status <span className="text-destructive">*</span></label>
+                  <select
+                    value={status}
+                    onChange={e => setStatus(e.target.value as any)}
+                    className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm appearance-none"
+                    required
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="completed">Completed (Updates Stock)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Notes</label>
+                  <input
+                    type="text"
+                    value={notes}
+                    onChange={e => setNotes(e.target.value)}
+                    placeholder="Optional notes"
+                    className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Line Items */}
+              <div className="bg-muted/30 rounded-2xl p-4 border border-border">
+                <div className="flex justify-between items-center mb-4">
+                  <h4 className="font-bold text-foreground">Purchase Items <span className="text-destructive">*</span></h4>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQuickAddName('');
+                        setQuickAddCategory('');
+                        setQuickAddCostPrice('');
+                        setQuickAddSellingPrice('');
+                        setQuickAddInitialQuantity('');
+                        setShowQuickAddProduct(true);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 text-xs font-bold hover:bg-emerald-500/20 transition-colors"
+                    >
+                      <Plus size={14} /> Quick Add Product
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleAddItem}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-colors"
+                    >
+                      <PlusCircle size={14} /> Add Item Row
+                    </button>
+                  </div>
                 </div>
 
-                {/* Line Items */}
-                <div className="bg-muted/30 rounded-2xl p-4 border border-border">
-                    <div className="flex justify-between items-center mb-4">
-                        <h4 className="font-bold text-foreground">Purchase Items <span className="text-destructive">*</span></h4>
-                        <div className="flex items-center gap-2">
-                            <button 
-                                type="button" 
-                                onClick={() => {
-                                    setQuickAddName('');
-                                    setQuickAddCategory('');
-                                    setQuickAddCostPrice('');
-                                    setQuickAddSellingPrice('');
-                                    setQuickAddInitialQuantity('');
-                                    setShowQuickAddProduct(true);
-                                }}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 text-xs font-bold hover:bg-emerald-500/20 transition-colors"
-                            >
-                                <Plus size={14} /> Quick Add Product
-                            </button>
-                            <button 
-                                type="button" 
-                                onClick={handleAddItem}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-colors"
-                            >
-                                <PlusCircle size={14} /> Add Item Row
-                            </button>
+                <div className="space-y-3">
+                  {purchaseItems.map((item, index) => (
+                    <div key={index} className="flex flex-wrap sm:flex-nowrap items-center gap-3 bg-background p-3 rounded-xl border border-border shadow-sm">
+                      <div className="flex-1 min-w-[200px]">
+                        <SearchableSelect
+                          value={item.item_id}
+                          onChange={val => handleItemChange(index, 'item_id', val)}
+                          options={items.filter(i => i.type === 'product').map(i => ({
+                            value: i.id,
+                            label: i.name,
+                            subLabel: `Stock: ${i.quantity}`,
+                            badge: i.barcode ? `Barcode: ${i.barcode}` : undefined
+                          }))}
+                          placeholder="Select Inventory Item"
+                          searchPlaceholder="Search item name or barcode..."
+                          triggerClassName="h-10 text-xs sm:text-sm rounded-lg"
+                          required
+                        />
+                      </div>
+                      <div className="w-24 shrink-0">
+                        <input
+                          type="number"
+                          placeholder="Qty"
+                          min="0.01"
+                          step="0.01"
+                          value={item.quantity || ''}
+                          onChange={e => handleItemChange(index, 'quantity', Number(e.target.value))}
+                          className="w-full px-3 py-2 h-10 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                          required
+                        />
+                      </div>
+                      <div className="w-32 shrink-0">
+                        <input
+                          type="number"
+                          placeholder="Cost Price"
+                          min="0"
+                          step="0.01"
+                          value={item.cost_price === 0 ? '' : item.cost_price}
+                          onChange={e => handleItemChange(index, 'cost_price', Number(e.target.value))}
+                          className="w-full px-3 py-2 h-10 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                          required
+                        />
+                      </div>
+                      <div className="w-32 shrink-0">
+                        <input
+                          type="number"
+                          placeholder="Sell Price"
+                          min="0"
+                          step="0.01"
+                          value={item.sell_price === 0 ? '' : item.sell_price}
+                          onChange={e => handleItemChange(index, 'sell_price', Number(e.target.value))}
+                          className="w-full px-3 py-2 h-10 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                      </div>
+                      <div className="w-24 shrink-0 text-right font-bold text-foreground pr-2">
+                        {formatCurrency(item.quantity * item.cost_price)}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveItem(index)}
+                        className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                  {purchaseItems.length === 0 && (
+                    <div className="text-center py-6 text-sm font-medium text-muted-foreground border-2 border-dashed border-border rounded-xl">
+                      No items added yet. Click "Add Item" to begin.
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-4 flex justify-end text-lg font-black text-foreground pt-4 border-t border-border">
+                  Total: {formatCurrency(totalPurchaseAmount)}
+                </div>
+              </div>
+
+              {/* Financial Tracking */}
+              <div className="bg-primary/5 rounded-2xl p-5 border border-primary/10">
+                <h4 className="font-bold text-primary mb-4 flex items-center gap-2">
+                  <FileText size={16} /> Financial Recording
+                </h4>
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="paymentStatus"
+                        value="paid"
+                        checked={paidAmount !== '0' && paidAmount !== ''}
+                        onChange={() => setPaidAmount(String(totalPurchaseAmount))}
+                        className="w-4 h-4 text-primary focus:ring-primary"
+                      />
+                      <span className="text-sm font-bold text-foreground">Paid (Now)</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="paymentStatus"
+                        value="credit"
+                        checked={paidAmount === '0' || paidAmount === ''}
+                        onChange={() => {
+                          setPaidAmount('0');
+                          setPaymentAccountId('');
+                        }}
+                        className="w-4 h-4 text-primary focus:ring-primary"
+                      />
+                      <span className="text-sm font-bold text-foreground">Credit / Pay Later</span>
+                    </label>
+                  </div>
+
+                  {(paidAmount !== '0' && paidAmount !== '') && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+                      <div>
+                        <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Amount Paid Now</label>
+                        <input
+                          type="number"
+                          value={paidAmount}
+                          onChange={e => setPaidAmount(e.target.value)}
+                          placeholder="0.00"
+                          min="0"
+                          step="0.01"
+                          max={totalPurchaseAmount}
+                          className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm"
+                        />
+                      </div>
+                      {Number(paidAmount) > 0 && paymentAccounts.length > 0 && (
+                        <div>
+                          <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Payment Account</label>
+                          <SearchableSelect
+                            value={paymentAccountId}
+                            onChange={setPaymentAccountId}
+                            options={paymentAccounts.map(pa => ({
+                              value: pa.id,
+                              label: `${pa.account_name} (${pa.account_type})`
+                            }))}
+                            placeholder="Select Account"
+                            searchPlaceholder="Search payment account..."
+                            required
+                          />
                         </div>
+                      )}
                     </div>
-                    
-                    <div className="space-y-3">
-                        {purchaseItems.map((item, index) => (
-                            <div key={index} className="flex flex-wrap sm:flex-nowrap items-center gap-3 bg-background p-3 rounded-xl border border-border shadow-sm">
-                                <div className="flex-1 min-w-[200px]">
-                                    <SearchableSelect 
-                                        value={item.item_id}
-                                        onChange={val => handleItemChange(index, 'item_id', val)}
-                                        options={items.filter(i => i.type === 'product').map(i => ({
-                                            value: i.id,
-                                            label: i.name,
-                                            subLabel: `Stock: ${i.quantity}`,
-                                            badge: i.barcode ? `Barcode: ${i.barcode}` : undefined
-                                        }))}
-                                        placeholder="Select Inventory Item"
-                                        searchPlaceholder="Search item name or barcode..."
-                                        triggerClassName="h-10 text-xs sm:text-sm rounded-lg"
-                                        required
-                                    />
-                                </div>
-                                <div className="w-24 shrink-0">
-                                    <input 
-                                        type="number"
-                                        placeholder="Qty"
-                                        min="0.01"
-                                        step="0.01"
-                                        value={item.quantity || ''}
-                                        onChange={e => handleItemChange(index, 'quantity', Number(e.target.value))}
-                                        className="w-full px-3 py-2 h-10 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-                                        required
-                                    />
-                                </div>
-                                <div className="w-32 shrink-0">
-                                    <input 
-                                        type="number"
-                                        placeholder="Cost Price"
-                                        min="0"
-                                        step="0.01"
-                                        value={item.cost_price === 0 ? '' : item.cost_price}
-                                        onChange={e => handleItemChange(index, 'cost_price', Number(e.target.value))}
-                                        className="w-full px-3 py-2 h-10 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-                                        required
-                                    />
-                                </div>
-                                <div className="w-32 shrink-0">
-                                    <input 
-                                        type="number"
-                                        placeholder="Sell Price"
-                                        min="0"
-                                        step="0.01"
-                                        value={item.sell_price === 0 ? '' : item.sell_price}
-                                        onChange={e => handleItemChange(index, 'sell_price', Number(e.target.value))}
-                                        className="w-full px-3 py-2 h-10 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-                                    />
-                                </div>
-                                <div className="w-24 shrink-0 text-right font-bold text-foreground pr-2">
-                                    {formatCurrency(item.quantity * item.cost_price)}
-                                </div>
-                                <button 
-                                    type="button" 
-                                    onClick={() => handleRemoveItem(index)}
-                                    className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
-                                >
-                                    <Trash2 size={16} />
-                                </button>
-                            </div>
-                        ))}
-                        {purchaseItems.length === 0 && (
-                            <div className="text-center py-6 text-sm font-medium text-muted-foreground border-2 border-dashed border-border rounded-xl">
-                                No items added yet. Click "Add Item" to begin.
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="mt-4 flex justify-end text-lg font-black text-foreground pt-4 border-t border-border">
-                        Total: {formatCurrency(totalPurchaseAmount)}
-                    </div>
+                  )}
                 </div>
-
-                {/* Financial Tracking */}
-                <div className="bg-primary/5 rounded-2xl p-5 border border-primary/10">
-                    <h4 className="font-bold text-primary mb-4 flex items-center gap-2">
-                        <FileText size={16} /> Financial Recording
-                    </h4>
-                    <div className="grid grid-cols-1 gap-4">
-                        <div className="flex gap-4">
-                            <label className="flex items-center gap-2 cursor-pointer">
-                                <input 
-                                    type="radio" 
-                                    name="paymentStatus" 
-                                    value="paid"
-                                    checked={paidAmount !== '0' && paidAmount !== ''}
-                                    onChange={() => setPaidAmount(String(totalPurchaseAmount))}
-                                    className="w-4 h-4 text-primary focus:ring-primary"
-                                />
-                                <span className="text-sm font-bold text-foreground">Paid (Now)</span>
-                            </label>
-                            <label className="flex items-center gap-2 cursor-pointer">
-                                <input 
-                                    type="radio" 
-                                    name="paymentStatus" 
-                                    value="credit"
-                                    checked={paidAmount === '0' || paidAmount === ''}
-                                    onChange={() => {
-                                        setPaidAmount('0');
-                                        setPaymentAccountId('');
-                                    }}
-                                    className="w-4 h-4 text-primary focus:ring-primary"
-                                />
-                                <span className="text-sm font-bold text-foreground">Credit / Pay Later</span>
-                            </label>
-                        </div>
-
-                        {(paidAmount !== '0' && paidAmount !== '') && (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-                                <div>
-                                    <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Amount Paid Now</label>
-                                    <input 
-                                        type="number" 
-                                        value={paidAmount} 
-                                        onChange={e => setPaidAmount(e.target.value)} 
-                                        placeholder="0.00"
-                                        min="0"
-                                        step="0.01"
-                                        max={totalPurchaseAmount}
-                                        className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm" 
-                                    />
-                                </div>
-                                {Number(paidAmount) > 0 && paymentAccounts.length > 0 && (
-                                    <div>
-                                        <label className="block text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Payment Account</label>
-                                        <SearchableSelect 
-                                            value={paymentAccountId} 
-                                            onChange={setPaymentAccountId}
-                                            options={paymentAccounts.map(pa => ({
-                                                value: pa.id,
-                                                label: `${pa.account_name} (${pa.account_type})`
-                                            }))}
-                                            placeholder="Select Account"
-                                            searchPlaceholder="Search payment account..."
-                                            required
-                                        />
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                </div>
+              </div>
 
             </form>
 
             <div className="flex gap-3 px-6 py-5 border-t border-border bg-muted/10 shrink-0">
-                <button 
-                  type="button" 
-                  onClick={() => setShowForm(false)} 
-                  className="flex-1 py-3 rounded-xl bg-background border border-border text-foreground text-sm font-bold hover:bg-accent transition-colors"
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="button" 
-                  data-submit-guard="true"
-                  onClick={handleSubmit}
-                  disabled={isSubmitting}
-                  className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                      <span>Processing...</span>
-                    </>
-                  ) : (
-                    'Process Purchase'
-                  )}
-                </button>
+              <button
+                type="button"
+                onClick={() => setShowForm(false)}
+                className="flex-1 py-3 rounded-xl bg-background border border-border text-foreground text-sm font-bold hover:bg-accent transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                data-submit-guard="true"
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                    <span>Processing...</span>
+                  </>
+                ) : (
+                  'Process Purchase'
+                )}
+              </button>
             </div>
           </div>
         </div>
@@ -708,7 +709,7 @@ export default function PurchasesPage() {
           <div className="w-full max-w-md bg-card rounded-2xl sm:rounded-3xl border border-border shadow-2xl flex flex-col animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center px-6 py-5 border-b border-border bg-muted/10 shrink-0">
               <h3 className="text-xl font-bold text-foreground">Quick Add Product</h3>
-              <button 
+              <button
                 onClick={() => setShowQuickAddProduct(false)}
                 className="w-8 h-8 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
               >
@@ -718,20 +719,20 @@ export default function PurchasesPage() {
             <form onSubmit={handleQuickAddProduct} className="p-6 space-y-4">
               <div>
                 <label className="block text-xs font-bold text-muted-foreground capitalize tracking-wider mb-2">Item Name <span className="text-destructive">*</span></label>
-                <input 
-                    type="text" 
-                    value={quickAddName} 
-                    onChange={e => setQuickAddName(e.target.value)} 
-                    placeholder="Enter item name"
-                    className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all" 
-                    required
+                <input
+                  type="text"
+                  value={quickAddName}
+                  onChange={e => setQuickAddName(e.target.value)}
+                  placeholder="Enter item name"
+                  className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all"
+                  required
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-muted-foreground capitalize tracking-wider mb-2">Category</label>
-                <SearchableSelect 
-                  value={quickAddCategory} 
+                <SearchableSelect
+                  value={quickAddCategory}
                   onChange={val => { setQuickAddCategory(val); setQuickAddSubCategory(''); }}
                   options={allCategoryNames}
                   placeholder="Select Category (Optional)"
@@ -747,12 +748,12 @@ export default function PurchasesPage() {
                 if (!selectedCatObj) return null;
                 const availableSubcategories = storeCategories.filter(c => c.parent_id === selectedCatObj.id);
                 if (availableSubcategories.length === 0) return null;
-                
+
                 return (
                   <div>
                     <label className="block text-xs font-bold text-muted-foreground capitalize tracking-wider mb-2">Sub-Category</label>
-                    <SearchableSelect 
-                      value={quickAddSubCategory} 
+                    <SearchableSelect
+                      value={quickAddSubCategory}
                       onChange={setQuickAddSubCategory}
                       options={availableSubcategories.map(sub => ({ value: sub.id, label: sub.name }))}
                       placeholder="Select Sub-Category (Optional)"
@@ -767,16 +768,16 @@ export default function PurchasesPage() {
               <div>
                 <label className="block text-xs font-bold text-muted-foreground capitalize tracking-wider mb-2">Barcode</label>
                 <div className="relative flex gap-2">
-                  <input 
-                      value={quickAddBarcode} 
-                      onChange={e => setQuickAddBarcode(e.target.value)} 
-                      placeholder="Optional barcode"
-                      className="flex-1 px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all" 
+                  <input
+                    value={quickAddBarcode}
+                    onChange={e => setQuickAddBarcode(e.target.value)}
+                    placeholder="Optional barcode"
+                    className="flex-1 px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all"
                   />
-                  <button 
-                      type="button" 
-                      onClick={() => setShowScanner(true)}
-                      className="w-11 h-11 rounded-xl border border-border bg-background shadow-sm flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+                  <button
+                    type="button"
+                    onClick={() => setShowScanner(true)}
+                    className="w-11 h-11 rounded-xl border border-border bg-background shadow-sm flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                   >
                     <ScanBarcode size={18} />
                   </button>
@@ -784,84 +785,86 @@ export default function PurchasesPage() {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-muted-foreground capitalize tracking-wider mb-2">Cost Price <span className="text-destructive">*</span></label>
-                    <input 
-                        type="number" 
-                        step="0.01"
-                        value={quickAddCostPrice} 
-                        onChange={e => setQuickAddCostPrice(e.target.value)} 
-                        placeholder="0.00"
-                        className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all" 
-                        required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-muted-foreground capitalize tracking-wider mb-2">Sell Price <span className="text-destructive">*</span></label>
-                    <input 
-                        type="number" 
-                        step="0.01"
-                        value={quickAddSellingPrice} 
-                        onChange={e => setQuickAddSellingPrice(e.target.value)} 
-                        placeholder="0.00"
-                        className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all" 
-                        required
-                    />
-                  </div>
+                <div>
+                  <label className="block text-xs font-bold text-muted-foreground capitalize tracking-wider mb-2">Cost Price <span className="text-destructive">*</span></label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={quickAddCostPrice}
+                    onChange={e => setQuickAddCostPrice(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-muted-foreground capitalize tracking-wider mb-2">Sell Price <span className="text-destructive">*</span></label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={quickAddSellingPrice}
+                    onChange={e => setQuickAddSellingPrice(e.target.value)}
+                    placeholder="0.00"
+                    className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all"
+                    required
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-muted-foreground capitalize tracking-wider mb-2">Initial Quantity <span className="text-destructive">*</span></label>
-                    <input 
-                        type="number" 
-                        value={quickAddInitialQuantity} 
-                        onChange={e => setQuickAddInitialQuantity(e.target.value)} 
-                        placeholder="0"
-                        className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all" 
-                        required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-muted-foreground capitalize tracking-wider mb-2">Low Stock Alert</label>
-                    <input 
-                        type="number" 
-                        value={quickAddLowStock} 
-                        onChange={e => setQuickAddLowStock(e.target.value)} 
-                        placeholder="5"
-                        className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all" 
-                    />
-                  </div>
+                <div>
+                  <label className="block text-xs font-bold text-muted-foreground capitalize tracking-wider mb-2">Initial Quantity <span className="text-destructive">*</span></label>
+                  <input
+                    type="number"
+                    value={quickAddInitialQuantity}
+                    onChange={e => setQuickAddInitialQuantity(e.target.value)}
+                    placeholder="0"
+                    className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-muted-foreground capitalize tracking-wider mb-2">Low Stock Alert</label>
+                  <input
+                    type="number"
+                    value={quickAddLowStock}
+                    onChange={e => setQuickAddLowStock(e.target.value)}
+                    placeholder="5"
+                    className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all"
+                  />
+                </div>
               </div>
               <div className="pt-4 flex gap-3">
-                 <button 
-                   type="button" 
-                   onClick={() => setShowQuickAddProduct(false)} 
-                   className="flex-1 py-3 rounded-xl bg-background border border-border text-foreground text-sm font-bold hover:bg-accent transition-colors"
-                 >
-                   Cancel
-                 </button>
-                 <button 
-                   type="submit" 
-                   disabled={isSubmittingProduct}
-                   className="flex-1 py-3 rounded-xl bg-emerald-600 text-white text-sm font-bold shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50"
-                 >
-                   {isSubmittingProduct ? 'Saving...' : 'Save & Select'}
-                 </button>
+                <button
+                  type="button"
+                  onClick={() => setShowQuickAddProduct(false)}
+                  className="flex-1 py-3 rounded-xl bg-background border border-border text-foreground text-sm font-bold hover:bg-accent transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingProduct}
+                  className="flex-1 py-3 rounded-xl bg-emerald-600 text-white text-sm font-bold shadow-sm hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  {isSubmittingProduct ? 'Saving...' : 'Save & Select'}
+                </button>
               </div>
             </form>
           </div>
         </div>
       )}
-      
+
       {showScanner && (
-        <BarcodeScanner
-          onScan={(code) => {
-            setQuickAddBarcode(code);
-            setShowScanner(false);
-          }}
-          onClose={() => setShowScanner(false)}
-        />
+        <Suspense fallback={<div className="p-8 text-center text-sm text-muted-foreground">Loading scanner...</div>}>
+          <BarcodeScanner
+            onScan={(code) => {
+              setQuickAddBarcode(code);
+              setShowScanner(false);
+            }}
+            onClose={() => setShowScanner(false)}
+          />
+        </Suspense>
       )}
     </div>
   );

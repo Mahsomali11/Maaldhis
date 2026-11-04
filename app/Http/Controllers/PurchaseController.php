@@ -79,6 +79,10 @@ class PurchaseController extends Controller
                 'notes' => $request->notes,
             ]);
 
+            $inventoryItemsById = $request->status === 'completed'
+                ? Item::whereIn('id', array_column($itemsData, 'item_id'))->get()->keyBy('id')
+                : collect();
+
             foreach ($itemsData as $itemData) {
                 $purchaseItemPayload = $itemData;
                 unset($purchaseItemPayload['sell_price']);
@@ -86,7 +90,7 @@ class PurchaseController extends Controller
                 PurchaseItem::create($purchaseItemPayload);
 
                 if ($request->status === 'completed') {
-                    $inventoryItem = Item::find($itemData['item_id']);
+                    $inventoryItem = $inventoryItemsById->get($itemData['item_id']);
                     if ($inventoryItem) {
                             $existingQty = $inventoryItem->quantity ?? 0;
                             $existingCost = $inventoryItem->cost_price ?? 0;

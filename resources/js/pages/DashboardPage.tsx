@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import { ShoppingCart, Receipt, TrendingUp, CreditCard, Package, Clock, MapPin, Wallet, ArrowUpRight, ArrowDownRight, Store, Plus, Bell, ChevronRight, Activity, Calendar } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
@@ -13,34 +13,91 @@ export default function DashboardPage() {
   const userRole = user?.role || 'owner';
   const { hasFeature } = useFeatureAccess();
 
-  const recentSales = [...sales]
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    .slice(0, 10)
-    .map(sale => {
-      const customer = customers?.find(c => c.id === sale.customer_id);
-      const payment = payments?.find(p => p.sale_id === sale.id);
-      return {
-        ...sale,
-        customer_name: customer ? customer.name : 'Walk-in Customer',
-        payment_method: payment ? (payment.method || 'Cash') : 'Cash'
-      };
-    });
+  const {
+    recentSales,
+    totalStock,
+    lowStockItems,
+    outOfStockItems,
+    lowStockCount,
+    todaySalesCount,
+    todayRevenue,
+    openDebts,
+    todayExpenses,
+  } = useMemo(() => {
+    const customersById = new Map<string, string>();
+    for (const c of customers || []) {
+      customersById.set(c.id, c.name);
+    }
 
-  const totalStock = items.reduce((sum, i) => sum + i.quantity, 0);
-  const lowStockItems = items.filter(i => i.type === 'product' && i.quantity > 0 && i.quantity <= i.low_stock_threshold);
-  const outOfStockItems = items.filter(i => i.type === 'product' && i.quantity === 0);
-  const lowStockCount = lowStockItems.length + outOfStockItems.length;
+    const paymentMethodBySaleId = new Map<string, string>();
+    for (const p of payments || []) {
+      if (p.sale_id && !paymentMethodBySaleId.has(p.sale_id)) {
+        paymentMethodBySaleId.set(p.sale_id, p.method || 'Cash');
+      }
+    }
+
+    const topRecent = sales
+      .slice(0, 10)
+      .map(sale => ({
+        ...sale,
+        customer_name: (sale.customer_id && customersById.get(sale.customer_id)) || 'Walk-in Customer',
+        payment_method: paymentMethodBySaleId.get(sale.id) || 'Cash',
+      }));
+
+    let stockSum = 0;
+    const lowStock: typeof items = [];
+    const outOfStock: typeof items = [];
+    for (const item of items) {
+      stockSum += Number(item.quantity || 0);
+      if (item.type === 'product') {
+        if (item.quantity === 0) outOfStock.push(item);
+        else if (item.quantity > 0 && item.quantity <= item.low_stock_threshold) lowStock.push(item);
+      }
+    }
+
+    const todayStr = new Date().toDateString();
+    let tSalesCount = 0;
+    let tRevenue = 0;
+    for (const s of sales) {
+      if (new Date(s.sold_at || s.created_at).toDateString() === todayStr) {
+        tSalesCount++;
+        tRevenue += Number(s.total || 0);
+      }
+    }
+
+    let unpaidDebts = 0;
+    for (const d of customerDebts) {
+      if (d.status !== 'paid') {
+        unpaidDebts += Number(d.balance_amount || 0);
+      }
+    }
+
+    let tExpenses = 0;
+    for (const e of expenses) {
+      if (
+        e.status !== 'reversed' &&
+        e.expense_type !== 'Purchase' &&
+        e.expense_type !== 'Supplier Payment' &&
+        new Date(e.created_at).toDateString() === todayStr
+      ) {
+        tExpenses += Number(e.amount || 0);
+      }
+    }
+
+    return {
+      recentSales: topRecent,
+      totalStock: stockSum,
+      lowStockItems: lowStock,
+      outOfStockItems: outOfStock,
+      lowStockCount: lowStock.length + outOfStock.length,
+      todaySalesCount: tSalesCount,
+      todayRevenue: tRevenue,
+      openDebts: unpaidDebts,
+      todayExpenses: tExpenses,
+    };
+  }, [sales, customers, payments, items, customerDebts, expenses]);
+
   const hasInventoryFeature = hasFeature('inventory');
-  
-  const todaySales = sales.filter(s => {
-    const d = new Date(s.sold_at);
-    const now = new Date();
-    return d.toDateString() === now.toDateString();
-  });
-  
-  const todayRevenue = todaySales.reduce((sum, s) => sum + s.total, 0);
-  const openDebts = customerDebts.filter(d => d.status !== 'paid').reduce((sum, d) => sum + d.balance_amount, 0);
-  const todayExpenses = expenses.filter(e => e.status !== 'reversed' && new Date(e.created_at).toDateString() === new Date().toDateString() && e.expense_type !== 'Purchase' && e.expense_type !== 'Supplier Payment').reduce((sum, e) => sum + e.amount, 0);
 
   const startSale = () => {
     if (!hasFeature('pos_sales')) {
@@ -94,22 +151,22 @@ export default function DashboardPage() {
       </div>
 
       <div className="p-6 md:px-8 max-w-7xl mx-auto w-full space-y-8">
-        
+
         <TrialExpiryBanner />
         <OnboardingCards />
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
+
           {/* Main Left Column */}
           <div className="lg:col-span-8 space-y-8">
-            
+
             {/* Primary Metrics Grid - Restructured */}
             <div>
               <h2 className="text-sm font-bold text-foreground  capitalize tracking-wider mb-4 flex items-center gap-2">
                 <Activity size={16} className="text-muted-foreground" />
                 Today's Performance
               </h2>
-              
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Hero Revenue Card */}
                 <div className="bg-primary text-primary-foreground rounded-md p-6 border border-primary shadow-sm flex flex-col justify-between relative overflow-hidden sm:col-span-2 md:col-span-1">
@@ -122,7 +179,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="mt-8 flex items-center gap-2 text-sm text-primary-foreground/80">
                     <span className="flex items-center gap-1 bg-primary-foreground/20 px-2 py-0.5 rounded text-xs font-medium">
-                      <ArrowUpRight size={14} /> {todaySales.length}
+                      <ArrowUpRight size={14} /> {todaySalesCount}
                     </span>
                     <span className="text-xs">Completed transactions today</span>
                   </div>
@@ -229,7 +286,7 @@ export default function DashboardPage() {
 
           {/* Right Sidebar Column */}
           <div className="lg:col-span-4 space-y-8">
-            
+
             {/* Store Badge Component */}
             <div className="bg-background rounded-md border border-border shadow-sm p-6 flex items-center gap-5">
               <div className="shrink-0">
@@ -269,7 +326,7 @@ export default function DashboardPage() {
                   </span>
                 )}
               </div>
-              
+
               <div className="p-5 flex items-center justify-between bg-muted/10 border-b border-border">
                 <div>
                   <p className="text-xs font-bold text-muted-foreground  capitalize tracking-wider">Total Inventory</p>

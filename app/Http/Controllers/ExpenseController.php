@@ -19,44 +19,19 @@ class ExpenseController extends Controller
             return false;
         }
 
-        // 1. Platform Admin check (admin_roles table)
-        $isPlatformAdmin = DB::table('admin_roles')
-            ->where('user_id', $user->id)
-            ->where('is_active', true)
-            ->exists();
+        $access = \App\Support\PerformanceCache::getUserAccessContext($user->id, $user->email);
 
-        if ($isPlatformAdmin) {
+        if ($access['is_admin'] || $access['is_owner']) {
             return true;
         }
 
-        // 2. Store Owner check: user is owner of this expense's store
-        $isStoreOwner = DB::table('stores')
-            ->where('id', $expense->store_id)
-            ->where('owner_user_id', $user->id)
-            ->exists();
-
-        if ($isStoreOwner) {
-            return true;
-        }
-
-        // 3. User is owner of any store on platform
-        $isAnyStoreOwner = DB::table('stores')
-            ->where('owner_user_id', $user->id)
-            ->exists();
-
-        if ($isAnyStoreOwner) {
-            return true;
-        }
-
-        // 4. Staff account check: check if the staff account has an 'admin' or 'owner' role in this store
-        $isStaffAdmin = DB::table('staff_accounts')
+        // Staff account check: check if the staff account has an 'admin' or 'owner' role in this store
+        return DB::table('staff_accounts')
             ->where('store_id', $expense->store_id)
             ->where('user_id', $user->id)
             ->where('is_active', true)
             ->whereIn('role', ['admin', 'owner'])
             ->exists();
-
-        return $isStaffAdmin;
     }
 
     /**

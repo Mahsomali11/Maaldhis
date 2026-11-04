@@ -20,4 +20,17 @@ export default defineConfig({
             '@': path.resolve(__dirname, './resources/js'),
         },
     },
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks(id) {
+                    if (id.includes('node_modules')) {
+                        if (id.includes('xlsx')) return 'vendor-xlsx';
+                        if (id.includes('html5-qrcode')) return 'vendor-scanner';
+                        if (id.includes('recharts') || id.includes('d3-')) return 'vendor-charts';
+                    }
+                },
+            },
+        },
+    },
 });

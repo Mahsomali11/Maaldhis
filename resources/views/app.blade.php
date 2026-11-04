@@ -1,27 +1,8 @@
 <!DOCTYPE html>
 @php
-    $systemName = config('app.name', 'Maaldhis');
-    $systemFavicon = '/favicon.ico';
-    try {
-        $brandingSettings = \App\Models\SystemSetting::whereIn('setting_key', [
-            'platform_name', 'system_name',
-            'platform_favicon', 'system_favicon',
-        ])->pluck('setting_value', 'setting_key');
-
-        if (!empty($brandingSettings['system_name'])) {
-            $systemName = $brandingSettings['system_name'];
-        } elseif (!empty($brandingSettings['platform_name'])) {
-            $systemName = $brandingSettings['platform_name'];
-        }
-
-        if (!empty($brandingSettings['system_favicon'])) {
-            $systemFavicon = $brandingSettings['system_favicon'];
-        } elseif (!empty($brandingSettings['platform_favicon'])) {
-            $systemFavicon = $brandingSettings['platform_favicon'];
-        }
-    } catch (\Throwable $e) {
-        // Fallback to defaults
-    }
+    $brandingSettings = \App\Support\PerformanceCache::getSystemBranding();
+    $systemName = $brandingSettings['system_name'] ?: config('app.name', 'Maaldhis');
+    $systemFavicon = !empty($brandingSettings['system_favicon']) ? $brandingSettings['system_favicon'] : '/favicon.ico';
 @endphp
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>

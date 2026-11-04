@@ -1,8 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import { useApp } from '@/context/AppContext';
 import PageHeader from '@/components/PageHeader';
 import { Search, Trash2, Download, Plus, ScanBarcode, AlertTriangle, Package, Pencil, Upload, X, Box, BarChart2 } from 'lucide-react';
-import * as XLSX from 'xlsx';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,9 +12,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import BarcodeScanner from '@/components/BarcodeScanner';
 import { toast } from 'sonner';
 import { SearchableSelect } from '@/components/ui/searchable-select';
+
+const BarcodeScanner = lazy(() => import('@/components/BarcodeScanner'));
 
 type StockFilter = 'all' | 'in_stock' | 'low_stock' | 'out_of_stock';
 
@@ -60,29 +60,65 @@ export default function InventoryPage() {
   const [form, setForm] = useState({ name: '', category: '', sub_category_id: '', barcode: '', cost_price: '', sell_price: '', quantity: '', low_stock_threshold: '5', image_path: '' });
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [visibleCount, setVisibleCount] = useState<number>(50);
 
-  const storeItems = items.filter(i => i.store_id === currentStore?.id && i.type === tab && i.is_active);
-  const storeCategories = categories.filter(c => c.store_id === currentStore?.id);
-  const existingItemCategories = Array.from(new Set(storeItems.map(i => i.category).filter(Boolean)));
-  const allCategoryNames = Array.from(new Set([...storeCategories.filter(c => !c.parent_id).map(c => c.name), ...existingItemCategories]));
+  useEffect(() => {
+    setVisibleCount(50);
+  }, [tab, search, stockFilter, categoryFilter, currentStore?.id]);
 
-  let filtered = storeItems.filter(i =>
-    i.name.toLowerCase().includes(search.toLowerCase()) ||
-    (i.category || '').toLowerCase().includes(search.toLowerCase()) ||
-    (i.barcode || '').includes(search)
+  const storeItems = useMemo(
+    () => items.filter(i => i.store_id === currentStore?.id && i.type === tab && i.is_active),
+    [items, currentStore?.id, tab]
   );
 
-  if (categoryFilter !== 'all') {
-    filtered = filtered.filter(i => i.category === categoryFilter);
-  }
+  const storeCategories = useMemo(
+    () => categories.filter(c => c.store_id === currentStore?.id),
+    [categories, currentStore?.id]
+  );
 
-  if (tab === 'product' && stockFilter !== 'all') {
-    filtered = filtered.filter(i => getStockStatus(i) === stockFilter);
-  }
+  const storeCategoriesById = useMemo(() => {
+    const map = new Map<string, typeof storeCategories[0]>();
+    for (const c of storeCategories) map.set(c.id, c);
+    return map;
+  }, [storeCategories]);
 
-  const lowStockItems = storeItems.filter(i => getStockStatus(i) === 'low_stock');
-  const outOfStockItems = storeItems.filter(i => getStockStatus(i) === 'out_of_stock');
-  const inStockItems = storeItems.filter(i => getStockStatus(i) === 'in_stock');
+  const allCategoryNames = useMemo(() => {
+    const existingItemCategories = storeItems.map(i => i.category).filter(Boolean);
+    return Array.from(new Set([...storeCategories.filter(c => !c.parent_id).map(c => c.name), ...existingItemCategories]));
+  }, [storeItems, storeCategories]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return storeItems.filter(i => {
+      if (q) {
+        const matches =
+          i.name.toLowerCase().includes(q) ||
+          (i.category || '').toLowerCase().includes(q) ||
+          (i.barcode || '').includes(search.trim());
+        if (!matches) return false;
+      }
+      if (categoryFilter !== 'all' && i.category !== categoryFilter) {
+        return false;
+      }
+      if (tab === 'product' && stockFilter !== 'all' && getStockStatus(i) !== stockFilter) {
+        return false;
+      }
+      return true;
+    });
+  }, [storeItems, search, categoryFilter, tab, stockFilter]);
+
+  const { lowStockItems, outOfStockItems, inStockItems } = useMemo(() => {
+    const low: typeof storeItems = [];
+    const out: typeof storeItems = [];
+    const inS: typeof storeItems = [];
+    for (const i of storeItems) {
+      const st = getStockStatus(i);
+      if (st === 'low_stock') low.push(i);
+      else if (st === 'out_of_stock') out.push(i);
+      else if (st === 'in_stock') inS.push(i);
+    }
+    return { lowStockItems: low, outOfStockItems: out, inStockItems: inS };
+  }, [storeItems]);
 
   const openEdit = (item: any) => {
     setEditingItem(item.id);
@@ -147,16 +183,17 @@ export default function InventoryPage() {
     }
   };
 
-  const handleDownloadExcel = () => {
+  const handleDownloadExcel = async () => {
     if (storeItems.length === 0) {
       toast.error('No items to export');
       return;
     }
+    const XLSX = await import('xlsx');
     const dataToExport = storeItems.map(item => ({
       Type: item.type,
       Name: item.name,
       Category: item.category || '',
-      SubCategory: item.sub_category_id ? (storeCategories.find(c => c.id === item.sub_category_id)?.name || item.sub_category?.name || '') : (item.sub_category?.name || ''),
+      SubCategory: item.sub_category_id ? (storeCategoriesById.get(item.sub_category_id)?.name || item.sub_category?.name || '') : (item.sub_category?.name || ''),
       Barcode: item.barcode || '',
       CostPrice: item.cost_price,
       SellPrice: item.sell_price,
@@ -174,6 +211,7 @@ export default function InventoryPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    const XLSX = await import('xlsx');
     const reader = new FileReader();
     reader.onload = async (evt) => {
       try {
@@ -226,7 +264,8 @@ export default function InventoryPage() {
     reader.readAsBinaryString(file);
   };
 
-  const handleDownloadSample = () => {
+  const handleDownloadSample = async () => {
+    const XLSX = await import('xlsx');
     const sampleData = [{
       Type: 'product',
       Name: 'Sample Product Name',
@@ -427,7 +466,7 @@ export default function InventoryPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/50">
-                  {filtered.map(item => {
+                  {filtered.slice(0, visibleCount).map(item => {
                     const status = getStockStatus(item);
                     return (
                       <tr
@@ -437,7 +476,7 @@ export default function InventoryPage() {
                         <td className="px-6 py-4 text-sm text-muted-foreground font-mono">{item.item_code}</td>
                         <td className="px-6 py-4 text-sm font-semibold text-foreground flex items-center gap-3">
                           {item.image_path ? (
-                            <img src={item.image_path} alt={item.name} className="w-8 h-8 rounded-md object-cover bg-muted" />
+                            <img src={item.image_path} alt={item.name} loading="lazy" decoding="async" className="w-8 h-8 rounded-md object-cover bg-muted" />
                           ) : (
                             <div className="w-8 h-8 rounded-md bg-muted/50 flex items-center justify-center">
                               <Package size={14} className="text-muted-foreground/50" />
@@ -448,7 +487,7 @@ export default function InventoryPage() {
                         <td className="px-6 py-4 text-sm text-muted-foreground">{item.category || '—'}</td>
                         <td className="px-6 py-4 text-sm text-muted-foreground">
                           {item.sub_category_id
-                            ? (storeCategories.find(c => c.id === item.sub_category_id)?.name || item.sub_category?.name || '—')
+                            ? (storeCategoriesById.get(item.sub_category_id)?.name || item.sub_category?.name || '—')
                             : (item.sub_category?.name || '—')}
                         </td>
                         <td className="px-6 py-4 text-sm text-muted-foreground text-right">{formatCurrency(item.cost_price)}</td>
@@ -456,8 +495,8 @@ export default function InventoryPage() {
                         {tab === 'product' && (
                           <>
                             <td className={`px-6 py-4 text-sm font-bold text-right ${status === 'out_of_stock' ? 'text-destructive' :
-                                status === 'low_stock' ? 'text-warning' :
-                                  'text-foreground'
+                              status === 'low_stock' ? 'text-warning' :
+                                'text-foreground'
                               }`}>
                               {item.quantity}
                             </td>
@@ -477,6 +516,20 @@ export default function InventoryPage() {
                   })}
                 </tbody>
               </table>
+              {filtered.length > visibleCount && (
+                <div className="p-4 border-t border-border/50 bg-muted/10 flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Showing {visibleCount} of {filtered.length} items
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setVisibleCount(prev => prev + 50)}
+                    className="px-4 py-2 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 text-xs font-bold transition-colors"
+                  >
+                    Load More Items (+50)
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -643,13 +696,15 @@ export default function InventoryPage() {
       )}
 
       {showScanner && (
-        <BarcodeScanner
-          onScan={(code) => {
-            setForm(f => ({ ...f, barcode: code }));
-            setShowScanner(false);
-          }}
-          onClose={() => setShowScanner(false)}
-        />
+        <Suspense fallback={<div className="p-8 text-center text-sm text-muted-foreground">Loading scanner...</div>}>
+          <BarcodeScanner
+            onScan={(code) => {
+              setForm(f => ({ ...f, barcode: code }));
+              setShowScanner(false);
+            }}
+            onClose={() => setShowScanner(false)}
+          />
+        </Suspense>
       )}
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>

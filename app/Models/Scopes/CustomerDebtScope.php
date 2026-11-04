@@ -17,18 +17,10 @@ class CustomerDebtScope implements Scope
         }
         if (!$user) return;
 
-        // 1. Check if user is a platform admin
-        $isAdmin = \Illuminate\Support\Facades\DB::table('admin_roles')
-            ->where('user_id', $user->id)
-            ->where('is_active', true)
-            ->exists();
-
-        if ($isAdmin) return;
-
-        // 2. Check if user is an owner of any store
-        $isOwner = \App\Models\Store::where('owner_user_id', $user->id)->exists();
-
-        if ($isOwner) return;
+        $ctx = \App\Support\PerformanceCache::getUserAccessContext($user->id, $user->email ?? null);
+        if ($ctx['is_admin'] || $ctx['is_owner']) {
+            return;
+        }
 
         // 3. User is staff, restrict to customer debts created from their own sales
         $builder->whereHas('sale', function ($q) use ($user) {

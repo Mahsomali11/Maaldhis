@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import { router } from '@inertiajs/react';
 import { api as apiClient } from '@/api';
 import type { Session } from '@/api';
 
@@ -21,10 +22,36 @@ interface AdminContextType {
 
 const AdminContext = createContext<AdminContextType | undefined>(undefined);
 
+function getInitialAdminFromDom(): { session: Session | null; admin: AdminProfile | null } {
+  if (typeof document === 'undefined') return { session: null, admin: null };
+  try {
+    const appEl = document.getElementById('app');
+    const dataPage = appEl?.getAttribute('data-page');
+    if (!dataPage) return { session: null, admin: null };
+    const parsed = JSON.parse(dataPage);
+    const user = parsed?.props?.auth?.user;
+    if (user && (user.role === 'admin' || user.admin_role)) {
+      const roleVal = (user.admin_role || 'admin') as 'super_owner' | 'admin' | 'support';
+      return {
+        session: { access_token: 'session', user },
+        admin: {
+          id: user.id,
+          email: user.email || '',
+          full_name: user.full_name || user.name || '',
+          role: roleVal,
+          admin_role: roleVal,
+        },
+      };
+    }
+  } catch {}
+  return { session: null, admin: null };
+}
+
 export function AdminProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session | null>(null);
-  const [admin, setAdmin] = useState<AdminProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const initial = getInitialAdminFromDom();
+  const [session, setSession] = useState<Session | null>(initial.session);
+  const [admin, setAdmin] = useState<AdminProfile | null>(initial.admin);
+  const [loading, setLoading] = useState(!initial.admin);
 
   const loadAdminFromSession = useCallback(async () => {
     try {
@@ -38,13 +65,14 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
       // Check if the user has admin role in the API response
       if (user.role === 'admin' || user.admin_role) {
+        const roleVal = (user.admin_role || 'admin') as 'super_owner' | 'admin' | 'support';
         setSession(sess);
         setAdmin({
           id: user.id,
           email: user.email || '',
           full_name: user.full_name || user.name || '',
-          role: user.admin_role as 'super_owner' | 'admin' | 'support',
-          admin_role: user.admin_role,
+          role: roleVal,
+          admin_role: roleVal,
         });
       } else {
         setAdmin(null);
@@ -57,13 +85,31 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // Only check session on admin routes
-    const isAdminRoute = window.location.pathname.startsWith('/admin');
-    if (!isAdminRoute) {
+    if (window.location.pathname.startsWith('/admin')) {
+      loadAdminFromSession();
+    } else {
       setLoading(false);
-      return;
     }
-    loadAdminFromSession();
+
+    const removeListener = router.on('navigate', (event) => {
+      const pageAuthUser = (event.detail.page?.props as any)?.auth?.user;
+      if (pageAuthUser && (pageAuthUser.role === 'admin' || pageAuthUser.admin_role)) {
+        const roleVal = (pageAuthUser.admin_role || 'admin') as 'super_owner' | 'admin' | 'support';
+        setSession({ access_token: 'session', user: pageAuthUser });
+        setAdmin({
+          id: pageAuthUser.id,
+          email: pageAuthUser.email || '',
+          full_name: pageAuthUser.full_name || pageAuthUser.name || '',
+          role: roleVal,
+          admin_role: roleVal,
+        });
+        setLoading(false);
+      } else if (window.location.pathname.startsWith('/admin')) {
+        loadAdminFromSession();
+      }
+    });
+
+    return () => removeListener();
   }, [loadAdminFromSession]);
 
   const logout = useCallback(async () => {

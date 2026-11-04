@@ -48,8 +48,8 @@ const bottomNav = [
 
 export default function DesktopSidebar({ isMobile = false }: { isMobile?: boolean }) {
   const navigate = (url: string, options?: any) => router.visit(url, options);
-  const { url } = usePage(); 
-  const location = { pathname: url };
+  const { url, props } = usePage<any>(); 
+  const location = { pathname: url.split('?')[0] };
   const { currentStore, stores, setCurrentStore, user, logout, isLicenseActive } = useApp();
   const { admin, isAdminAuthenticated, logout: adminLogout } = useAdmin();
   const { hasFeature } = useFeatureAccess();
@@ -59,9 +59,10 @@ export default function DesktopSidebar({ isMobile = false }: { isMobile?: boolea
   const [inventoryOpen, setInventoryOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
-  const displayUser = admin || user;
-  const role = admin ? admin.admin_role : (user?.role || 'owner');
-  const isAdmin = isAdminAuthenticated;
+  const pageAuthUser = props?.auth?.user;
+  const displayUser = admin || pageAuthUser || user;
+  const role = admin ? admin.admin_role : (pageAuthUser?.admin_role || pageAuthUser?.role || user?.role || 'owner');
+  const isAdmin = isAdminAuthenticated || location.pathname.startsWith('/admin') || pageAuthUser?.role === 'admin' || Boolean(pageAuthUser?.admin_role);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -252,12 +253,13 @@ export default function DesktopSidebar({ isMobile = false }: { isMobile?: boolea
         )}
 
         {/* Navigation Links */}
-        <div className="flex-1 overflow-y-auto pb-8 space-y-8 scrollbar-hide px-3">
+        <div className="flex-1 overflow-y-auto pb-6 space-y-6 px-3">
           
           {isAdmin ? (
              <div className="space-y-1">
-               <p className="text-[11px] font-bold text-muted-foreground  capitalize tracking-widest px-4 mb-3">Admin Panel</p>
+               <p className="text-[11px] font-bold text-muted-foreground capitalize tracking-widest px-4 mb-2">Admin Panel</p>
                <NavItem label="Dashboard" icon={LayoutDashboard} path="/admin/dashboard" />
+               <NavItem label="Settings" icon={Settings} path="/admin/settings" />
                <NavItem label="Stores" icon={Store} path="/admin/stores" />
                <NavItem label="Licenses" icon={ShieldCheck} path="/admin/licenses" />
                <NavItem label="Subscriptions" icon={CreditCard} path="/admin/subscriptions" />
@@ -268,7 +270,6 @@ export default function DesktopSidebar({ isMobile = false }: { isMobile?: boolea
                <NavItem label="Support" icon={HelpCircle} path="/admin/support" />
                <NavItem label="Exchange Rates" icon={ArrowLeftRight} path="/admin/exchange-rates" />
                <NavItem label="M-Pesa Config" icon={Smartphone} path="/admin/mpesa-settings" />
-               <NavItem label="Settings" icon={Settings} path="/admin/settings" />
              </div>
           ) : (
             <>

@@ -1,8 +1,9 @@
 import PageHeader from '@/components/PageHeader';
 import { useEffect, useState } from 'react';
+import { router } from '@inertiajs/react';
 import { api as apiClient } from '@/api';
 import StatCard from '@/components/admin/StatCard';
-import { Store, Users, KeyRound, DollarSign, Activity, AlertTriangle, TrendingUp, ShoppingCart } from 'lucide-react';
+import { Store, Users, KeyRound, DollarSign, Activity, AlertTriangle, TrendingUp, ShoppingCart, Settings } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, AreaChart, Area } from 'recharts';
 import { getExchangeRates, convertToUsd, formatUsd } from '@/lib/currency';
 
@@ -100,8 +101,19 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:px-8 space-y-6 max-w-7xl mx-auto w-full">
-      <div>
-                <p className="text-muted-foreground text-sm mt-1">Monitor your entire platform at a glance</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Platform Overview</h1>
+          <p className="text-muted-foreground text-sm mt-1">Monitor your entire platform at a glance</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => router.visit('/admin/settings')}
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity self-start sm:self-auto shadow-sm"
+        >
+          <Settings size={16} />
+          <span>System Settings & Branding</span>
+        </button>
       </div>
 
       {/* Stats Grid */}

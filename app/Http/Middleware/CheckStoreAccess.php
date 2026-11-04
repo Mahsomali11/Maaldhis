@@ -45,52 +45,51 @@ class CheckStoreAccess
             $requestedStoreId = substr($requestedStoreId, 3);
         }
 
+        $ctx = \App\Support\PerformanceCache::getUserAccessContext((string) $user->id, $user->email ?? null);
+
+        // 1b. Platform admins have full access
+        if ($ctx['is_admin']) {
+            $request->attributes->set('store_role', 'admin');
+            return $next($request);
+        }
+
         // 2. Check if user is an owner of this store
-        $isOwner = \App\Models\Store::where('id', $requestedStoreId)
-            ->where('owner_user_id', $user->id)
-            ->exists();
+        $isOwner = in_array($requestedStoreId, $ctx['owned_store_ids'], true)
+            || \App\Models\Store::where('id', $requestedStoreId)->where('owner_user_id', $user->id)->exists();
             
         if ($isOwner) {
             $request->attributes->set('store_role', 'owner');
             return $next($request);
         }
 
-        // 3. Check if user is staff for this store
-        $staff = \App\Models\StaffAccount::where('user_id', $user->id)
-            ->where('store_id', $requestedStoreId)
-            ->where('is_active', true)
-            ->first();
+        // 3. Check if user is staff for this store (cached or DB fallback)
+        $staffRole = $ctx['staff_roles_by_store'][$requestedStoreId] ?? null;
+        if (!$staffRole) {
+            $staff = \App\Models\StaffAccount::where('store_id', $requestedStoreId)
+                ->where('is_active', true)
+                ->where(function ($q) use ($user) {
+                    $q->where('user_id', $user->id)->orWhere('email', $user->email);
+                })
+                ->first();
+            if ($staff) {
+                if (empty($staff->user_id)) {
+                    $staff->update(['user_id' => $user->id]);
+                }
+                $staffRole = $staff->role;
+                \App\Support\PerformanceCache::forgetUserAccessContext((string) $user->id);
+            }
+        }
 
-        if ($staff) {
-            $request->attributes->set('store_role', $staff->role);
+        if ($staffRole) {
+            $request->attributes->set('store_role', $staffRole);
             
             // Check basic role restrictions for the entire store
             if (in_array($request->route('table'), ['stores', 'staff_accounts']) && $request->method() !== 'GET') {
-                if ($staff->role !== 'admin') {
-                    \Illuminate\Support\Facades\Log::warning("CheckStoreAccess 403: Role restriction. User: " . $user->id . " Role: " . $staff->role . " Table: " . $request->route('table'));
+                if ($staffRole !== 'admin') {
                     return response()->json(['error' => 'Forbidden: You do not have permission to modify store settings or staff.'], 403);
                 }
             }
             
-            return $next($request);
-        }
-
-        // 4. Fallback check by email (in case user_id is missing for some reason)
-        $staffByEmail = \App\Models\StaffAccount::where('email', $user->email)
-            ->where('store_id', $requestedStoreId)
-            ->where('is_active', true)
-            ->first();
-
-        if ($staffByEmail) {
-            // Auto-heal the missing user_id
-            $staffByEmail->update(['user_id' => $user->id]);
-            $request->attributes->set('store_role', $staffByEmail->role);
-            
-            if (in_array($request->route('table'), ['stores', 'staff_accounts']) && $request->method() !== 'GET') {
-                if ($staffByEmail->role !== 'admin') {
-                    return response()->json(['error' => 'Forbidden: You do not have permission to modify store settings or staff.'], 403);
-                }
-            }
             return $next($request);
         }
 

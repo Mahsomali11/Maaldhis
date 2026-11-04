@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { useApp } from '@/context/AppContext';
 import { api as apiClient } from '@/api';
@@ -102,24 +102,65 @@ export default function ExpensesPage() {
     return d.toDateString() === now.toDateString();
   };
 
-  // Base date-filtered expenses for current store
-  const storeExpensesInPeriod = expenses.filter(
-    e => e.store_id === currentStore?.id && filterByDate(e.created_at)
-  );
+  // Base date-filtered expenses for current store (memoized)
+  const { storeExpensesInPeriod, activeExpenses, reversedExpenses, activeTotal, reversedTotal, displayedExpenses } = useMemo(() => {
+    const now = new Date();
+    const todayStr = now.toDateString();
+    const curMonth = now.getMonth();
+    const curYear = now.getFullYear();
+    const fromTime = fromDate ? new Date(fromDate).getTime() : null;
+    let toTime: number | null = null;
+    if (toDate) {
+      const to = new Date(toDate);
+      to.setHours(23, 59, 59, 999);
+      toTime = to.getTime();
+    }
 
-  // Active (non-reversed) expenses count towards operating costs
-  const activeExpenses = storeExpensesInPeriod.filter(e => e.status !== 'reversed');
-  const reversedExpenses = storeExpensesInPeriod.filter(e => e.status === 'reversed');
+    const inPeriod = expenses.filter(e => {
+      if (e.store_id !== currentStore?.id) return false;
+      const d = new Date(e.created_at);
+      if (tab === 'today') return d.toDateString() === todayStr;
+      if (tab === 'month') return d.getMonth() === curMonth && d.getFullYear() === curYear;
+      if (tab === 'custom') {
+        const t = d.getTime();
+        if (fromTime !== null && t < fromTime) return false;
+        if (toTime !== null && t > toTime) return false;
+        return true;
+      }
+      return true;
+    });
 
-  const activeTotal = activeExpenses.reduce((s, e) => s + e.amount, 0);
-  const reversedTotal = reversedExpenses.reduce((s, e) => s + Number(e.refund_amount || e.amount), 0);
+    const active: Expense[] = [];
+    const reversed: Expense[] = [];
+    let actSum = 0;
+    let revSum = 0;
 
-  // Visible items based on status filter
-  const displayedExpenses = statusFilter === 'active'
-    ? activeExpenses
-    : statusFilter === 'reversed'
-      ? reversedExpenses
-      : storeExpensesInPeriod;
+    for (const e of inPeriod) {
+      if (e.status === 'reversed') {
+        reversed.push(e);
+        revSum += Number(e.refund_amount || e.amount);
+      } else {
+        active.push(e);
+        actSum += Number(e.amount || 0);
+      }
+    }
+
+    const displayed =
+      statusFilter === 'active'
+        ? active
+        : statusFilter === 'reversed'
+          ? reversed
+          : inPeriod;
+
+    return {
+      storeExpensesInPeriod: inPeriod,
+      activeExpenses: active,
+      reversedExpenses: reversed,
+      activeTotal: actSum,
+      reversedTotal: revSum,
+      displayedExpenses: displayed,
+    };
+  }, [expenses, currentStore?.id, tab, fromDate, toDate, statusFilter]);
 
   // --------------------------------------------------------------------------
   // Handlers

@@ -4,9 +4,44 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use App\Support\PerformanceCache;
 
 class DynamicApiController extends Controller
 {
+    protected function invalidateTableCache(string $table, array $body = [], Request $request = null): void
+    {
+        if ($table === 'system_settings') {
+            PerformanceCache::forgetSystemBranding();
+            return;
+        }
+
+        if (in_array($table, ['stores', 'staff_accounts', 'admin_roles'], true)) {
+            $userId = $body['user_id'] ?? $body['owner_user_id'] ?? ($request ? $request->user()?->id : null);
+            if ($userId) {
+                PerformanceCache::forgetUserAccessContext($userId);
+            }
+            if ($request && $request->user()) {
+                PerformanceCache::forgetUserAccessContext($request->user()->id);
+            }
+        }
+
+        if (in_array($table, ['licenses', 'plans', 'subscriptions', 'stores'], true)) {
+            $storeId = $body['store_id'] ?? $body['id'] ?? null;
+            if (!$storeId && $request) {
+                foreach (['store_id', 'id'] as $k) {
+                    $qVal = $request->query($k);
+                    if (is_string($qVal) && str_starts_with($qVal, 'eq.')) {
+                        $storeId = substr($qVal, 3);
+                        break;
+                    }
+                }
+            }
+            if ($storeId) {
+                PerformanceCache::forgetStoreLicenseContext($storeId);
+            }
+        }
+    }
+
     protected function getModelClass($table)
     {
         // Special cases
@@ -25,7 +60,6 @@ class DynamicApiController extends Controller
 
     public function index(Request $request, $table)
     {
-        \Illuminate\Support\Facades\Log::info("DynamicAPI Index: $table", $request->all());
         $class = $this->getModelClass($table);
         $query = $class::query();
 
@@ -156,8 +190,6 @@ class DynamicApiController extends Controller
         if (empty($body)) {
             $body = $request->post();
         }
-        
-        \Illuminate\Support\Facades\Log::info("DynamicAPI Store Payload: $table", $body);
 
         if (is_array($body) && isset($body[0]) && is_array($body[0])) {
             // Check for rapid duplicate bulk insert (e.g. sale_items for the same sale)
@@ -270,6 +302,7 @@ class DynamicApiController extends Controller
                     'setting_value' => $body['setting_value'] ?? $existing->setting_value,
                     'description' => $body['description'] ?? $existing->description,
                 ]);
+                $this->invalidateTableCache($table, $body, $request);
                 return response()->json($existing, 200);
             }
         }
@@ -293,6 +326,7 @@ class DynamicApiController extends Controller
         }
         try {
             $record = $class::create($body);
+            $this->invalidateTableCache($table, $body, $request);
             return response()->json($record, 201);
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error("DynamicAPI Insert Error: " . $e->getMessage());
@@ -312,9 +346,11 @@ class DynamicApiController extends Controller
 
         if ($table === 'expenses') {
             $user = $request->user() ?? auth()->user();
-            $isAdmin = $user && \Illuminate\Support\Facades\DB::table('admin_roles')->where('user_id', $user->id)->where('is_active', true)->exists();
-            $isOwner = $user && \Illuminate\Support\Facades\DB::table('stores')->where('owner_user_id', $user->id)->exists();
-            if (!$isAdmin && !$isOwner) {
+            if (!$user) {
+                return response()->json(['error' => 'Forbidden'], 403);
+            }
+            $access = PerformanceCache::getUserAccessContext($user->id, $user->email);
+            if (!$access['is_admin'] && !$access['is_owner']) {
                 return response()->json(['error' => 'Forbidden: Only Store Owners and Admins are permitted to edit expenses.'], 403);
             }
         }
@@ -336,6 +372,7 @@ class DynamicApiController extends Controller
                     ->update(['features_enabled' => $featuresJson]);
             }
             
+            $this->invalidateTableCache($table, $body, $request);
             return response()->json($record);
         }
         
@@ -369,6 +406,7 @@ class DynamicApiController extends Controller
                         'id' => (string) Str::uuid(),
                         'setting_key' => $settingKey,
                     ]));
+                    $this->invalidateTableCache($table, $body, $request);
                     return response()->json($record);
                 }
             }
@@ -391,6 +429,7 @@ class DynamicApiController extends Controller
                 }
             }
             
+            $this->invalidateTableCache($table, $body, $request);
             return response()->json(['success' => true]);
         }
         
@@ -403,9 +442,11 @@ class DynamicApiController extends Controller
 
         if ($table === 'expenses') {
             $user = $request->user() ?? auth()->user();
-            $isAdmin = $user && \Illuminate\Support\Facades\DB::table('admin_roles')->where('user_id', $user->id)->where('is_active', true)->exists();
-            $isOwner = $user && \Illuminate\Support\Facades\DB::table('stores')->where('owner_user_id', $user->id)->exists();
-            if (!$isAdmin && !$isOwner) {
+            if (!$user) {
+                return response()->json(['error' => 'Forbidden'], 403);
+            }
+            $access = PerformanceCache::getUserAccessContext($user->id, $user->email);
+            if (!$access['is_admin'] && !$access['is_owner']) {
                 return response()->json(['error' => 'Forbidden: Only Store Owners and Admins are permitted to delete expenses.'], 403);
             }
         }
@@ -413,6 +454,7 @@ class DynamicApiController extends Controller
         if ($id) {
             $record = $class::findOrFail($id);
             $record->delete();
+            $this->invalidateTableCache($table, [], $request);
             return response()->json(null, 204);
         }
         
@@ -435,6 +477,7 @@ class DynamicApiController extends Controller
         
         if ($filtered) {
             $query->delete();
+            $this->invalidateTableCache($table, [], $request);
             return response()->json(null, 204);
         }
         

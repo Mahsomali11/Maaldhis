@@ -15,7 +15,7 @@ const getCsrfToken = () => {
   const name = 'XSRF-TOKEN=';
   const decodedCookie = decodeURIComponent(document.cookie);
   const ca = decodedCookie.split(';');
-  for(let i = 0; i < ca.length; i++) {
+  for (let i = 0; i < ca.length; i++) {
     let c = ca[i];
     while (c.charAt(0) == ' ') {
       c = c.substring(1);
@@ -95,7 +95,7 @@ class QueryBuilder {
     this.query[column] = `eq.${value}`;
     return this;
   }
-  
+
   neq(column: string, value: any) {
     this.query[column] = `neq.${value}`;
     return this;
@@ -121,13 +121,13 @@ class QueryBuilder {
     this.query.limit = '1';
     return this;
   }
-  
+
   maybeSingle() {
     this.isSingle = true;
     this.query.limit = '1';
     return this;
   }
-  
+
   limit(count: number) {
     this.query.limit = count.toString();
     return this;
@@ -136,7 +136,7 @@ class QueryBuilder {
   async then(resolve: any, reject: any) {
     const q = new URLSearchParams(this.query).toString();
     const url = `${API_URL}/rest/v1/${this.table}${q ? '?' + q : ''}`;
-    
+
     let method = 'GET';
     if (this.action === 'insert') method = 'POST';
     if (this.action === 'update') method = 'PATCH';
@@ -176,13 +176,13 @@ class QueryBuilder {
           try {
             const errBody = await res.json();
             errMsg = errBody.message || errBody.error || errMsg;
-          } catch (_) {}
+          } catch (_) { }
           throw new Error(errMsg);
         }
 
         let data = null;
         let count = null;
-        
+
         if (res.status !== 204) {
           data = await res.json();
         }
@@ -223,7 +223,7 @@ class QueryBuilder {
 
 class LaravelAuthMock {
   private listeners: ((event: string, session: any) => void)[] = [];
-  
+
   private trigger(event: string, session: any) {
     this.listeners.forEach(l => l(event, session));
   }
@@ -241,30 +241,54 @@ class LaravelAuthMock {
     };
   }
 
+  private sessionCache: { session: Session | null; expiresAt: number } | null = null;
+
   async getSession() {
+    if (this.sessionCache && this.sessionCache.expiresAt > Date.now()) {
+      return { data: { session: this.sessionCache.session }, error: null };
+    }
+
+    // Check Inertia initial page props first to avoid a round-trip network request on initial mount
+    if (typeof document !== 'undefined') {
+      try {
+        const appEl = document.getElementById('app');
+        const dataPage = appEl?.getAttribute('data-page');
+        if (dataPage) {
+          const parsed = JSON.parse(dataPage);
+          const user = parsed?.props?.auth?.user;
+          if (user && user.id) {
+            const session: Session = { access_token: 'session', user };
+            this.sessionCache = { session, expiresAt: Date.now() + 15000 };
+            return { data: { session }, error: null };
+          }
+        }
+      } catch (e) { }
+    }
+
     try {
-      const res = await fetch(`${API_URL}/user`, { 
-          headers: getHeaders(),
-          credentials: 'same-origin'
+      const res = await fetch(`${API_URL}/user`, {
+        headers: getHeaders(),
+        credentials: 'same-origin'
       });
       if (res.ok) {
         const user = await res.json();
         const session: Session = { access_token: 'session', user };
+        this.sessionCache = { session, expiresAt: Date.now() + 15000 };
         return { data: { session }, error: null };
       }
-    } catch (e) {}
-    
+    } catch (e) { }
+
     return { data: { session: null }, error: null };
   }
 
   async signInWithPassword({ email, password }: any) {
-      // The actual login happens via Inertia post('/login'), this is just a fallback 
-      // in case unmigrated components call this directly.
-      return { error: { message: 'Use standard login form' } };
+    // The actual login happens via Inertia post('/login'), this is just a fallback 
+    // in case unmigrated components call this directly.
+    return { error: { message: 'Use standard login form' } };
   }
 
   async signUp({ email, password, options }: any) {
-      return { error: { message: 'Use standard signup form' } };
+    return { error: { message: 'Use standard signup form' } };
   }
 
   async getUser() {
@@ -277,18 +301,18 @@ class LaravelAuthMock {
 
   async signOut() {
     try {
-      await fetch('/logout', { 
-          method: 'POST', 
-          headers: getHeaders(),
-          credentials: 'same-origin'
+      await fetch('/logout', {
+        method: 'POST',
+        headers: getHeaders(),
+        credentials: 'same-origin'
       });
       // Force reload to trigger redirect
       window.location.href = '/login';
-    } catch (e) {}
+    } catch (e) { }
     this.trigger('SIGNED_OUT', null);
     return { error: null };
   }
-  
+
   async updateUser(updates: any) {
     return { data: null, error: null };
   }
@@ -316,10 +340,10 @@ class LaravelAuthMock {
         headers: getHeaders(),
         credentials: 'same-origin',
         body: JSON.stringify({
-           email: payload.email,
-           token: payload.token,
-           password: payload.password,
-           password_confirmation: payload.password // Laravel requires confirmation
+          email: payload.email,
+          token: payload.token,
+          password: payload.password,
+          password_confirmation: payload.password // Laravel requires confirmation
         })
       });
       const data = await res.json();
@@ -331,75 +355,102 @@ class LaravelAuthMock {
   }
 }
 
+const storeLicenseRpcCache = new Map<string, { promise: Promise<{ status: any; features: any }>; expiresAt: number }>();
+
+async function fetchStoreLicenseCombined(storeId: string): Promise<{ status: any; features: any }> {
+  const cached = storeLicenseRpcCache.get(storeId);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.promise;
+  }
+
+  const promise = (async () => {
+    try {
+      const res = await fetch(`${API_URL}/rest/v1/rpc/get_store_license`, {
+        method: 'POST',
+        headers: getHeaders(),
+        credentials: 'same-origin',
+        body: JSON.stringify({ _store_id: storeId }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.status) {
+          return {
+            status: data.status,
+            features: data.features || {},
+          };
+        }
+      }
+    } catch (e) { }
+
+    // Fallback to direct store/license lookup if needed
+    try {
+      const storeRes = await fetch(`${API_URL}/rest/v1/stores?id=eq.${storeId}`, { headers: getHeaders(), credentials: 'same-origin' });
+      const storeData = await storeRes.json();
+      if (storeData && storeData.length > 0) {
+        const ownerId = storeData[0].owner_user_id;
+        let licRes = await fetch(`${API_URL}/rest/v1/licenses?owner_user_id=eq.${ownerId}&status=eq.active&order=expiry_date.desc&select=*,plans(name)`, { headers: getHeaders(), credentials: 'same-origin' });
+        let licData = await licRes.json();
+        if (!licData || licData.length === 0) {
+          licRes = await fetch(`${API_URL}/rest/v1/licenses?owner_user_id=eq.${ownerId}&order=created_at.desc&limit=1&select=*,plans(name)`, { headers: getHeaders(), credentials: 'same-origin' });
+          licData = await licRes.json();
+        }
+        if (licData && licData.length > 0) {
+          const lic = licData[0];
+          let remaining = 999;
+          let isTimestampExpired = false;
+          const expiryTimestamp = lic.expiry_date || lic.expires_at;
+          if (expiryTimestamp) {
+            const diffMs = new Date(expiryTimestamp).getTime() - Date.now();
+            isTimestampExpired = diffMs <= 0;
+            remaining = isTimestampExpired ? 0 : Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+          }
+          const effectiveStatus = (lic.status === 'active' && isTimestampExpired) ? 'expired' : lic.status;
+          const features = typeof lic.features_enabled === 'string' ? JSON.parse(lic.features_enabled) : (lic.features_enabled || {});
+          return {
+            status: {
+              status: effectiveStatus,
+              plan_name: lic.plans?.name || 'Unknown',
+              days_remaining: remaining,
+              expiry_date: expiryTimestamp,
+            },
+            features,
+          };
+        }
+      }
+    } catch (e) { }
+
+    return {
+      status: { status: 'expired', plan_name: 'None', days_remaining: 0 },
+      features: {},
+    };
+  })();
+
+  storeLicenseRpcCache.set(storeId, { promise, expiresAt: Date.now() + 10000 });
+  return promise;
+}
+
 export const api = {
   auth: new LaravelAuthMock(),
   from: (table: string) => new QueryBuilder(table),
   rpc: async (fn: string, params: any) => {
-      // Mock RPC calls
-      if (fn === 'check_store_creation_allowed') {
-         return { data: { allowed: true } };
-      }
-      if (fn === 'inherit_owner_license') {
-         return { data: { inherited: true } };
-      }
-      if (fn === 'check_store_license') {
-         try {
-           const storeRes = await fetch(`${API_URL}/rest/v1/stores?id=eq.${params._store_id}`, { headers: getHeaders(), credentials: 'same-origin' });
-           const storeData = await storeRes.json();
-           if (storeData && storeData.length > 0) {
-             const ownerId = storeData[0].owner_user_id;
-             let licRes = await fetch(`${API_URL}/rest/v1/licenses?owner_user_id=eq.${ownerId}&status=eq.active&order=expiry_date.desc&select=*,plans(name)`, { headers: getHeaders(), credentials: 'same-origin' });
-             let licData = await licRes.json();
-             if (!licData || licData.length === 0) {
-                 licRes = await fetch(`${API_URL}/rest/v1/licenses?owner_user_id=eq.${ownerId}&order=created_at.desc&limit=1&select=*,plans(name)`, { headers: getHeaders(), credentials: 'same-origin' });
-                 licData = await licRes.json();
-             }
-             if (licData && licData.length > 0) {
-               const lic = licData[0];
-               let remaining = 999;
-               let isTimestampExpired = false;
-               const expiryTimestamp = lic.expiry_date || lic.expires_at;
-               if (expiryTimestamp) {
-                 const diffMs = new Date(expiryTimestamp).getTime() - Date.now();
-                 isTimestampExpired = diffMs <= 0;
-                 remaining = isTimestampExpired ? 0 : Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
-               }
-               const effectiveStatus = (lic.status === 'active' && isTimestampExpired) ? 'expired' : lic.status;
-               return { 
-                 data: { 
-                   status: effectiveStatus, 
-                   plan_name: lic.plans?.name || 'Unknown', 
-                   days_remaining: remaining,
-                   expiry_date: expiryTimestamp
-                 } 
-               };
-             }
-           }
-         } catch (e) { }
-         return { data: { status: 'expired', plan_name: 'None', days_remaining: 0 } };
-      }
-      if (fn === 'get_store_features') {
-         try {
-           const storeRes = await fetch(`${API_URL}/rest/v1/stores?id=eq.${params._store_id}`, { headers: getHeaders(), credentials: 'same-origin' });
-           const storeData = await storeRes.json();
-           if (storeData && storeData.length > 0) {
-             const ownerId = storeData[0].owner_user_id;
-             let licRes = await fetch(`${API_URL}/rest/v1/licenses?owner_user_id=eq.${ownerId}&status=eq.active&order=expiry_date.desc`, { headers: getHeaders(), credentials: 'same-origin' });
-             let licData = await licRes.json();
-             if (!licData || licData.length === 0) {
-                 licRes = await fetch(`${API_URL}/rest/v1/licenses?owner_user_id=eq.${ownerId}&order=created_at.desc&limit=1`, { headers: getHeaders(), credentials: 'same-origin' });
-                 licData = await licRes.json();
-             }
-             if (licData && licData.length > 0) {
-               return { data: typeof licData[0].features_enabled === 'string' ? JSON.parse(licData[0].features_enabled) : (licData[0].features_enabled || {}) };
-             }
-           }
-         } catch (e) { }
-         return { data: {} };
-      }
-      if (fn === 'check_user_limit') {
-         return { data: { allowed: true } };
-      }
+    // Mock RPC calls
+    if (fn === 'check_store_creation_allowed') {
+      return { data: { allowed: true } };
+    }
+    if (fn === 'inherit_owner_license') {
+      return { data: { inherited: true } };
+    }
+    if (fn === 'check_store_license') {
+      const combined = await fetchStoreLicenseCombined(params._store_id);
+      return { data: combined.status };
+    }
+    if (fn === 'get_store_features') {
+      const combined = await fetchStoreLicenseCombined(params._store_id);
+      return { data: combined.features };
+    }
+    if (fn === 'check_user_limit') {
+      return { data: { allowed: true } };
+    }
     if (fn === 'get_admin_role') {
       try {
         const res = await fetch(`${API_URL}/rest/v1/admin_roles?user_id=eq.${params._user_id}`, { headers: getHeaders(), credentials: 'same-origin' });
@@ -431,7 +482,7 @@ export const api = {
         return { data: null, error: e };
       }
     }
-    
+
     return { data: null, error: null };
 
   },
