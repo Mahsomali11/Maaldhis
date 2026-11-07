@@ -238,24 +238,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [currency]);
 
   // Derived: is the license active and not expired?
+  // Requirement 2: A license MUST be strictly 'active' whenever expiry_date >= now() (days_left >= 0) and status != 'suspended'.
   const isLicenseActive = (() => {
-    const ls = state.licenseStatus;
-    if (!ls || ls.status === 'none') return true; // No license system = allow (first store / no stores)
-    if (ls.status === 'suspended' || ls.status === 'canceled' || ls.status === 'cancelled' || ls.status === 'expired') {
+    const ls = state.licenseStatus as any;
+    if (!ls) return true; // No license loaded yet = allow
+    if (typeof ls === 'string') {
+      return ls !== 'suspended' && ls !== 'canceled' && ls !== 'cancelled' && ls !== 'expired';
+    }
+    const rawStatus = String(ls.status || '').toLowerCase();
+    if (rawStatus === 'none') return true;
+    if (rawStatus === 'suspended' || rawStatus === 'canceled' || rawStatus === 'cancelled') {
       return false;
     }
-    if (ls.status !== 'active') return false;
 
-    // A store MUST be allowed full system access and checkout capabilities until the exact expiration timestamp (expires_at > now()).
     if (ls.expiry_date) {
-      const expiryTime = new Date(ls.expiry_date).getTime();
-      if (!isNaN(expiryTime)) {
-        return expiryTime > Date.now();
+      const clean = String(ls.expiry_date).split('T')[0].split(' ')[0];
+      const parts = clean.split('-').map(Number);
+      const expiryMs = parts.length === 3 && !parts.some(isNaN)
+        ? new Date(parts[0], parts[1] - 1, parts[2]).getTime()
+        : new Date(ls.expiry_date).getTime();
+      if (!isNaN(expiryMs)) {
+        const daysLeft = Math.ceil((expiryMs - Date.now()) / (1000 * 60 * 60 * 24));
+        return daysLeft >= 0;
       }
     }
 
-    if (ls.days_remaining !== undefined && ls.days_remaining <= 0) return false;
-    return true;
+    if (ls.days_remaining !== undefined) {
+      return ls.days_remaining >= 0;
+    }
+
+    return rawStatus === 'active';
   })();
 
   // Load all data for a store
@@ -264,6 +276,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const { data } = await apiClient.rpc('get_store_data', { _store_id: storeId });
 
       if (data) {
+        let normalizedLicense: LicenseInfo | null = null;
+        if (data.licenseStatus) {
+          if (typeof data.licenseStatus === 'string') {
+            normalizedLicense = { status: data.licenseStatus };
+          } else {
+            const rawLic = { ...(data.licenseStatus as any) };
+            const rawStatus = String(rawLic.status || '').toLowerCase();
+            if (rawLic.expiry_date) {
+              const clean = String(rawLic.expiry_date).split('T')[0].split(' ')[0];
+              const parts = clean.split('-').map(Number);
+              const expiryMs = parts.length === 3 && !parts.some(isNaN)
+                ? new Date(parts[0], parts[1] - 1, parts[2]).getTime()
+                : new Date(rawLic.expiry_date).getTime();
+              if (!isNaN(expiryMs)) {
+                const daysLeft = Math.ceil((expiryMs - Date.now()) / (1000 * 60 * 60 * 24));
+                rawLic.days_remaining = daysLeft === 0 ? 0 : daysLeft;
+                rawLic.expiry_date = clean;
+                if (rawStatus !== 'suspended' && rawStatus !== 'cancelled' && rawStatus !== 'canceled' && rawStatus !== 'none') {
+                  rawLic.status = daysLeft >= 0 ? 'active' : 'expired';
+                }
+              }
+            }
+            normalizedLicense = rawLic as LicenseInfo;
+          }
+        }
+
         setState(prev => ({
           ...prev,
           items: (data.items || []) as unknown as Item[],
@@ -281,7 +319,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           purchases: (data.purchases || []) as unknown as Purchase[],
           purchaseItems: (data.purchaseItems || []) as unknown as PurchaseItem[],
           accountTransfers: (data.accountTransfers || []) as unknown as AccountTransfer[],
-          licenseStatus: data.licenseStatus ? (data.licenseStatus as unknown as LicenseInfo) : prev.licenseStatus,
+          licenseStatus: normalizedLicense ?? prev.licenseStatus,
           storeFeatures: data.storeFeatures ? (data.storeFeatures as unknown as StoreFeatures) : prev.storeFeatures,
         }));
       }

@@ -56,6 +56,34 @@ export default function AdminLicensesPage() {
 
   const generateKey = () => `ZHP-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
+  const formatDateStr = (val?: string | null): string => {
+    if (!val) return '';
+    return String(val).split('T')[0].split(' ')[0];
+  };
+
+  // Requirement 2: Days Left calculation: ceil((expiry_date - now()) in days)
+  const getDaysLeft = useCallback((expiryDate?: string | null): number => {
+    if (!expiryDate) return 999;
+    const clean = formatDateStr(expiryDate);
+    const parts = clean.split('-').map(Number);
+    const expiryMs = parts.length === 3 && !parts.some(isNaN)
+      ? new Date(parts[0], parts[1] - 1, parts[2]).getTime()
+      : new Date(expiryDate).getTime();
+    if (isNaN(expiryMs)) return 999;
+    const diffDays = Math.ceil((expiryMs - Date.now()) / (1000 * 60 * 60 * 24));
+    return diffDays === 0 ? 0 : diffDays;
+  }, []);
+
+  // Requirement 2: A license MUST be strictly 'active' whenever expiry_date >= now() (days_left >= 0) and status != 'suspended'
+  const getEffectiveStatus = useCallback((lic: any): string => {
+    if (!lic) return 'expired';
+    const raw = String(lic.status || '').toLowerCase();
+    if (raw === 'suspended' || raw === 'cancelled' || raw === 'canceled') {
+      return raw;
+    }
+    return getDaysLeft(lic.expiry_date) >= 0 ? 'active' : 'expired';
+  }, [getDaysLeft]);
+
   // Helper: get owner profile for a license
   const getOwnerProfile = (lic: any) => {
     return profiles.find((p: any) => p.id === lic.owner_user_id);
@@ -175,20 +203,27 @@ export default function AdminLicensesPage() {
   // === EXTEND LICENSE (IMMEDIATE) ===
   const computeExtendPreview = useMemo(() => {
     if (!showExtend) return null;
-    const currentExpiry = showExtend.expiry_date;
+    const currentExpiry = formatDateStr(showExtend.expiry_date);
+    const isCurrentlyExpired = getDaysLeft(currentExpiry) < 0;
 
     if (extendMode === 'exact') {
       if (!extendExactDate) return null;
+      const baseDate = isCurrentlyExpired ? new Date() : new Date(currentExpiry);
+      const diffDays = Math.ceil((new Date(extendExactDate).getTime() - baseDate.getTime()) / (1000 * 60 * 60 * 24));
       return {
         currentExpiry,
         newExpiry: extendExactDate,
-        durationLabel: `${differenceInDays(new Date(extendExactDate), new Date(currentExpiry))} days from current expiry`,
+        durationLabel: `${diffDays} days from ${isCurrentlyExpired ? 'today' : 'current expiry'}`,
+        startFrom: isCurrentlyExpired ? 'today' : 'current expiry',
       };
     }
 
+    // Requirement 1: If current_expiry < now() (already expired), automatically set extension base start date to TODAY (now())
+    const effectiveStartFrom = (isCurrentlyExpired && extendStartFrom === 'expiry') ? 'today' : extendStartFrom;
+
     let startDate: Date;
-    if (extendStartFrom === 'today') startDate = new Date();
-    else if (extendStartFrom === 'custom' && extendCustomStart) startDate = new Date(extendCustomStart);
+    if (effectiveStartFrom === 'today') startDate = new Date();
+    else if (effectiveStartFrom === 'custom' && extendCustomStart) startDate = new Date(extendCustomStart);
     else startDate = new Date(currentExpiry);
 
     let result = startDate;
@@ -210,16 +245,18 @@ export default function AdminLicensesPage() {
       currentExpiry,
       newExpiry: format(result, 'yyyy-MM-dd'),
       durationLabel: parts.join(', '),
-      startFrom: extendStartFrom === 'today' ? 'today' : extendStartFrom === 'custom' ? extendCustomStart : 'current expiry',
+      startFrom: effectiveStartFrom === 'today' ? 'today' : effectiveStartFrom === 'custom' ? extendCustomStart : 'current expiry',
     };
-  }, [showExtend, extendMode, extendDays, extendMonths, extendYears, extendExactDate, extendStartFrom, extendCustomStart]);
+  }, [showExtend, extendMode, extendDays, extendMonths, extendYears, extendExactDate, extendStartFrom, extendCustomStart, getDaysLeft]);
 
   const extendLicense = async () => {
     if (!showExtend || !admin || !computeExtendPreview) return;
     const { currentExpiry, newExpiry } = computeExtendPreview;
+    const isCurrentlyExpired = getDaysLeft(currentExpiry) < 0;
+    const minValidDate = isCurrentlyExpired ? format(new Date(), 'yyyy-MM-dd') : currentExpiry;
 
-    if (new Date(newExpiry) <= new Date(currentExpiry) && extendMode === 'exact') {
-      toast.error('New expiry date must be after current expiry date');
+    if (new Date(newExpiry) <= new Date(minValidDate) && extendMode === 'exact') {
+      toast.error(isCurrentlyExpired ? 'New expiry date must be after today' : 'New expiry date must be after current expiry date');
       return;
     }
 
@@ -351,13 +388,15 @@ export default function AdminLicensesPage() {
   const radioClass = "flex items-center gap-2 cursor-pointer text-sm";
 
   const openExtendModal = (lic: any) => {
+    const isExpired = getDaysLeft(lic.expiry_date) < 0;
     setShowExtend(lic);
     setExtendMode('duration');
     setExtendDays('30');
     setExtendMonths('0');
     setExtendYears('0');
     setExtendExactDate('');
-    setExtendStartFrom('expiry');
+    // Requirement 1: If current_expiry < now() (already expired), automatically default Start From to TODAY
+    setExtendStartFrom(isExpired ? 'today' : 'expiry');
     setExtendCustomStart('');
   };
 
@@ -398,7 +437,8 @@ export default function AdminLicensesPage() {
           </thead>
           <tbody>
             {filtered.map((lic: any) => {
-              const daysLeft = differenceInDays(new Date(lic.expiry_date), new Date());
+              const daysLeft = getDaysLeft(lic.expiry_date);
+              const effectiveStatus = getEffectiveStatus(lic);
               const owner = getOwnerProfile(lic);
               const ownerStores = getOwnerStores(lic);
               return (
@@ -407,11 +447,11 @@ export default function AdminLicensesPage() {
                   <td className="py-3 px-4 text-sm text-foreground">{owner?.full_name || '—'}</td>
                   <td className="py-3 px-4 text-sm text-muted-foreground">{owner?.email || '—'}</td>
                   <td className="py-3 px-4 text-sm text-muted-foreground">{lic.plans?.name || '—'}</td>
-                  <td className="py-3 px-4 text-sm text-muted-foreground">{lic.start_date}</td>
-                  <td className="py-3 px-4 text-sm text-muted-foreground">{lic.expiry_date}</td>
+                  <td className="py-3 px-4 text-sm text-muted-foreground">{formatDateStr(lic.start_date)}</td>
+                  <td className="py-3 px-4 text-sm text-muted-foreground">{formatDateStr(lic.expiry_date)}</td>
                   <td className="py-3 px-4 text-sm">
-                    <span className={daysLeft <= 0 ? 'text-red-400' : daysLeft <= 7 ? 'text-yellow-400' : 'text-green-400'}>
-                      {daysLeft <= 0 ? 'Expired' : `${daysLeft}d`}
+                    <span className={daysLeft < 0 ? 'text-red-400' : daysLeft <= 7 ? 'text-yellow-400' : 'text-green-400'}>
+                      {daysLeft < 0 ? 'Expired' : `${daysLeft}d`}
                     </span>
                   </td>
                   <td className="py-3 px-4">
@@ -423,11 +463,11 @@ export default function AdminLicensesPage() {
                       <span>{ownerStores.length}</span>
                     </button>
                   </td>
-                  <td className="py-3 px-4"><span className={`px-2 py-0.5 rounded-full text-xs ${statusColors[lic.status]}`}>{lic.status}</span></td>
+                  <td className="py-3 px-4"><span className={`px-2 py-0.5 rounded-full text-xs ${statusColors[effectiveStatus] || statusColors.cancelled}`}>{effectiveStatus}</span></td>
                   <td className="py-3 px-4">
                     <div className="flex gap-1 flex-wrap">
-                      {lic.status !== 'active' && <button onClick={() => updateStatus(lic.id, 'active')} className="text-xs px-2 py-1 rounded bg-green-500/10 text-green-400 hover:bg-green-500/20">Activate</button>}
-                      {lic.status === 'active' && <button onClick={() => updateStatus(lic.id, 'suspended')} className="text-xs px-2 py-1 rounded bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20">Suspend</button>}
+                      {effectiveStatus !== 'active' && <button onClick={() => updateStatus(lic.id, 'active')} className="text-xs px-2 py-1 rounded bg-green-500/10 text-green-400 hover:bg-green-500/20">Activate</button>}
+                      {effectiveStatus === 'active' && <button onClick={() => updateStatus(lic.id, 'suspended')} className="text-xs px-2 py-1 rounded bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20">Suspend</button>}
                       <button onClick={() => openChangePlanModal(lic)} className="text-xs px-2 py-1 rounded bg-purple-500/10 text-purple-400 hover:bg-purple-500/20 flex items-center gap-1">
                         <RefreshCw size={10} /> Plan
                       </button>
@@ -457,8 +497,8 @@ export default function AdminLicensesPage() {
                   <div className="flex justify-between"><span className="text-muted-foreground">Email</span><span className="text-foreground">{owner?.email || '—'}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">License Key</span><span className="text-foreground font-mono text-xs">{showDetail.license_key}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">Plan</span><span className="text-foreground">{showDetail.plans?.name || '—'}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Status</span><span className={`px-2 py-0.5 rounded-full text-xs ${statusColors[showDetail.status]}`}>{showDetail.status}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Expiry</span><span className="text-foreground">{showDetail.expiry_date}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Status</span><span className={`px-2 py-0.5 rounded-full text-xs ${statusColors[getEffectiveStatus(showDetail)] || statusColors.cancelled}`}>{getEffectiveStatus(showDetail)}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Expiry</span><span className="text-foreground">{formatDateStr(showDetail.expiry_date)}</span></div>
                   <hr className="border-border" />
                   <div>
                     <p className="text-muted-foreground mb-2 flex items-center gap-1"><Store size={14} /> Linked Stores ({ownerStores.length})</p>
@@ -552,7 +592,7 @@ export default function AdminLicensesPage() {
             <h2 className="text-xl font-bold text-foreground mb-2 capitalize">Extend Owner License</h2>
             <p className="text-sm text-muted-foreground mb-1">Owner: <span className="text-foreground">{getOwnerProfile(showExtend)?.full_name || getOwnerProfile(showExtend)?.email || '—'}</span></p>
             <p className="text-sm text-muted-foreground mb-1">Stores: <span className="text-foreground">{getOwnerStores(showExtend).length}</span></p>
-            <p className="text-sm text-muted-foreground mb-4">Current expiry: <span className="text-foreground">{showExtend.expiry_date}</span></p>
+            <p className="text-sm text-muted-foreground mb-4">Current expiry: <span className="text-foreground">{formatDateStr(showExtend.expiry_date)}</span></p>
 
             <div className="space-y-3 mb-4">
               <label className={labelClass}>Extension Method</label>
@@ -573,12 +613,28 @@ export default function AdminLicensesPage() {
                 <div className="space-y-2 mb-4">
                   <label className={labelClass}>Start From</label>
                   <div className="flex flex-wrap gap-2">
-                    {(['expiry', 'today', 'custom'] as const).map(opt => (
-                      <label key={opt} className={radioClass}>
-                        <input type="radio" name="startFrom" checked={extendStartFrom === opt} onChange={() => setExtendStartFrom(opt)} className="accent-[hsl(145,63%,42%)]" />
-                        <span className="text-[hsl(220,10%,70%)] capitalize">{opt === 'expiry' ? 'Current Expiry' : opt === 'today' ? 'Today' : 'Custom Date'}</span>
-                      </label>
-                    ))}
+                    {(['expiry', 'today', 'custom'] as const).map(opt => {
+                      const isExpiredLicense = getDaysLeft(showExtend.expiry_date) < 0;
+                      const isExpiryDisabled = isExpiredLicense && opt === 'expiry';
+                      const effectiveChecked = isExpiredLicense && extendStartFrom === 'expiry'
+                        ? opt === 'today'
+                        : extendStartFrom === opt;
+                      return (
+                        <label key={opt} className={`${radioClass} ${isExpiryDisabled ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                          <input
+                            type="radio"
+                            name="startFrom"
+                            disabled={isExpiryDisabled}
+                            checked={effectiveChecked}
+                            onChange={() => !isExpiryDisabled && setExtendStartFrom(opt)}
+                            className="accent-[hsl(145,63%,42%)]"
+                          />
+                          <span className="text-[hsl(220,10%,70%)] capitalize">
+                            {opt === 'expiry' ? (isExpiredLicense ? 'Current Expiry (Expired)' : 'Current Expiry') : opt === 'today' ? 'Today' : 'Custom Date'}
+                          </span>
+                        </label>
+                      );
+                    })}
                   </div>
                   {extendStartFrom === 'custom' && (
                     <input type="date" value={extendCustomStart} onChange={e => setExtendCustomStart(e.target.value)} className={inputClass} />
@@ -606,7 +662,13 @@ export default function AdminLicensesPage() {
             ) : (
               <div className="mb-4">
                 <label className={labelClass}>New Expiry Date</label>
-                <input type="date" value={extendExactDate} onChange={e => setExtendExactDate(e.target.value)} className={inputClass} min={showExtend.expiry_date} />
+                <input
+                  type="date"
+                  value={extendExactDate}
+                  onChange={e => setExtendExactDate(e.target.value)}
+                  className={inputClass}
+                  min={getDaysLeft(showExtend.expiry_date) < 0 ? format(new Date(), 'yyyy-MM-dd') : formatDateStr(showExtend.expiry_date)}
+                />
               </div>
             )}
 

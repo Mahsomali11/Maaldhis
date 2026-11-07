@@ -66,15 +66,36 @@ export default function AdminStoresPage() {
     s.profiles?.email?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const getEffectiveLicenseStatus = (license: any): string => {
+    if (!license) return 'none';
+    const raw = String(license.status || '').toLowerCase();
+    if (raw === 'suspended' || raw === 'cancelled' || raw === 'canceled') {
+      return raw;
+    }
+    if (license.expiry_date) {
+      const clean = String(license.expiry_date).split('T')[0].split(' ')[0];
+      const parts = clean.split('-').map(Number);
+      const expiryMs = parts.length === 3 && !parts.some(isNaN)
+        ? new Date(parts[0], parts[1] - 1, parts[2]).getTime()
+        : new Date(license.expiry_date).getTime();
+      if (!isNaN(expiryMs)) {
+        const daysLeft = Math.ceil((expiryMs - Date.now()) / (1000 * 60 * 60 * 24));
+        return daysLeft >= 0 ? 'active' : 'expired';
+      }
+    }
+    return raw || 'active';
+  };
+
   const getStatusBadge = (license: any) => {
     if (!license) return <span className="px-2 py-0.5 rounded-full text-xs bg-gray-500/20 text-gray-400">No License</span>;
+    const effectiveStatus = getEffectiveLicenseStatus(license);
     const colors: Record<string, string> = {
       active: 'bg-green-500/20 text-green-400',
       suspended: 'bg-yellow-500/20 text-yellow-400',
       expired: 'bg-red-500/20 text-red-400',
       cancelled: 'bg-gray-500/20 text-gray-400',
     };
-    return <span className={`px-2 py-0.5 rounded-full text-xs ${colors[license.status] || colors.cancelled}`}>{license.status}</span>;
+    return <span className={`px-2 py-0.5 rounded-full text-xs ${colors[effectiveStatus] || colors.cancelled}`}>{effectiveStatus}</span>;
   };
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div>;

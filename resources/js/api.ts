@@ -199,6 +199,10 @@ class QueryBuilder {
           data = data[0] || null;
         }
 
+        if (method !== 'GET' && ['licenses', 'subscriptions', 'plans', 'stores'].includes(this.table)) {
+          storeLicenseRpcCache.clear();
+        }
+
         const result = { data, count, error: null };
         window.dispatchEvent(new CustomEvent('action-complete'));
         return result;
@@ -397,14 +401,20 @@ async function fetchStoreLicenseCombined(storeId: string): Promise<{ status: any
         if (licData && licData.length > 0) {
           const lic = licData[0];
           let remaining = 999;
-          let isTimestampExpired = false;
           const expiryTimestamp = lic.expiry_date || lic.expires_at;
           if (expiryTimestamp) {
-            const diffMs = new Date(expiryTimestamp).getTime() - Date.now();
-            isTimestampExpired = diffMs <= 0;
-            remaining = isTimestampExpired ? 0 : Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+            const clean = String(expiryTimestamp).split('T')[0].split(' ')[0];
+            const parts = clean.split('-').map(Number);
+            const expiryMs = parts.length === 3 && !parts.some(isNaN)
+              ? new Date(parts[0], parts[1] - 1, parts[2]).getTime()
+              : new Date(expiryTimestamp).getTime();
+            const diffDays = Math.ceil((expiryMs - Date.now()) / (1000 * 60 * 60 * 24));
+            remaining = diffDays === 0 ? 0 : diffDays;
           }
-          const effectiveStatus = (lic.status === 'active' && isTimestampExpired) ? 'expired' : lic.status;
+          const rawStatus = String(lic.status || '').toLowerCase();
+          const effectiveStatus = (rawStatus === 'suspended' || rawStatus === 'cancelled' || rawStatus === 'canceled')
+            ? rawStatus
+            : (remaining >= 0 ? 'active' : 'expired');
           const features = typeof lic.features_enabled === 'string' ? JSON.parse(lic.features_enabled) : (lic.features_enabled || {});
           return {
             status: {

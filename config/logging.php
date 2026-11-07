@@ -55,19 +55,23 @@ return [
         'stack' => [
             'driver' => 'stack',
             'channels' => explode(',', (string) env('LOG_STACK', 'single')),
-            'ignore_exceptions' => false,
+            'ignore_exceptions' => true,
         ],
 
         'single' => [
             'driver' => 'single',
-            'path' => storage_path('logs/laravel.log'),
+            'path' => is_writable(storage_path('logs'))
+                ? storage_path('logs/laravel.log')
+                : sys_get_temp_dir().DIRECTORY_SEPARATOR.'maaldhis-laravel.log',
             'level' => env('LOG_LEVEL', 'debug'),
             'replace_placeholders' => true,
         ],
 
         'daily' => [
             'driver' => 'daily',
-            'path' => storage_path('logs/laravel.log'),
+            'path' => is_writable(storage_path('logs'))
+                ? storage_path('logs/laravel.log')
+                : sys_get_temp_dir().DIRECTORY_SEPARATOR.'maaldhis-laravel.log',
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => env('LOG_DAILY_DAYS', 14),
             'replace_placeholders' => true,
@@ -124,7 +128,9 @@ return [
         ],
 
         'emergency' => [
-            'path' => storage_path('logs/laravel.log'),
+            'path' => is_writable(storage_path('logs'))
+                ? storage_path('logs/laravel.log')
+                : sys_get_temp_dir().DIRECTORY_SEPARATOR.'maaldhis-laravel.log',
         ],
 
     ],

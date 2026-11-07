@@ -13,8 +13,9 @@ class License extends Model
     protected $casts = [
         'features_enabled' => 'array',
         'is_active' => 'boolean',
-        'start_date' => 'datetime',
-        'end_date' => 'datetime',
+        'start_date' => 'date:Y-m-d',
+        'expiry_date' => 'date:Y-m-d',
+        'end_date' => 'date:Y-m-d',
     ];
 
     //

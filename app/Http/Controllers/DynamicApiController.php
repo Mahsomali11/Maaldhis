@@ -26,20 +26,46 @@ class DynamicApiController extends Controller
         }
 
         if (in_array($table, ['licenses', 'plans', 'subscriptions', 'stores'], true)) {
-            $storeId = $body['store_id'] ?? $body['id'] ?? null;
-            if (!$storeId && $request) {
-                foreach (['store_id', 'id'] as $k) {
-                    $qVal = $request->query($k);
-                    if (is_string($qVal) && str_starts_with($qVal, 'eq.')) {
-                        $storeId = substr($qVal, 3);
-                        break;
+            PerformanceCache::forgetStoreLicenseContext(null);
+        }
+    }
+
+    protected function normalizeLicensePayload(array $body, ?object $existingLicense = null): array
+    {
+        if (isset($body['expiry_date']) && !empty($body['expiry_date'])) {
+            try {
+                $newExpiry = \Carbon\Carbon::parse($body['expiry_date'])->startOfDay();
+                $today = now()->startOfDay();
+
+                if ($existingLicense && !empty($existingLicense->expiry_date)) {
+                    $oldExpiry = \Carbon\Carbon::parse($existingLicense->expiry_date)->startOfDay();
+                    $oldDaysLeft = (int) ceil(($oldExpiry->getTimestamp() - now()->getTimestamp()) / 86400);
+
+                    // Requirement 1: If current_expiry < now() (already expired) and the extension was added to oldExpiry,
+                    // rebase the extension duration onto TODAY (now()).
+                    if ($oldDaysLeft < 0 && $newExpiry->gt($oldExpiry) && $newExpiry->lt($today)) {
+                        $deltaDays = (int) round($oldExpiry->diffInDays($newExpiry));
+                        if ($deltaDays > 0) {
+                            $newExpiry = $today->copy()->addDays($deltaDays);
+                        }
                     }
                 }
+
+                $body['expiry_date'] = $newExpiry->format('Y-m-d');
+                $newDaysLeft = (int) ceil(($newExpiry->getTimestamp() - now()->getTimestamp()) / 86400);
+
+                // Requirement 2 & 3: When extended to a valid date (days_left >= 0), automatically set status to 'active'
+                if ($newDaysLeft >= 0) {
+                    $body['status'] = 'active';
+                }
+            } catch (\Throwable $e) {
             }
-            if ($storeId) {
-                PerformanceCache::forgetStoreLicenseContext($storeId);
-            }
+        } elseif (isset($body['status']) && $body['status'] === 'active' && $existingLicense && !empty($existingLicense->expiry_date)) {
+            // If activating a license, ensure status stays consistent
+            $body['status'] = 'active';
         }
+
+        return $body;
     }
 
     protected function getModelClass($table)
@@ -47,6 +73,7 @@ class DynamicApiController extends Controller
         // Special cases
         if ($table === 'returns') return '\\App\\Models\\ReturnModel';
         if ($table === 'profiles') return '\\App\\Models\\User'; // Use users table for profiles
+        if ($table === 'license_extension_logs') return '\\App\\Models\\LicenseExtension';
         
         $modelName = Str::studly(Str::singular($table));
         $class = '\\App\\Models\\' . $modelName;
@@ -178,11 +205,42 @@ class DynamicApiController extends Controller
             $headers['Content-Range'] = "0-0/$count";
         }
 
-        return response()->json($query->get(), 200, $headers);
+        $results = $query->get();
+
+        // Dynamic License Status Evaluation on read:
+        // A license MUST be strictly 'active' whenever expiry_date >= now() (days_left >= 0) and status != 'suspended'.
+        if ($table === 'licenses') {
+            foreach ($results as $lic) {
+                $rawStatus = strtolower($lic->status ?? 'active');
+                if (!in_array($rawStatus, ['suspended', 'cancelled', 'canceled'], true)) {
+                    $expiryVal = $lic->getRawOriginal('expiry_date') ?? $lic->expiry_date;
+                    if ($expiryVal) {
+                        $diffSeconds = \Carbon\Carbon::parse($expiryVal)->getTimestamp() - now()->getTimestamp();
+                        $daysLeft = (int) ceil($diffSeconds / 86400);
+                        $computedStatus = ($daysLeft >= 0) ? 'active' : 'expired';
+                        if ($rawStatus !== $computedStatus) {
+                            $lic->status = $computedStatus;
+                            try {
+                                \Illuminate\Support\Facades\DB::table('licenses')
+                                    ->where('id', $lic->id)
+                                    ->update(['status' => $computedStatus]);
+                            } catch (\Throwable $e) {
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return response()->json($results, 200, $headers);
     }
 
     public function store(Request $request, $table)
     {
+        if ($table === 'license_extension_logs') {
+            return response()->json(['success' => true], 201);
+        }
+
         $class = $this->getModelClass($table);
 
         // Use only JSON body data, or fallback to POST
@@ -363,7 +421,22 @@ class DynamicApiController extends Controller
 
         if ($id) {
             $record = $class::findOrFail($id);
+            if ($table === 'licenses') {
+                $body = $this->normalizeLicensePayload($body, $record);
+            }
             $record->update($body);
+
+            if ($table === 'licenses' && isset($body['expiry_date'])) {
+                try {
+                    \Illuminate\Support\Facades\DB::table('subscriptions')
+                        ->where('owner_user_id', $record->owner_user_id)
+                        ->update([
+                            'end_date' => $body['expiry_date'],
+                            'status' => $body['status'] ?? 'active',
+                        ]);
+                } catch (\Throwable $e) {
+                }
+            }
             
             if ($table === 'plans' && isset($body['features'])) {
                 $featuresJson = is_array($body['features']) ? json_encode($body['features']) : $body['features'];
@@ -411,7 +484,25 @@ class DynamicApiController extends Controller
                 }
             }
 
-            $query->update($body);
+            if ($table === 'licenses') {
+                $existingRecord = (clone $query)->first();
+                $body = $this->normalizeLicensePayload($body, $existingRecord);
+                $query->update($body);
+
+                if ($existingRecord && isset($body['expiry_date'])) {
+                    try {
+                        \Illuminate\Support\Facades\DB::table('subscriptions')
+                            ->where('owner_user_id', $existingRecord->owner_user_id)
+                            ->update([
+                                'end_date' => $body['expiry_date'],
+                                'status' => $body['status'] ?? 'active',
+                            ]);
+                    } catch (\Throwable $e) {
+                    }
+                }
+            } else {
+                $query->update($body);
+            }
             
             if ($table === 'plans' && isset($body['features'])) {
                 $planId = null;

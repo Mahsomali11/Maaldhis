@@ -41,9 +41,26 @@ export default function AdminDashboardPage() {
         apiClient.from('stores').select('id, created_at'),
       ]);
 
-      const activeLicenses = (licenses || []).filter((l: any) => l.status === 'active').length;
-      const suspendedLicenses = (licenses || []).filter((l: any) => l.status === 'suspended').length;
-      const expiredLicenses = (licenses || []).filter((l: any) => l.status === 'expired').length;
+      const getDynamicLicenseStatus = (l: any): string => {
+        const raw = String(l.status || '').toLowerCase();
+        if (raw === 'suspended' || raw === 'cancelled' || raw === 'canceled') return raw;
+        if (l.expiry_date) {
+          const clean = String(l.expiry_date).split('T')[0].split(' ')[0];
+          const parts = clean.split('-').map(Number);
+          const expiryMs = parts.length === 3 && !parts.some(isNaN)
+            ? new Date(parts[0], parts[1] - 1, parts[2]).getTime()
+            : new Date(l.expiry_date).getTime();
+          if (!isNaN(expiryMs)) {
+            const daysLeft = Math.ceil((expiryMs - Date.now()) / (1000 * 60 * 60 * 24));
+            return daysLeft >= 0 ? 'active' : 'expired';
+          }
+        }
+        return raw || 'active';
+      };
+
+      const activeLicenses = (licenses || []).filter((l: any) => getDynamicLicenseStatus(l) === 'active').length;
+      const suspendedLicenses = (licenses || []).filter((l: any) => getDynamicLicenseStatus(l) === 'suspended').length;
+      const expiredLicenses = (licenses || []).filter((l: any) => getDynamicLicenseStatus(l) === 'expired').length;
       const totalRevenue = (paymentsData || []).filter((p: any) => p.status === 'completed').reduce((s: number, p: any) => s + Number(p.amount), 0);
       const totalTransactions = (sales || []).length;
       

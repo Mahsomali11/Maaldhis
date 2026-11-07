@@ -1,10 +1,17 @@
+import { useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { router } from '@inertiajs/react';
 import { AlertTriangle, Shield, RefreshCw, Crown, MessageCircle, LogOut } from 'lucide-react';
 
 export default function LicenseBlockPage() {
-  const { currentStore, licenseStatus, logout } = useApp();
+  const { currentStore, licenseStatus, isLicenseActive, logout } = useApp();
   const navigate = (url: string, options?: any) => router.visit(url, options);
+
+  useEffect(() => {
+    if (licenseStatus && isLicenseActive) {
+      router.visit('/dashboard');
+    }
+  }, [licenseStatus, isLicenseActive]);
 
   const statusMessages: Record<string, { title: string; message: string; color: string; bg: string }> = {
     expired: {

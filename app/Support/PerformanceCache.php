@@ -188,22 +188,11 @@ class PerformanceCache
                         $q->where('licenses.owner_user_id', $store->owner_user_id)
                           ->orWhere('licenses.store_id', $store->id);
                     })
-                    ->where('licenses.status', 'active')
+                    ->orderByRaw("CASE WHEN licenses.status != 'suspended' AND licenses.status != 'cancelled' THEN 0 ELSE 1 END")
                     ->orderBy('licenses.expiry_date', 'desc')
+                    ->orderBy('licenses.updated_at', 'desc')
                     ->select('licenses.*', 'plans.name as plan_name')
                     ->first();
-
-                if (!$license) {
-                    $license = DB::table('licenses')
-                        ->leftJoin('plans', 'licenses.plan_id', '=', 'plans.id')
-                        ->where(function ($q) use ($store) {
-                            $q->where('licenses.owner_user_id', $store->owner_user_id)
-                              ->orWhere('licenses.store_id', $store->id);
-                        })
-                        ->orderBy('licenses.created_at', 'desc')
-                        ->select('licenses.*', 'plans.name as plan_name')
-                        ->first();
-                }
 
                 if (!$license) {
                     return [
@@ -212,21 +201,38 @@ class PerformanceCache
                         'plan_name' => 'Free',
                         'expiry_date' => null,
                         'days_remaining' => 999,
+                        'max_users' => null,
+                        'max_devices' => null,
                         'features' => [],
                     ];
                 }
 
                 $expiryTimestamp = $license->expiry_date ?? $license->expires_at ?? null;
                 $daysRemaining = 999;
-                $isExpiredByTime = false;
+                $formattedExpiry = null;
                 if ($expiryTimestamp) {
-                    $diffSeconds = \Carbon\Carbon::parse($expiryTimestamp)->timestamp - now()->timestamp;
-                    $isExpiredByTime = $diffSeconds <= 0;
-                    $daysRemaining = $isExpiredByTime ? 0 : (int) max(1, ceil($diffSeconds / 86400));
+                    $expiryCarbon = \Carbon\Carbon::parse($expiryTimestamp);
+                    $formattedExpiry = $expiryCarbon->format('Y-m-d');
+                    $diffSeconds = $expiryCarbon->getTimestamp() - now()->getTimestamp();
+                    $daysRemaining = (int) ceil($diffSeconds / 86400);
+                    if ($daysRemaining === 0) {
+                        $daysRemaining = 0;
+                    }
                 }
 
-                $rawStatus = strtolower($license->status ?? 'expired');
-                $effectiveStatus = ($rawStatus === 'active' && $isExpiredByTime) ? 'expired' : $rawStatus;
+                $rawStatus = strtolower($license->status ?? 'active');
+                if (in_array($rawStatus, ['suspended', 'cancelled', 'canceled'], true)) {
+                    $effectiveStatus = $rawStatus;
+                } else {
+                    // A license MUST be strictly active whenever days_remaining >= 0 (expiry_date >= now()) and status != 'suspended'
+                    $effectiveStatus = ($daysRemaining >= 0) ? 'active' : 'expired';
+                    if ($rawStatus !== $effectiveStatus) {
+                        try {
+                            DB::table('licenses')->where('id', $license->id)->update(['status' => $effectiveStatus]);
+                        } catch (\Throwable $e) {
+                        }
+                    }
+                }
 
                 $features = is_string($license->features_enabled)
                     ? (json_decode($license->features_enabled, true) ?: [])
@@ -237,8 +243,10 @@ class PerformanceCache
                     'status' => $effectiveStatus,
                     'raw_status' => $rawStatus,
                     'plan_name' => $license->plan_name ?? 'Standard',
-                    'expiry_date' => $expiryTimestamp,
+                    'expiry_date' => $formattedExpiry ?? $expiryTimestamp,
                     'days_remaining' => $daysRemaining,
+                    'max_users' => $license->max_users ?? null,
+                    'max_devices' => $license->max_devices ?? null,
                     'features' => $features,
                 ];
             });
@@ -260,6 +268,13 @@ class PerformanceCache
             }
         } else {
             self::$requestMemo = [];
+            try {
+                $storeIds = DB::table('stores')->pluck('id');
+                foreach ($storeIds as $id) {
+                    Cache::forget("store_license_context:{$id}");
+                }
+            } catch (\Throwable $e) {
+            }
         }
     }
 }

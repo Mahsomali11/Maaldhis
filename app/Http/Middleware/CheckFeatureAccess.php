@@ -77,25 +77,24 @@ class CheckFeatureAccess
             return $next($request);
         }
 
-        $status = strtolower($licCtx['status'] ?? '');
+        $rawStatus = strtolower($licCtx['raw_status'] ?? $licCtx['status'] ?? '');
 
-        // Explicitly block if status is suspended, canceled, or expired
-        if (in_array($status, ['suspended', 'canceled', 'cancelled', 'expired'])) {
+        // Explicitly block if status is suspended or cancelled
+        if (in_array($rawStatus, ['suspended', 'canceled', 'cancelled'], true)) {
             return response()->json(['error' => 'License expired or suspended. Please renew your subscription.'], 403);
         }
 
-        // Timestamp validation: A store MUST be allowed full system access and checkout capabilities
-        // until the exact expiration timestamp (expires_at > now()).
+        // Dynamic License Status Evaluation:
+        // Days Left calculation: ceil((expiry_date - now()) in days).
+        // If days_left >= 0 and status != 'suspended', the license status is ACTIVE and user access MUST be granted instantly.
         $expiryTimestamp = $licCtx['expiry_date'] ?? null;
         if ($expiryTimestamp) {
-            $expiresAt = \Carbon\Carbon::parse($expiryTimestamp);
-            if ($expiresAt->lessThanOrEqualTo(now())) {
+            $diffSeconds = \Carbon\Carbon::parse($expiryTimestamp)->getTimestamp() - now()->getTimestamp();
+            $daysLeft = (int) ceil($diffSeconds / 86400);
+            if ($daysLeft < 0) {
                 return response()->json(['error' => 'License expired or suspended. Please renew your subscription.'], 403);
             }
-        }
-
-        // Must be active to proceed
-        if ($status !== 'active') {
+        } elseif (($licCtx['days_remaining'] ?? 0) < 0 || strtolower($licCtx['status'] ?? '') === 'expired') {
             return response()->json(['error' => 'License expired or suspended. Please renew your subscription.'], 403);
         }
 

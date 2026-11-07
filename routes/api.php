@@ -73,9 +73,18 @@ Route::middleware(['auth:sanctum'])->group(function () {
             if (!$storeId) return response()->json(['error' => 'Store ID is required'], 400);
 
             $licenseCtx = \App\Support\PerformanceCache::getStoreLicenseContext($storeId);
+            $licenseStatusObj = [
+                'status' => $licenseCtx['status'] ?? 'none',
+                'plan_name' => $licenseCtx['plan_name'] ?? 'Free',
+                'expiry_date' => $licenseCtx['expiry_date'] ?? null,
+                'days_remaining' => $licenseCtx['days_remaining'] ?? 999,
+                'max_users' => $licenseCtx['max_users'] ?? null,
+                'max_devices' => $licenseCtx['max_devices'] ?? null,
+                'features' => $licenseCtx['features'] ?? [],
+            ];
             return response()->json([
-                'status' => $licenseCtx['status'],
-                'features' => $licenseCtx['features'],
+                'status' => $licenseStatusObj,
+                'features' => $licenseCtx['features'] ?? [],
             ]);
         });
 
@@ -90,6 +99,15 @@ Route::middleware(['auth:sanctum'])->group(function () {
             $purchases = \App\Models\Purchase::where('store_id', $storeId)->orderBy('created_at', 'desc')->take(200)->get();
             $purchaseIds = $purchases->pluck('id');
             $licenseCtx = \App\Support\PerformanceCache::getStoreLicenseContext($storeId);
+            $licenseStatusObj = [
+                'status' => $licenseCtx['status'] ?? 'none',
+                'plan_name' => $licenseCtx['plan_name'] ?? 'Free',
+                'expiry_date' => $licenseCtx['expiry_date'] ?? null,
+                'days_remaining' => $licenseCtx['days_remaining'] ?? 999,
+                'max_users' => $licenseCtx['max_users'] ?? null,
+                'max_devices' => $licenseCtx['max_devices'] ?? null,
+                'features' => $licenseCtx['features'] ?? [],
+            ];
 
             return response()->json([
                 'items' => \App\Models\Item::with(['subCategory:id,store_id,name,parent_id'])->where('store_id', $storeId)->get(),
@@ -110,8 +128,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
                 'purchases' => $purchases,
                 'purchaseItems' => $purchaseIds->isEmpty() ? [] : \App\Models\PurchaseItem::whereIn('purchase_id', $purchaseIds)->get(),
                 'accountTransfers' => \App\Models\AccountTransfer::where('store_id', $storeId)->orderBy('created_at', 'desc')->take(200)->get(),
-                'licenseStatus' => $licenseCtx['status'],
-                'storeFeatures' => $licenseCtx['features'],
+                'licenseStatus' => $licenseStatusObj,
+                'storeFeatures' => $licenseCtx['features'] ?? [],
             ]);
         });
 
@@ -150,20 +168,40 @@ Route::middleware(['auth:sanctum'])->group(function () {
             // Create a unique filename
             $filename = uniqid() . '_' . time() . '.' . $ext;
             
+            $rawContents = @file_get_contents($file->getRealPath());
+            $mimeMap = [
+                'jpg'  => 'image/jpeg',
+                'jpeg' => 'image/jpeg',
+                'png'  => 'image/png',
+                'svg'  => 'image/svg+xml',
+                'webp' => 'image/webp',
+                'ico'  => 'image/x-icon',
+            ];
+            $mimeType = $mimeMap[$ext] ?? ($file->getMimeType() ?: 'image/png');
+
             $destinationDir = public_path('uploads/' . $folder);
-            if (!is_dir($destinationDir)) {
-                mkdir($destinationDir, 0755, true);
+            try {
+                if (!is_dir($destinationDir)) {
+                    @mkdir($destinationDir, 0777, true);
+                }
+
+                if (is_dir($destinationDir) && is_writable($destinationDir)) {
+                    // Move directly to public/uploads folder to avoid storage symlink issues on shared hosting
+                    $file->move($destinationDir, $filename);
+                    $path = 'uploads/' . $folder . '/' . $filename;
+                    return response()->json([
+                        'path' => $path,
+                        'url' => '/' . $path
+                    ]);
+                }
+            } catch (\Throwable $e) {
+                // Fallback to inline data URI when running inside a read-only Program Files directory
             }
 
-            // Move directly to public/uploads folder to avoid storage symlink issues on shared hosting
-            $file->move($destinationDir, $filename);
-            
-            // Use relative path for URL so it works regardless of APP_URL config
-            $path = 'uploads/' . $folder . '/' . $filename;
-            
+            $dataUri = 'data:' . $mimeType . ';base64,' . base64_encode($rawContents ?: '');
             return response()->json([
-                'path' => $path,
-                'url' => '/' . $path
+                'path' => $dataUri,
+                'url' => $dataUri,
             ]);
         });
     });
