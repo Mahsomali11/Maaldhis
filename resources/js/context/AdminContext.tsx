@@ -135,6 +135,10 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     window.location.href = '/admin/login';
   }, []);
 
+  const isSuperOwner = ['super_owner', 'superadmin', 'super_admin'].includes(
+    String(admin?.role || admin?.admin_role || '').toLowerCase()
+  );
+
   return (
     <AdminContext.Provider value={{
       session,
@@ -142,7 +146,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
       isAdminAuthenticated: !!admin,
       loading,
       logout,
-      isSuperOwner: admin?.role === 'super_owner',
+      isSuperOwner,
     }}>
       {children}
     </AdminContext.Provider>

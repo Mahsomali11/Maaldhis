@@ -531,6 +531,22 @@ class DynamicApiController extends Controller
     {
         $class = $this->getModelClass($table);
 
+        if ($table === 'licenses') {
+            $user = $request->user() ?? auth()->user();
+            if (!$user) {
+                return response()->json(['error' => 'Forbidden'], 403);
+            }
+            $access = PerformanceCache::getUserAccessContext($user->id, $user->email);
+            $adminRole = strtolower((string) ($access['admin_role'] ?? ''));
+            $isSuperAdmin = $access['is_admin'] && in_array($adminRole, ['super_owner', 'superadmin', 'super_admin'], true);
+            if (!$isSuperAdmin) {
+                return response()->json([
+                    'error' => 'Forbidden: Only Super Admins have permission to delete licenses.',
+                    'message' => 'Forbidden: Only Super Admins have permission to delete licenses.',
+                ], 403);
+            }
+        }
+
         if ($table === 'expenses') {
             $user = $request->user() ?? auth()->user();
             if (!$user) {

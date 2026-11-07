@@ -3,12 +3,12 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { api as apiClient } from '@/api';
 import { useAdmin } from '@/context/AdminContext';
 import { toast } from 'sonner';
-import { Plus, Search, RefreshCw, Users, Store } from 'lucide-react';
+import { Plus, Search, RefreshCw, Users, Store, Trash2 } from 'lucide-react';
 import { format, addDays, addMonths, addYears, differenceInDays } from 'date-fns';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 
 export default function AdminLicensesPage() {
-  const { admin } = useAdmin();
+  const { admin, isSuperOwner } = useAdmin();
   const [licenses, setLicenses] = useState<any[]>([]);
   const [allStores, setAllStores] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<any[]>([]);
@@ -196,6 +196,23 @@ export default function AdminLicensesPage() {
       toast.error('Failed');
     } else {
       toast.success(`Owner license ${status}`);
+      loadData();
+    }
+  };
+
+  const deleteLicense = async (lic: any) => {
+    if (!isSuperOwner) {
+      toast.error('Only Super Admins can delete licenses');
+      return;
+    }
+    if (!confirm('Are you sure you want to permanently delete this license?')) return;
+
+    const { error } = await apiClient.from('licenses').delete().eq('id', lic.id);
+    if (error) {
+      toast.error((error as any)?.message || 'Failed to delete license');
+    } else {
+      await apiClient.from('subscriptions').delete().eq('owner_user_id', lic.owner_user_id);
+      toast.success('License deleted successfully');
       loadData();
     }
   };
@@ -473,6 +490,15 @@ export default function AdminLicensesPage() {
                       </button>
                       <button onClick={() => openExtendModal(lic)} className="text-xs px-2 py-1 rounded bg-blue-500/10 text-blue-400 hover:bg-blue-500/20">Extend</button>
                       <button onClick={() => updateStatus(lic.id, 'cancelled')} className="text-xs px-2 py-1 rounded bg-red-500/10 text-red-400 hover:bg-red-500/20">Cancel</button>
+                      {isSuperOwner && (
+                        <button
+                          onClick={() => deleteLicense(lic)}
+                          className="text-xs px-2 py-1 rounded bg-red-500/15 text-red-400 hover:bg-red-500/25 flex items-center gap-1"
+                          title="Delete License (Super Admin only)"
+                        >
+                          <Trash2 size={11} /> Delete
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
