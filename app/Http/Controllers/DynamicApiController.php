@@ -68,6 +68,30 @@ class DynamicApiController extends Controller
         return $body;
     }
 
+    protected function isSelfStaffAccount(?object $staff, ?object $authUser): bool
+    {
+        if (!$staff || !$authUser) {
+            return false;
+        }
+
+        $authUserId = trim((string) ($authUser->id ?? ''));
+        $authEmail = strtolower(trim((string) ($authUser->email ?? '')));
+
+        $staffUserId = trim((string) ($staff->user_id ?? ''));
+        $staffId = trim((string) ($staff->id ?? ''));
+        $staffEmail = strtolower(trim((string) ($staff->email ?? '')));
+
+        if ($authUserId !== '' && ($staffUserId === $authUserId || $staffId === $authUserId)) {
+            return true;
+        }
+
+        if ($authEmail !== '' && $staffEmail !== '' && $staffEmail === $authEmail) {
+            return true;
+        }
+
+        return false;
+    }
+
     protected function getModelClass($table)
     {
         // Special cases
@@ -453,6 +477,12 @@ class DynamicApiController extends Controller
 
         if ($id) {
             $record = $class::findOrFail($id);
+            if ($table === 'staff_accounts' && $this->isSelfStaffAccount($record, $user)) {
+                return response()->json([
+                    'error' => 'Forbidden: You cannot modify your own staff account or role.',
+                    'message' => 'Forbidden: You cannot modify your own staff account or role.',
+                ], 403);
+            }
             if ($table === 'licenses') {
                 $body = $this->normalizeLicensePayload($body, $record);
             }
@@ -496,6 +526,18 @@ class DynamicApiController extends Controller
         }
         
         if ($filtered) {
+            if ($table === 'staff_accounts') {
+                $matchingStaff = (clone $query)->get();
+                foreach ($matchingStaff as $staffRow) {
+                    if ($this->isSelfStaffAccount($staffRow, $user)) {
+                        return response()->json([
+                            'error' => 'Forbidden: You cannot modify your own staff account or role.',
+                            'message' => 'Forbidden: You cannot modify your own staff account or role.',
+                        ], 403);
+                    }
+                }
+            }
+
             if ($table === 'system_settings' && (clone $query)->count() === 0) {
                 $settingKey = $body['setting_key'] ?? null;
                 if (!$settingKey) {
@@ -592,6 +634,15 @@ class DynamicApiController extends Controller
         
         if ($id) {
             $record = $class::findOrFail($id);
+            if ($table === 'staff_accounts') {
+                $authUser = $request->user() ?? auth()->user();
+                if ($this->isSelfStaffAccount($record, $authUser)) {
+                    return response()->json([
+                        'error' => 'Forbidden: You cannot delete your own staff account.',
+                        'message' => 'Forbidden: You cannot delete your own staff account.',
+                    ], 403);
+                }
+            }
             $record->delete();
             $this->invalidateTableCache($table, [], $request);
             return response()->json(null, 204);
@@ -615,6 +666,18 @@ class DynamicApiController extends Controller
         }
         
         if ($filtered) {
+            if ($table === 'staff_accounts') {
+                $authUser = $request->user() ?? auth()->user();
+                $matchingStaff = (clone $query)->get();
+                foreach ($matchingStaff as $staffRow) {
+                    if ($this->isSelfStaffAccount($staffRow, $authUser)) {
+                        return response()->json([
+                            'error' => 'Forbidden: You cannot delete your own staff account.',
+                            'message' => 'Forbidden: You cannot delete your own staff account.',
+                        ], 403);
+                    }
+                }
+            }
             $query->delete();
             $this->invalidateTableCache($table, [], $request);
             return response()->json(null, 204);

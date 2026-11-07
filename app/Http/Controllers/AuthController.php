@@ -162,6 +162,18 @@ class AuthController extends Controller
         $staff = \App\Models\StaffAccount::find($request->staff_id);
         if (!$staff) return response()->json(['message' => 'Staff not found'], 404);
 
+        $authUser = $request->user() ?? auth()->user();
+        if ($authUser) {
+            $isSelf = ($staff->user_id && (string) $staff->user_id === (string) $authUser->id)
+                || ($staff->email && strtolower(trim($staff->email)) === strtolower(trim((string) $authUser->email)));
+            if ($isSelf) {
+                return response()->json([
+                    'error' => 'Forbidden: You cannot modify your own staff account from Staff Management.',
+                    'message' => 'Forbidden: You cannot modify your own staff account from Staff Management.',
+                ], 403);
+            }
+        }
+
         $user = User::where('email', $staff->email)->orWhere('id', $staff->user_id)->first();
         
         if ($user) {

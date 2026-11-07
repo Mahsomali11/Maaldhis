@@ -1402,34 +1402,58 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const deleteStaffAccount = useCallback(async (id: string) => {
-    const { error } = await apiClient.from('staff_accounts').delete().eq('id', id);
-    if (!error) {
-      setState(prev => ({ ...prev, staffAccounts: prev.staffAccounts.filter(s => s.id !== id) }));
+    const target = state.staffAccounts.find(s => s.id === id);
+    const currentId = String(state.profile?.id || '').trim();
+    const currentEmail = String(state.profile?.email || '').trim().toLowerCase();
+    if (
+      target &&
+      ((currentId && (String(target.user_id || '').trim() === currentId || String(target.id || '').trim() === currentId)) ||
+        (currentEmail && String(target.email || '').trim().toLowerCase() === currentEmail))
+    ) {
+      throw new Error('Forbidden: You cannot delete your own staff account.');
     }
-  }, []);
+
+    const { error } = await apiClient.from('staff_accounts').delete().eq('id', id);
+    if (error) {
+      throw new Error(error.message || 'Forbidden: You cannot delete your own staff account.');
+    }
+    setState(prev => ({ ...prev, staffAccounts: prev.staffAccounts.filter(s => s.id !== id) }));
+  }, [state.staffAccounts, state.profile]);
 
   const updateStaffAccount = useCallback(async (id: string, updates: Partial<StaffAccount> & { password?: string }) => {
+    const target = state.staffAccounts.find(s => s.id === id);
+    const currentId = String(state.profile?.id || '').trim();
+    const currentEmail = String(state.profile?.email || '').trim().toLowerCase();
+    if (
+      target &&
+      ((currentId && (String(target.user_id || '').trim() === currentId || String(target.id || '').trim() === currentId)) ||
+        (currentEmail && String(target.email || '').trim().toLowerCase() === currentEmail))
+    ) {
+      throw new Error('Forbidden: You cannot modify your own staff account or role.');
+    }
+
     const { password, ...staffUpdates } = updates;
     const { error } = await apiClient.from('staff_accounts').update(staffUpdates as any).eq('id', id);
-    if (!error) {
-      if (password) {
-        await fetch('/api/auth/v1/update-staff-password', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-            'X-XSRF-TOKEN': getCsrfToken()
-          },
-          body: JSON.stringify({ staff_id: id, password })
-        });
-      }
-      setState(prev => ({
-        ...prev,
-        staffAccounts: prev.staffAccounts.map(s => s.id === id ? { ...s, ...staffUpdates } : s),
-      }));
+    if (error) {
+      throw new Error(error.message || 'Forbidden: You cannot modify your own staff account or role.');
     }
-  }, []);
+    if (password) {
+      await fetch('/api/auth/v1/update-staff-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-XSRF-TOKEN': getCsrfToken()
+        },
+        body: JSON.stringify({ staff_id: id, password })
+      });
+    }
+    setState(prev => ({
+      ...prev,
+      staffAccounts: prev.staffAccounts.map(s => s.id === id ? { ...s, ...staffUpdates } : s),
+    }));
+  }, [state.staffAccounts, state.profile]);
 
   const user = state.profile ? {
     id: state.profile.id,

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { router, usePage } from '@inertiajs/react';
 import PageHeader from '@/components/PageHeader';
 import { useApp } from '@/context/AppContext';
 import { Trash2, UserPlus, X, Pencil, Plus, Search, ShieldAlert, BadgeCheck, LayoutGrid, Eye } from 'lucide-react';
@@ -17,8 +18,28 @@ import {
 
 export default function StaffAccountsPage() {
   const { staffAccounts, addStaffAccount, deleteStaffAccount, updateStaffAccount, currentStore, stores, user } = useApp();
+  const { props } = usePage<any>();
+  const pageAuthUser = props?.auth?.user;
   const navigate = (url: string) => router.visit(url);
   const userRole = user?.role || 'owner';
+
+  const currentUserId = String(pageAuthUser?.id || user?.id || '').trim();
+  const currentUserEmail = String(pageAuthUser?.email || user?.email || '').trim().toLowerCase();
+
+  const isSelfAccount = (staff: typeof staffAccounts[0] | undefined | null): boolean => {
+    if (!staff) return false;
+    const staffUserId = String(staff.user_id || '').trim();
+    const staffId = String(staff.id || '').trim();
+    const staffEmail = String(staff.email || '').trim().toLowerCase();
+
+    if (currentUserId && (staffUserId === currentUserId || staffId === currentUserId)) {
+      return true;
+    }
+    if (currentUserEmail && staffEmail && staffEmail === currentUserEmail) {
+      return true;
+    }
+    return false;
+  };
 
   useEffect(() => {
     if (userRole !== 'owner' && userRole !== 'admin') {
@@ -51,6 +72,10 @@ export default function StaffAccountsPage() {
   };
 
   const openEdit = (staff: typeof staffAccounts[0]) => {
+    if (isSelfAccount(staff)) {
+      toast.error('You cannot modify your own staff account or role.');
+      return;
+    }
     setEditingId(staff.id);
     setName(staff.full_name);
     setEmail(staff.email);
@@ -69,6 +94,13 @@ export default function StaffAccountsPage() {
     }
     try {
       if (editingId) {
+        const targetStaff = staffAccounts.find(s => s.id === editingId);
+        if (isSelfAccount(targetStaff)) {
+          toast.error('You cannot modify your own staff account or role.');
+          resetForm();
+          setShowForm(false);
+          return;
+        }
         await updateStaffAccount(editingId, {
           full_name: name.trim(),
           email: email.trim(),
@@ -101,11 +133,22 @@ export default function StaffAccountsPage() {
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteId) return;
-    deleteStaffAccount(deleteId);
-    toast.success('Staff account removed');
-    setDeleteId(null);
+    const targetStaff = staffAccounts.find(s => s.id === deleteId);
+    if (isSelfAccount(targetStaff)) {
+      toast.error('You cannot delete your own staff account.');
+      setDeleteId(null);
+      return;
+    }
+    try {
+      await deleteStaffAccount(deleteId);
+      toast.success('Staff account removed');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to remove staff account');
+    } finally {
+      setDeleteId(null);
+    }
   };
 
   const getRoleBadge = (r: string) => {
@@ -172,7 +215,9 @@ export default function StaffAccountsPage() {
                       </td>
                     </tr>
                   ) : (
-                    storeStaff.map((staff) => (
+                    storeStaff.map((staff) => {
+                      const isSelf = isSelfAccount(staff);
+                      return (
                       <tr key={staff.id} className="hover:bg-muted/30 transition-colors group">
                         <td className="px-6 py-5">
                           <div className="flex items-center gap-4">
@@ -180,7 +225,14 @@ export default function StaffAccountsPage() {
                                 {staff.full_name.charAt(0).toUpperCase()}
                              </div>
                              <div>
-                                <div className="text-sm font-bold text-foreground group-hover:text-primary transition-colors">{staff.full_name}</div>
+                                <div className="text-sm font-bold text-foreground group-hover:text-primary transition-colors flex items-center gap-2">
+                                  <span>{staff.full_name}</span>
+                                  {isSelf && (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
+                                      You
+                                    </span>
+                                  )}
+                                </div>
                                 <div className="text-xs font-medium text-muted-foreground">{staff.email}</div>
                              </div>
                           </div>
@@ -200,24 +252,29 @@ export default function StaffAccountsPage() {
                             >
                               <Eye size={16} />
                             </button>
-                            <button 
-                              onClick={() => openEdit(staff)} 
-                              className="w-10 h-10 rounded-xl bg-muted text-muted-foreground hover:text-primary hover:bg-primary/10 flex items-center justify-center transition-colors"
-                              title="Edit Staff"
-                            >
-                              <Pencil size={16} />
-                            </button>
-                            <button 
-                              onClick={() => setDeleteId(staff.id)} 
-                              className="w-10 h-10 rounded-xl bg-muted text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex items-center justify-center transition-colors"
-                              title="Remove Staff"
-                            >
-                              <Trash2 size={16} />
-                            </button>
+                            {!isSelf && (
+                              <>
+                                <button 
+                                  onClick={() => openEdit(staff)} 
+                                  className="w-10 h-10 rounded-xl bg-muted text-muted-foreground hover:text-primary hover:bg-primary/10 flex items-center justify-center transition-colors"
+                                  title="Edit Staff"
+                                >
+                                  <Pencil size={16} />
+                                </button>
+                                <button 
+                                  onClick={() => setDeleteId(staff.id)} 
+                                  className="w-10 h-10 rounded-xl bg-muted text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex items-center justify-center transition-colors"
+                                  title="Remove Staff"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>
-                    ))
+                    );
+                    })
                   )}
                 </tbody>
               </table>
@@ -225,7 +282,9 @@ export default function StaffAccountsPage() {
 
             {/* Mobile Cards */}
             <div className="md:hidden space-y-4">
-               {storeStaff.map((staff) => (
+               {storeStaff.map((staff) => {
+                  const isSelf = isSelfAccount(staff);
+                  return (
                   <div key={staff.id} className="bg-card rounded-2xl border border-border p-5 shadow-sm">
                      <div className="flex justify-between items-start mb-4">
                         <div className="flex items-center gap-3">
@@ -233,7 +292,14 @@ export default function StaffAccountsPage() {
                               {staff.full_name.charAt(0).toUpperCase()}
                            </div>
                            <div className="flex flex-col">
-                              <span className="font-bold text-foreground text-sm leading-tight">{staff.full_name}</span>
+                              <span className="font-bold text-foreground text-sm leading-tight flex items-center gap-2">
+                                <span>{staff.full_name}</span>
+                                {isSelf && (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">
+                                    You
+                                  </span>
+                                )}
+                              </span>
                               <span className="text-xs font-medium text-muted-foreground">{staff.email}</span>
                            </div>
                         </div>
@@ -255,21 +321,26 @@ export default function StaffAccountsPage() {
                         >
                           <Eye size={14} /> View
                         </button>
-                        <button 
-                          onClick={() => openEdit(staff)} 
-                          className="flex-1 py-2.5 rounded-xl bg-muted text-foreground hover:bg-accent text-xs font-bold flex items-center justify-center gap-2 transition-colors"
-                        >
-                          <Pencil size={14} /> Edit
-                        </button>
-                        <button 
-                          onClick={() => setDeleteId(staff.id)} 
-                          className="flex-1 py-2.5 rounded-xl bg-destructive/10 text-destructive hover:bg-destructive/20 text-xs font-bold flex items-center justify-center gap-2 transition-colors"
-                        >
-                          <Trash2 size={14} /> Remove
-                        </button>
+                        {!isSelf && (
+                          <>
+                            <button 
+                              onClick={() => openEdit(staff)} 
+                              className="flex-1 py-2.5 rounded-xl bg-muted text-foreground hover:bg-accent text-xs font-bold flex items-center justify-center gap-2 transition-colors"
+                            >
+                              <Pencil size={14} /> Edit
+                            </button>
+                            <button 
+                              onClick={() => setDeleteId(staff.id)} 
+                              className="flex-1 py-2.5 rounded-xl bg-destructive/10 text-destructive hover:bg-destructive/20 text-xs font-bold flex items-center justify-center gap-2 transition-colors"
+                            >
+                              <Trash2 size={14} /> Remove
+                            </button>
+                          </>
+                        )}
                      </div>
                   </div>
-               ))}
+                  );
+               })}
                {storeStaff.length === 0 && (
                   <div className="bg-card rounded-2xl border border-border p-10 text-center shadow-sm">
                      <UserPlus size={40} className="mx-auto mb-4 text-muted-foreground/30" />

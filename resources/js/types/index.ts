@@ -238,6 +238,7 @@ export interface CartItem {
 
 export interface StaffAccount {
   id: string;
+  user_id?: string | null;
   store_id: string;
   full_name: string;
   email: string;
