@@ -87,8 +87,26 @@ class DynamicApiController extends Controller
 
     public function index(Request $request, $table)
     {
+        $user = $request->user() ?? auth()->user();
+        $access = $user ? PerformanceCache::getUserAccessContext((string) $user->id, $user->email ?? null) : ['is_admin' => false, 'owned_store_ids' => [], 'assigned_store_id' => null, 'staff_roles_by_store' => []];
+
+        // Strictly block non-Super-Admins from querying platform-only admin tables
+        if (in_array($table, ['admin_roles', 'platform_payments', 'license_extensions', 'license_extension_logs'], true) && empty($access['is_admin'])) {
+            return response()->json(['error' => 'Forbidden: Super Admin access required.'], 403);
+        }
+
         $class = $this->getModelClass($table);
         $query = $class::query();
+
+        // Scope stores query for tenant users so they only ever see their own / assigned stores
+        if ($table === 'stores' && empty($access['is_admin'])) {
+            $allowedStoreIds = array_values(array_unique(array_filter(array_merge(
+                $access['owned_store_ids'] ?? [],
+                array_keys($access['staff_roles_by_store'] ?? []),
+                !empty($access['assigned_store_id']) ? [$access['assigned_store_id']] : []
+            ))));
+            $query->whereIn('id', !empty($allowedStoreIds) ? $allowedStoreIds : ['00000000-0000-0000-0000-000000000000']);
+        }
 
         $selectParam = $request->query('select', '*');
         
@@ -237,6 +255,13 @@ class DynamicApiController extends Controller
 
     public function store(Request $request, $table)
     {
+        $user = $request->user() ?? auth()->user();
+        $access = $user ? PerformanceCache::getUserAccessContext((string) $user->id, $user->email ?? null) : ['is_admin' => false];
+
+        if (in_array($table, ['admin_roles', 'plans', 'system_settings', 'license_extensions', 'license_extension_logs'], true) && empty($access['is_admin'])) {
+            return response()->json(['error' => 'Forbidden: Super Admin access required.'], 403);
+        }
+
         if ($table === 'license_extension_logs') {
             return response()->json(['success' => true], 201);
         }
@@ -400,6 +425,13 @@ class DynamicApiController extends Controller
 
     public function update(Request $request, $table, $id = null)
     {
+        $user = $request->user() ?? auth()->user();
+        $access = $user ? PerformanceCache::getUserAccessContext((string) $user->id, $user->email ?? null) : ['is_admin' => false, 'is_owner' => false];
+
+        if (in_array($table, ['admin_roles', 'plans', 'licenses', 'system_settings', 'platform_payments'], true) && empty($access['is_admin'])) {
+            return response()->json(['error' => 'Forbidden: Super Admin access required.'], 403);
+        }
+
         $class = $this->getModelClass($table);
 
         if ($table === 'expenses') {

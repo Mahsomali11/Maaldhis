@@ -38,6 +38,7 @@ class HandleInertiaRequests extends Middleware
         $user = $request->user();
         $role = null;
         $admin_role = null;
+        $is_admin = false;
         $assigned_store_id = null;
         $initialStores = [];
 
@@ -45,9 +46,10 @@ class HandleInertiaRequests extends Middleware
             $ctx = \App\Support\PerformanceCache::getUserAccessContext($user->id, $user->email ?? null);
             $role = $ctx['role'];
             $admin_role = $ctx['admin_role'];
+            $is_admin = (bool) ($ctx['is_admin'] ?? false);
             $assigned_store_id = $ctx['assigned_store_id'];
 
-            if (!$ctx['is_admin']) {
+            if (!$is_admin) {
                 $storeFields = [
                     'id', 'owner_user_id', 'store_name', 'store_code', 'location', 'phone',
                     'currency', 'logo_url', 'show_logo_on_receipt', 'receipt_thank_you_message',
@@ -80,6 +82,8 @@ class HandleInertiaRequests extends Middleware
                     'full_name' => $user->full_name ?? $user->name,
                     'role' => $role,
                     'admin_role' => $admin_role,
+                    'is_admin' => $is_admin,
+                    'is_super_admin' => $is_admin,
                     'assigned_store_id' => $assigned_store_id,
                 ]) : null,
             ],

@@ -37,6 +37,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         return array_merge($user->only(['id', 'name', 'full_name', 'email', 'phone', 'created_at']), [
             'role'              => $access['role'],
             'admin_role'        => $access['admin_role'],
+            'is_admin'          => (bool) ($access['is_admin'] ?? false),
+            'is_super_admin'    => (bool) ($access['is_admin'] ?? false),
             'assigned_store_id' => $access['assigned_store_id'],
             'email'             => $user->email,
             'full_name'         => $user->full_name ?? $user->name,

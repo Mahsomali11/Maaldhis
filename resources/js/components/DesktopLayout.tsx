@@ -13,12 +13,34 @@ interface DesktopLayoutProps {
 }
 
 export default function DesktopLayout({ children }: DesktopLayoutProps) {
-  const { licenseStatus, storeFeatures, isLicenseActive } = useApp();
-  const { url } = usePage();
+  const { licenseStatus, storeFeatures, isLicenseActive, user } = useApp();
+  const { url, props } = usePage<any>();
   const { hasFeature } = useFeatureAccess();
   const { systemName, systemLogo } = useSystemBranding();
   const daysRemaining = licenseStatus?.days_remaining ?? 999;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const pageAuthUser = props?.auth?.user;
+  const hasAssignedStore = Boolean(pageAuthUser?.assigned_store_id || user?.assigned_store_id);
+  const isPlatformSuperAdmin = Boolean(
+    pageAuthUser?.is_super_admin === true ||
+    pageAuthUser?.is_admin === true ||
+    pageAuthUser?.role === 'super_admin' ||
+    (typeof pageAuthUser?.admin_role === 'string' && pageAuthUser.admin_role.trim().length > 0)
+  ) && !hasAssignedStore;
+
+  // Enforce strict portal boundary on the frontend
+  useEffect(() => {
+    const path = url.split('?')[0];
+    if (path.startsWith('/admin') && path !== '/admin/login' && !isPlatformSuperAdmin && (pageAuthUser || user)) {
+      router.visit('/dashboard');
+      return;
+    }
+    if (!path.startsWith('/admin') && isPlatformSuperAdmin) {
+      router.visit('/admin/dashboard');
+      return;
+    }
+  }, [url, isPlatformSuperAdmin, pageAuthUser, user]);
 
   // Check feature access
   useEffect(() => {

@@ -34,6 +34,7 @@ $app = Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
             'block_admin' => \App\Http\Middleware\BlockAdminMiddleware::class,
+            'role' => \App\Http\Middleware\RoleMiddleware::class,
             'prevent_duplicates' => \App\Http\Middleware\PreventDuplicateSubmissions::class,
         ]);
     })

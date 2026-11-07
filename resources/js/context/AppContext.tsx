@@ -175,7 +175,11 @@ function getInitialInertiaContext(): {
     const hasInitialStores = Array.isArray(rawStores);
     const stores: Store[] = hasInitialStores ? (rawStores as Store[]) : [];
     const savedStoreId = typeof localStorage !== 'undefined' ? localStorage.getItem('currentStoreId') : null;
-    const currentStore = stores.find(s => s.id === savedStoreId) || stores[0] || null;
+    const preferredStoreId = (user.role !== 'owner' && user.assigned_store_id) ? user.assigned_store_id : savedStoreId;
+    const currentStore = stores.find(s => s.id === preferredStoreId) || stores.find(s => s.id === savedStoreId) || stores[0] || null;
+    if (currentStore && typeof localStorage !== 'undefined') {
+      localStorage.setItem('currentStoreId', currentStore.id);
+    }
     return {
       session,
       profile,
@@ -359,7 +363,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
 
       const savedStoreId = localStorage.getItem('currentStoreId');
-      const currentStore = storeList.find(s => s.id === savedStoreId) || storeList[0] || null;
+      const preferredStoreId = (role !== 'owner' && assignedStoreId) ? assignedStoreId : savedStoreId;
+      const currentStore = storeList.find(s => s.id === preferredStoreId) || storeList.find(s => s.id === savedStoreId) || storeList[0] || null;
+      if (currentStore) {
+        localStorage.setItem('currentStoreId', currentStore.id);
+      }
 
       setState(prev => ({
         ...prev,

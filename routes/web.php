@@ -66,8 +66,8 @@ Route::middleware('guest')->group(function () {
 // Admin Logout
 Route::post('/admin/logout', [\App\Http\Controllers\WebAuthController::class, 'adminLogout'])->name('admin.logout');
 
-// All /admin/* pages — protected by AdminMiddleware
-Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
+// All /admin/* pages — protected by AdminMiddleware & role:super_admin
+Route::prefix('admin')->middleware(['auth', 'admin', 'role:super_admin'])->group(function () {
     Route::get('/dashboard', fn() => Inertia::render('admin/AdminDashboardPage'))->name('admin.dashboard');
     Route::get('/stores', fn() => Inertia::render('admin/AdminStoresPage'));
     Route::get('/licenses', fn() => Inertia::render('admin/AdminLicensesPage'));
@@ -83,10 +83,10 @@ Route::prefix('admin')->middleware(['auth', 'admin'])->group(function () {
 });
 
 // ============================================================
-// NORMAL USER ROUTES — Requires auth, blocks admin users
+// NORMAL USER ROUTES — Requires auth, blocks super admin users
 // ============================================================
 
-Route::middleware(['auth', 'block_admin'])->group(function () {
+Route::middleware(['auth', 'block_admin', 'role:owner,admin,cashier,inventory_manager,staff'])->group(function () {
     Route::get('/dashboard', fn() => Inertia::render('DashboardPage'))->name('dashboard');
     Route::get('/start-sale', fn() => Inertia::render('StartSalePage'));
     Route::get('/customer-display', fn() => Inertia::render('CustomerDisplayPage'));
@@ -105,12 +105,8 @@ Route::middleware(['auth', 'block_admin'])->group(function () {
     Route::get('/purchases', fn() => Inertia::render('PurchasesPage'));
     Route::get('/receipt-history', fn() => Inertia::render('ReceiptHistoryPage'));
     Route::get('/stock-transfers', fn() => Inertia::render('StockTransfersPage'));
-    Route::get('/staff-accounts', fn() => Inertia::render('StaffAccountsPage'));
     Route::get('/stock-report', fn() => Inertia::render('StockReportPage'));
-    Route::get('/payment-accounts', fn() => Inertia::render('PaymentAccountsPage'));
-    Route::get('/store-edit', fn() => Inertia::render('StoreEditPage'));
     Route::get('/profile', fn() => Inertia::render('ProfilePage'));
-    Route::get('/preferences', fn() => Inertia::render('PreferencesPage'));
     Route::get('/help', fn() => Inertia::render('HelpPage'));
     Route::get('/learning-center', fn() => Inertia::render('LearningCenterPage'));
     Route::get('/devices', fn() => Inertia::render('DeviceManagementPage'));
@@ -118,6 +114,14 @@ Route::middleware(['auth', 'block_admin'])->group(function () {
     Route::get('/create-store', fn() => Inertia::render('CreateStorePage'));
     Route::get('/setup-wizard', fn() => Inertia::render('SetupWizardPage'));
     Route::get('/select-store', fn() => Inertia::render('SelectStorePage'));
+
+    // Store Admin & Store Owner only routes
+    Route::middleware(['role:admin'])->group(function () {
+        Route::get('/staff-accounts', fn() => Inertia::render('StaffAccountsPage'));
+        Route::get('/payment-accounts', fn() => Inertia::render('PaymentAccountsPage'));
+        Route::get('/store-edit', fn() => Inertia::render('StoreEditPage'));
+        Route::get('/preferences', fn() => Inertia::render('PreferencesPage'));
+    });
 });
 
 // ============================================================

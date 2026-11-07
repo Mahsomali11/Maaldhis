@@ -27,31 +27,17 @@ class AuthController extends Controller
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        // Determine role and store
-        $role = null;
-        $assigned_store_id = null;
-
-        // Check if user is an owner of any store
-        $isOwner = \App\Models\Store::where('owner_user_id', $user->id)->exists();
-        if ($isOwner) {
-            $role = 'owner';
-        } else {
-            // Check if user is staff
-            $staff = \App\Models\StaffAccount::where('user_id', $user->id)
-                ->orWhere('email', $user->email) // fallback
-                ->first();
-            if ($staff) {
-                $role = $staff->role;
-                $assigned_store_id = $staff->store_id;
-            }
-        }
+        $access = \App\Support\PerformanceCache::getUserAccessContext((string) $user->id, $user->email);
 
         return response()->json([
             'access_token' => $token,
             'token_type' => 'bearer',
             'user' => array_merge($user->toArray(), [
-                'role' => $role,
-                'assigned_store_id' => $assigned_store_id
+                'role' => $access['role'],
+                'admin_role' => $access['admin_role'],
+                'is_admin' => (bool) ($access['is_admin'] ?? false),
+                'is_super_admin' => (bool) ($access['is_admin'] ?? false),
+                'assigned_store_id' => $access['assigned_store_id'],
             ])
         ]);
     }

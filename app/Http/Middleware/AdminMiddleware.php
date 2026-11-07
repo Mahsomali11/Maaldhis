@@ -31,18 +31,14 @@ class AdminMiddleware
         $isAdmin = $ctx['is_admin'];
 
         if (!$isAdmin) {
-            Auth::logout();
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-
-            if ($request->expectsJson()) {
+            if ($request->expectsJson() || $request->is('api/*')) {
                 return response()->json([
                     'message' => 'Access denied. You are not a platform administrator.',
                 ], 403);
             }
 
-            return redirect()->route('admin.login')
-                ->withErrors(['email' => 'Access denied. You are not a platform administrator.']);
+            // Strictly redirect Store Admin / Cashier / Store Owner to their Store Client Portal
+            return redirect('/dashboard');
         }
 
         return $next($request);

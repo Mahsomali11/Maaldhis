@@ -22,6 +22,19 @@ interface AdminContextType {
 
 const AdminContext = createContext<AdminContextType | undefined>(undefined);
 
+function isPlatformAdminUser(user: any): boolean {
+  if (!user) return false;
+  // Store users (Store Admin, Cashier, Inventory Manager) have assigned_store_id and no admin_role.
+  // They must NEVER be treated as Platform Super Admins.
+  if (user.assigned_store_id && !user.admin_role && user.is_super_admin !== true && user.is_admin !== true) {
+    return false;
+  }
+  if (user.is_super_admin === true || user.is_admin === true) return true;
+  if (user.role === 'super_admin' || user.role === 'super_owner' || user.role === 'superadmin') return true;
+  if (typeof user.admin_role === 'string' && user.admin_role.trim().length > 0) return true;
+  return false;
+}
+
 function getInitialAdminFromDom(): { session: Session | null; admin: AdminProfile | null } {
   if (typeof document === 'undefined') return { session: null, admin: null };
   try {
@@ -30,8 +43,8 @@ function getInitialAdminFromDom(): { session: Session | null; admin: AdminProfil
     if (!dataPage) return { session: null, admin: null };
     const parsed = JSON.parse(dataPage);
     const user = parsed?.props?.auth?.user;
-    if (user && (user.role === 'admin' || user.admin_role)) {
-      const roleVal = (user.admin_role || 'admin') as 'super_owner' | 'admin' | 'support';
+    if (isPlatformAdminUser(user)) {
+      const roleVal = (user.admin_role || 'super_owner') as 'super_owner' | 'admin' | 'support';
       return {
         session: { access_token: 'session', user },
         admin: {
@@ -57,15 +70,16 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     try {
       const { data: { session: sess } } = await apiClient.auth.getSession();
       if (!sess?.user) {
+        setAdmin(null);
         setLoading(false);
         return;
       }
 
       const user = sess.user as any;
 
-      // Check if the user has admin role in the API response
-      if (user.role === 'admin' || user.admin_role) {
-        const roleVal = (user.admin_role || 'admin') as 'super_owner' | 'admin' | 'support';
+      // Strictly check if the user is a Platform Super Admin (never true for Store Admin / Cashier)
+      if (isPlatformAdminUser(user)) {
+        const roleVal = (user.admin_role || 'super_owner') as 'super_owner' | 'admin' | 'support';
         setSession(sess);
         setAdmin({
           id: user.id,
@@ -93,8 +107,8 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
     const removeListener = router.on('navigate', (event) => {
       const pageAuthUser = (event.detail.page?.props as any)?.auth?.user;
-      if (pageAuthUser && (pageAuthUser.role === 'admin' || pageAuthUser.admin_role)) {
-        const roleVal = (pageAuthUser.admin_role || 'admin') as 'super_owner' | 'admin' | 'support';
+      if (isPlatformAdminUser(pageAuthUser)) {
+        const roleVal = (pageAuthUser.admin_role || 'super_owner') as 'super_owner' | 'admin' | 'support';
         setSession({ access_token: 'session', user: pageAuthUser });
         setAdmin({
           id: pageAuthUser.id,
@@ -104,8 +118,11 @@ export function AdminProvider({ children }: { children: ReactNode }) {
           admin_role: roleVal,
         });
         setLoading(false);
-      } else if (window.location.pathname.startsWith('/admin')) {
-        loadAdminFromSession();
+      } else {
+        setAdmin(null);
+        if (window.location.pathname.startsWith('/admin')) {
+          loadAdminFromSession();
+        }
       }
     });
 

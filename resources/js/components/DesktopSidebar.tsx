@@ -60,9 +60,20 @@ export default function DesktopSidebar({ isMobile = false }: { isMobile?: boolea
   const dropdownRef = useRef<HTMLDivElement>(null);
   
   const pageAuthUser = props?.auth?.user;
-  const displayUser = admin || pageAuthUser || user;
-  const role = admin ? admin.admin_role : (pageAuthUser?.admin_role || pageAuthUser?.role || user?.role || 'owner');
-  const isAdmin = isAdminAuthenticated || location.pathname.startsWith('/admin') || pageAuthUser?.role === 'admin' || Boolean(pageAuthUser?.admin_role);
+  const hasAssignedStore = Boolean(pageAuthUser?.assigned_store_id || user?.assigned_store_id);
+  const isPlatformSuperAdmin = Boolean(
+    isAdminAuthenticated ||
+    pageAuthUser?.is_super_admin === true ||
+    pageAuthUser?.is_admin === true ||
+    pageAuthUser?.role === 'super_admin' ||
+    (typeof pageAuthUser?.admin_role === 'string' && pageAuthUser.admin_role.trim().length > 0)
+  ) && !hasAssignedStore;
+
+  const isAdmin = isPlatformSuperAdmin && location.pathname.startsWith('/admin');
+  const displayUser = isAdmin ? (admin || pageAuthUser) : (pageAuthUser || user);
+  const role = isAdmin
+    ? (admin?.admin_role || pageAuthUser?.admin_role || 'super_admin')
+    : (pageAuthUser?.role || user?.role || 'owner');
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -242,11 +253,13 @@ export default function DesktopSidebar({ isMobile = false }: { isMobile?: boolea
                     </button>
                   ))}
                 </div>
-                <div className="border-t border-border p-2 bg-muted/30">
-                  <button onClick={() => { setStoreDropdownOpen(false); navigate('/create-store'); }} className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold bg-card border border-border hover:bg-muted transition-colors text-foreground shadow-sm">
-                    <Plus size={16} /> <span>Add New Store</span>
-                  </button>
-                </div>
+                {role === 'owner' && (
+                  <div className="border-t border-border p-2 bg-muted/30">
+                    <button onClick={() => { setStoreDropdownOpen(false); navigate('/create-store'); }} className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-bold bg-card border border-border hover:bg-muted transition-colors text-foreground shadow-sm">
+                      <Plus size={16} /> <span>Add New Store</span>
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>

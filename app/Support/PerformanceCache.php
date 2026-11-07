@@ -77,6 +77,7 @@ class PerformanceCache
         $default = [
             'role' => 'staff',
             'is_admin' => false,
+            'is_super_admin' => false,
             'admin_role' => null,
             'is_owner' => false,
             'owned_store_ids' => [],
@@ -85,7 +86,7 @@ class PerformanceCache
         ];
 
         try {
-            $ctx = Cache::remember("user_access_context:{$userId}", 300, function () use ($userId, $email) {
+            $ctx = Cache::remember("user_access_context:v2:{$userId}", 300, function () use ($userId, $email) {
                 $role = 'staff';
                 $isAdmin = false;
                 $adminRole = null;
@@ -125,8 +126,9 @@ class PerformanceCache
 
                 if ($adminRow) {
                     $isAdmin = true;
-                    $role = 'admin';
+                    $role = 'super_admin';
                     $adminRole = $adminRow->role;
+                    $assignedStoreId = null;
                 } elseif (!empty($ownedStoreIds)) {
                     $isOwner = true;
                     $role = 'owner';
@@ -137,6 +139,7 @@ class PerformanceCache
                 return [
                     'role' => $role,
                     'is_admin' => $isAdmin,
+                    'is_super_admin' => $isAdmin,
                     'admin_role' => $adminRole,
                     'is_owner' => !empty($ownedStoreIds),
                     'owned_store_ids' => $ownedStoreIds,
@@ -158,6 +161,7 @@ class PerformanceCache
             unset(self::$requestMemo["user_access:{$userId}"]);
             try {
                 Cache::forget("user_access_context:{$userId}");
+                Cache::forget("user_access_context:v2:{$userId}");
             } catch (\Throwable $e) {
             }
         } else {
