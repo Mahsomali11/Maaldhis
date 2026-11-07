@@ -29,6 +29,9 @@ export default function StoreEditPage() {
   const [receiptTemplate, setReceiptTemplate] = useState(currentStore?.receipt_template || 'classic');
   const [primaryColor, setPrimaryColor] = useState(currentStore?.primary_color || '#2d7d46');
   const [secondaryColor, setSecondaryColor] = useState(currentStore?.secondary_color || '#1e5c32');
+  const [businessType, setBusinessType] = useState<'standard_retail' | 'grocery_bulk'>(
+    currentStore?.business_type === 'grocery_bulk' ? 'grocery_bulk' : 'standard_retail'
+  );
   const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
@@ -50,6 +53,7 @@ export default function StoreEditPage() {
         receipt_template: receiptTemplate,
         primary_color: primaryColor,
         secondary_color: secondaryColor,
+        business_type: businessType,
       });
       toast.success('Store settings saved');
       window.history.back();
@@ -145,6 +149,23 @@ export default function StoreEditPage() {
                       className="w-full px-4 h-11 rounded-md border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all shadow-sm" 
                       required 
                     />
+                  </div>
+
+                  <div className="space-y-2 pt-2 border-t border-border/60">
+                    <label className="text-xs font-bold text-muted-foreground capitalize tracking-wider">Business Type / Store Mode</label>
+                    <select
+                      value={businessType}
+                      onChange={e => setBusinessType(e.target.value as 'standard_retail' | 'grocery_bulk')}
+                      className="w-full px-4 h-11 rounded-md border border-input bg-background text-sm text-foreground font-medium focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all shadow-sm"
+                    >
+                      <option value="standard_retail">Standard Retail (Default — Integer quantities, single-unit items)</option>
+                      <option value="grocery_bulk">Grocery / Bulk Retail (Decimal quantities & Wholesale/Retail unit conversion)</option>
+                    </select>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      {businessType === 'grocery_bulk'
+                        ? 'Grocery / Bulk Mode active: Enables fractional quantities (e.g. 0.25, 0.5) and Wholesale vs Retail base-unit conversions in Inventory & POS.'
+                        : 'Standard Retail Mode active: Uses standard whole-unit integer quantities and hides bulk conversion fields.'}
+                    </p>
                   </div>
                   
                </div>

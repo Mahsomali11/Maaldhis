@@ -17,7 +17,8 @@ interface PaymentAccount {
 }
 
 export default function StartSalePage() {
-  const { items, cart, addToCart, removeFromCart, clearCart, completeSale, customers, formatCurrency, currentStore, updateCartPrice, categories: allCategories, isLicenseActive } = useApp();
+  const { items, cart, addToCart, removeFromCart, updateCartQuantity, updateCartUnit, clearCart, completeSale, customers, formatCurrency, currentStore, updateCartPrice, categories: allCategories, isLicenseActive } = useApp();
+  const isGroceryMode = currentStore?.business_type === 'grocery_bulk';
   const [search, setSearch] = useState('');
   const [showCheckoutMobile, setShowCheckoutMobile] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
@@ -30,6 +31,7 @@ export default function StartSalePage() {
   const isSubmittingRef = useRef(false);
   const [editingPrice, setEditingPrice] = useState<string | null>(null);
   const [tempPrice, setTempPrice] = useState('');
+  const [qtyDrafts, setQtyDrafts] = useState<Record<string, string>>({});
 
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [activeParentId, setActiveParentId] = useState<string | null>(null);
@@ -260,9 +262,11 @@ export default function StartSalePage() {
   const handleSavePrice = (itemId: string) => {
     const newPrice = Number(tempPrice);
     const cartItem = cart.find(c => c.item.id === itemId);
+    const factor = cartItem?.unit_type === 'wholesale' ? (Number(cartItem.conversion_factor || cartItem.item.conversion_factor) || 1) : 1;
+    const minCost = cartItem ? Number(cartItem.item.cost_price || 0) * factor : 0;
 
-    if (cartItem && newPrice < Number(cartItem.item.cost_price)) {
-      toast.error(`Selling price cannot be less than the item cost price of ${formatCurrency(cartItem.item.cost_price)}`);
+    if (cartItem && newPrice < minCost) {
+      toast.error(`Selling price cannot be less than the unit cost price of ${formatCurrency(minCost)}`);
       return;
     }
 
@@ -281,7 +285,7 @@ export default function StartSalePage() {
     );
   }
 
-  const CheckoutPanel = () => (
+  const checkoutPanelContent = (
     <div className="bg-card h-full max-h-full flex flex-col rounded-2xl shadow-sm border border-border overflow-hidden lg:shadow-xl">
       {/* Header */}
       <div className="px-3.5 py-2.5 border-b border-border/50 bg-muted/15 flex items-center justify-between shrink-0">
@@ -289,7 +293,7 @@ export default function StartSalePage() {
           Current Order
         </h2>
         <span className="bg-primary text-primary-foreground font-bold px-2 py-0.5 rounded-full text-[11px]">
-          {cart.reduce((s, c) => s + c.quantity, 0)} Items
+          {Number(cart.reduce((s, c) => s + c.quantity, 0).toFixed(3))} Items
         </span>
       </div>
 
@@ -304,16 +308,28 @@ export default function StartSalePage() {
             <p className="text-[10px] font-medium text-muted-foreground text-center mt-0.5 max-w-[180px]">Scan a barcode or tap a product to add it.</p>
           </div>
         ) : (
-          <div className="overflow-y-auto max-h-[160px] lg:max-h-[190px] xl:max-h-[220px] p-2 space-y-1.5 scrollbar-thin">
-            {cart.map((c) => (
-              <div key={c.item.id} className="bg-card rounded-lg border border-border/60 p-2 shadow-2xs hover:border-primary/40 transition-all group">
-                <div className="flex justify-between items-start gap-1.5 mb-1">
+          <div className="overflow-y-auto max-h-[210px] lg:max-h-[240px] xl:max-h-[270px] p-2 space-y-1.5 scrollbar-thin">
+            {cart.map((c) => {
+              const activeUnitPrice = Number(c.unit_price ?? c.item.retail_price ?? c.item.sell_price ?? 0);
+              const activeUnitName = c.unit_type === 'wholesale' && c.item.wholesale_unit
+                ? c.item.wholesale_unit
+                : (isGroceryMode ? (c.item.base_unit || 'unit') : 'unit');
+              const hasWholesaleOption = isGroceryMode && Boolean(c.item.wholesale_unit) && Number(c.item.conversion_factor || 1) > 0;
+              const allowDecimal = isGroceryMode && Boolean(c.item.allow_decimal_qty);
+              const factor = c.unit_type === 'wholesale' ? (Number(c.conversion_factor || c.item.conversion_factor) || 1) : 1;
+              const deductedBaseQty = Number((c.quantity * factor).toFixed(3));
+
+              return (
+              <div key={c.item.id} className="bg-card rounded-lg border border-border/60 p-2 shadow-2xs hover:border-primary/40 transition-all group space-y-1.5">
+                <div className="flex justify-between items-start gap-1.5">
                   <div className="flex flex-col min-w-0 flex-1">
                     <span className="font-bold text-foreground text-xs line-clamp-1">{c.item.name}</span>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="text-[10px] font-medium text-muted-foreground">{formatCurrency(c.item.sell_price)}/unit</span>
+                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                      <span className="text-[10px] font-medium text-muted-foreground">
+                        {formatCurrency(activeUnitPrice)}/{activeUnitName}
+                      </span>
                       {editingPrice !== c.item.id && (
-                        <button onClick={() => handleEditPrice(c.item.id, c.item.sell_price)} className="text-[10px] font-bold text-muted-foreground hover:text-primary transition-colors flex items-center gap-0.5 opacity-60 hover:opacity-100">
+                        <button onClick={() => handleEditPrice(c.item.id, activeUnitPrice)} className="text-[10px] font-bold text-muted-foreground hover:text-primary transition-colors flex items-center gap-0.5 opacity-60 hover:opacity-100">
                           <Pencil size={9} /> Edit
                         </button>
                       )}
@@ -341,20 +357,133 @@ export default function StartSalePage() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between border-t border-border/40 pt-1">
-                  <span className="text-[10px] font-bold text-muted-foreground capitalize">Qty</span>
-                  <div className="flex items-center bg-muted/60 rounded-md p-0.5">
-                    <button onClick={() => removeFromCart(c.item.id)} className="w-5 h-5 rounded flex items-center justify-center text-foreground hover:bg-background transition-all">
+                {/* Wholesale vs Retail Unit Selector (Grocery / Bulk Mode only) */}
+                {hasWholesaleOption && (
+                  <div className="flex items-center justify-between gap-1.5 pt-1 border-t border-border/30">
+                    <span className="text-[10px] font-bold text-muted-foreground">Unit:</span>
+                    <div className="flex bg-muted/60 rounded-md p-0.5 gap-0.5">
+                      <button
+                        type="button"
+                        onClick={() => updateCartUnit(c.item.id, 'retail')}
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                          (c.unit_type || 'retail') === 'retail'
+                            ? 'bg-primary text-primary-foreground shadow-2xs'
+                            : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        Retail ({c.item.base_unit || 'Piece'})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateCartUnit(c.item.id, 'wholesale')}
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all ${
+                          c.unit_type === 'wholesale'
+                            ? 'bg-primary text-primary-foreground shadow-2xs'
+                            : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        Wholesale ({c.item.wholesale_unit})
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {c.unit_type === 'wholesale' && factor > 1 && (
+                  <div className="text-[10px] font-semibold text-primary bg-primary/5 px-2 py-0.5 rounded flex justify-between">
+                    <span>1 {c.item.wholesale_unit} = {factor} {c.item.base_unit || 'units'}</span>
+                    <span>Deducts: {deductedBaseQty} {c.item.base_unit || 'units'}</span>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between border-t border-border/40 pt-1 gap-2">
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] font-bold text-muted-foreground capitalize">Qty</span>
+                    {allowDecimal && (
+                      <div className="flex items-center gap-0.5 ml-1">
+                        {[0.125, 0.25, 0.5, 1].map(preset => (
+                          <button
+                            key={preset}
+                            type="button"
+                            onClick={() => {
+                              setQtyDrafts(prev => {
+                                const next = { ...prev };
+                                delete next[c.item.id];
+                                return next;
+                              });
+                              updateCartQuantity(c.item.id, preset);
+                            }}
+                            className={`px-1.5 py-0.5 rounded text-[9px] font-bold border transition-all ${
+                              Math.abs(c.quantity - preset) < 0.001
+                                ? 'bg-primary/15 text-primary border-primary/40'
+                                : 'bg-muted/40 text-muted-foreground border-border/50 hover:text-foreground'
+                            }`}
+                          >
+                            {preset}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center bg-muted/60 rounded-md p-0.5 gap-0.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQtyDrafts(prev => {
+                          const next = { ...prev };
+                          delete next[c.item.id];
+                          return next;
+                        });
+                        removeFromCart(c.item.id);
+                      }}
+                      className="w-5 h-5 rounded flex items-center justify-center text-foreground hover:bg-background transition-all"
+                    >
                       <Minus size={10} />
                     </button>
-                    <span className="font-bold text-[11px] w-6 text-center">{c.quantity}</span>
-                    <button onClick={() => addToCart(c.item, 1)} className="w-5 h-5 rounded flex items-center justify-center text-foreground hover:bg-background transition-all">
+                    {isGroceryMode ? (
+                      <input
+                        type="number"
+                        step={allowDecimal ? "0.001" : "1"}
+                        min={allowDecimal ? "0.001" : "1"}
+                        value={qtyDrafts[c.item.id] !== undefined ? qtyDrafts[c.item.id] : String(c.quantity)}
+                        onChange={e => {
+                          const raw = e.target.value;
+                          setQtyDrafts(prev => ({ ...prev, [c.item.id]: raw }));
+                          const parsed = parseFloat(raw);
+                          if (!isNaN(parsed) && parsed > 0) {
+                            updateCartQuantity(c.item.id, allowDecimal ? parsed : Math.round(parsed));
+                          }
+                        }}
+                        onBlur={() => {
+                          setQtyDrafts(prev => {
+                            const next = { ...prev };
+                            delete next[c.item.id];
+                            return next;
+                          });
+                        }}
+                        className="font-bold text-[11px] w-14 h-5 text-center bg-background rounded border border-border/60 focus:outline-none focus:ring-1 focus:ring-primary"
+                      />
+                    ) : (
+                      <span className="font-bold text-[11px] w-6 text-center">{Math.round(c.quantity)}</span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQtyDrafts(prev => {
+                          const next = { ...prev };
+                          delete next[c.item.id];
+                          return next;
+                        });
+                        addToCart(c.item, 1, c.unit_type);
+                      }}
+                      className="w-5 h-5 rounded flex items-center justify-center text-foreground hover:bg-background transition-all"
+                    >
                       <Plus size={10} />
                     </button>
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -560,7 +689,7 @@ export default function StartSalePage() {
                 <X size={20} />
               </button>
             </div>
-            <CheckoutPanel />
+            {checkoutPanelContent}
           </div>
         </div>
       )}
@@ -692,10 +821,17 @@ export default function StartSalePage() {
                     </div>
                     <div className="flex flex-col flex-1 px-1">
                       <h4 className="font-bold text-foreground text-sm line-clamp-2 leading-tight mb-2 group-hover:text-primary transition-colors capitalize">{item.name}</h4>
-                      <div className="mt-auto flex items-center gap-2">
-                        <span className="flex-1 text-sm font-black text-foreground">
-                          {item.sell_price > 0 ? formatCurrency(item.sell_price) : 'Free'}
+                      <div className="mt-auto flex flex-col gap-0.5">
+                        <span className="text-sm font-black text-foreground">
+                          {(item.retail_price ?? item.sell_price) > 0
+                            ? `${formatCurrency(item.retail_price ?? item.sell_price)}${isGroceryMode && item.base_unit ? `/${item.base_unit}` : ''}`
+                            : 'Free'}
                         </span>
+                        {isGroceryMode && item.wholesale_unit && item.wholesale_price ? (
+                          <span className="text-[10px] font-bold text-primary truncate">
+                            {formatCurrency(item.wholesale_price)}/{item.wholesale_unit}
+                          </span>
+                        ) : null}
                       </div>
                     </div>
                   </button>
@@ -709,7 +845,7 @@ export default function StartSalePage() {
       {/* Right Area (Checkout Panel - Desktop & Laptop Normalized) */}
       {cart.length > 0 && (
         <div className="hidden lg:block w-[350px] xl:w-[390px] 2xl:w-[420px] p-3 lg:p-4 pl-0 h-full shrink-0 animate-in fade-in slide-in-from-right-8 duration-300">
-          <CheckoutPanel />
+          {checkoutPanelContent}
         </div>
       )}
 

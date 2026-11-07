@@ -50,6 +50,7 @@ function StockBadge({ status }: { status: string }) {
 
 export default function InventoryPage() {
   const { items, categories, addItem, addItemsBulk, updateItem, deleteItem, currentStore, formatCurrency } = useApp();
+  const isGroceryMode = currentStore?.business_type === 'grocery_bulk';
   const [tab, setTab] = useState<'product' | 'service'>('product');
   const [search, setSearch] = useState('');
   const [stockFilter, setStockFilter] = useState<StockFilter>('all');
@@ -57,7 +58,24 @@ export default function InventoryPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [showScanner, setShowScanner] = useState(false);
-  const [form, setForm] = useState({ name: '', category: '', sub_category_id: '', barcode: '', cost_price: '', sell_price: '', quantity: '', low_stock_threshold: '5', image_path: '' });
+  const defaultFormState = {
+    name: '',
+    category: '',
+    sub_category_id: '',
+    barcode: '',
+    cost_price: '',
+    sell_price: '',
+    retail_price: '',
+    wholesale_price: '',
+    allow_decimal_qty: false,
+    base_unit: isGroceryMode ? 'KG' : 'Piece',
+    wholesale_unit: '',
+    conversion_factor: '1',
+    quantity: '',
+    low_stock_threshold: '5',
+    image_path: '',
+  };
+  const [form, setForm] = useState(defaultFormState);
   const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [visibleCount, setVisibleCount] = useState<number>(50);
@@ -122,13 +140,20 @@ export default function InventoryPage() {
 
   const openEdit = (item: any) => {
     setEditingItem(item.id);
+    const rPrice = item.retail_price ?? item.sell_price ?? '';
     setForm({
       name: item.name,
       category: item.category || '',
       sub_category_id: item.sub_category_id || '',
       barcode: item.barcode || '',
       cost_price: String(item.cost_price),
-      sell_price: String(item.sell_price),
+      sell_price: String(rPrice),
+      retail_price: String(rPrice),
+      wholesale_price: item.wholesale_price !== null && item.wholesale_price !== undefined ? String(item.wholesale_price) : '',
+      allow_decimal_qty: Boolean(item.allow_decimal_qty),
+      base_unit: item.base_unit || (isGroceryMode ? 'KG' : 'Piece'),
+      wholesale_unit: item.wholesale_unit || '',
+      conversion_factor: item.conversion_factor ? String(item.conversion_factor) : '1',
       quantity: String(item.quantity),
       low_stock_threshold: String(item.low_stock_threshold),
       image_path: item.image_path || '',
@@ -141,6 +166,17 @@ export default function InventoryPage() {
     if (isSubmitting) return;
     setIsSubmitting(true);
     try {
+      const parsedRetailPrice = Number(form.sell_price || form.retail_price || 0);
+      const parsedWholesalePrice = isGroceryMode && form.wholesale_unit.trim() && form.wholesale_price !== ''
+        ? Number(form.wholesale_price)
+        : null;
+      const parsedConversionFactor = isGroceryMode && form.wholesale_unit.trim() && Number(form.conversion_factor) > 0
+        ? Number(form.conversion_factor)
+        : 1;
+      const parsedQty = tab === 'product'
+        ? (isGroceryMode && form.allow_decimal_qty ? Number(parseFloat(form.quantity || '0').toFixed(3)) : Math.round(Number(form.quantity || 0)))
+        : 0;
+
       if (editingItem) {
         await updateItem(editingItem, {
           name: form.name,
@@ -148,8 +184,16 @@ export default function InventoryPage() {
           sub_category_id: form.sub_category_id || null,
           barcode: form.barcode,
           cost_price: Number(form.cost_price),
-          sell_price: Number(form.sell_price),
-          quantity: tab === 'product' ? Number(form.quantity) : 0,
+          sell_price: parsedRetailPrice,
+          retail_price: parsedRetailPrice,
+          ...(isGroceryMode && tab === 'product' ? {
+            allow_decimal_qty: Boolean(form.allow_decimal_qty),
+            base_unit: form.base_unit.trim() || 'Piece',
+            wholesale_unit: form.wholesale_unit.trim() || null,
+            conversion_factor: parsedConversionFactor,
+            wholesale_price: parsedWholesalePrice,
+          } : {}),
+          quantity: parsedQty,
           low_stock_threshold: Number(form.low_stock_threshold),
           image_path: form.image_path,
         });
@@ -165,15 +209,21 @@ export default function InventoryPage() {
           type: tab,
           barcode: form.barcode,
           cost_price: Number(form.cost_price),
-          sell_price: Number(form.sell_price),
-          quantity: tab === 'product' ? Number(form.quantity) : 0,
+          sell_price: parsedRetailPrice,
+          retail_price: parsedRetailPrice,
+          allow_decimal_qty: isGroceryMode && tab === 'product' ? Boolean(form.allow_decimal_qty) : false,
+          base_unit: isGroceryMode && tab === 'product' ? (form.base_unit.trim() || 'Piece') : 'Piece',
+          wholesale_unit: isGroceryMode && tab === 'product' ? (form.wholesale_unit.trim() || null) : null,
+          conversion_factor: isGroceryMode && tab === 'product' ? parsedConversionFactor : 1,
+          wholesale_price: isGroceryMode && tab === 'product' ? parsedWholesalePrice : null,
+          quantity: parsedQty,
           low_stock_threshold: Number(form.low_stock_threshold),
           is_active: true,
           image_path: form.image_path,
         });
         toast.success('Item added successfully');
       }
-      setForm({ name: '', category: '', sub_category_id: '', barcode: '', cost_price: '', sell_price: '', quantity: '', low_stock_threshold: '5', image_path: '' });
+      setForm(defaultFormState);
       setShowForm(false);
       setEditingItem(null);
     } catch (err: any) {
@@ -491,14 +541,29 @@ export default function InventoryPage() {
                             : (item.sub_category?.name || '—')}
                         </td>
                         <td className="px-6 py-4 text-sm text-muted-foreground text-right">{formatCurrency(item.cost_price)}</td>
-                        <td className="px-6 py-4 text-sm font-bold text-foreground text-right">{formatCurrency(item.sell_price)}</td>
+                        <td className="px-6 py-4 text-sm font-bold text-foreground text-right">
+                          <div>{formatCurrency(item.retail_price ?? item.sell_price)}{isGroceryMode && item.base_unit ? <span className="text-[11px] font-medium text-muted-foreground"> / {item.base_unit}</span> : null}</div>
+                          {isGroceryMode && item.wholesale_unit && item.wholesale_price ? (
+                            <div className="text-[11px] font-semibold text-primary">
+                              {formatCurrency(item.wholesale_price)} / {item.wholesale_unit} ({item.conversion_factor || 1} {item.base_unit || 'unit'})
+                            </div>
+                          ) : null}
+                        </td>
                         {tab === 'product' && (
                           <>
                             <td className={`px-6 py-4 text-sm font-bold text-right ${status === 'out_of_stock' ? 'text-destructive' :
                               status === 'low_stock' ? 'text-warning' :
                                 'text-foreground'
                               }`}>
-                              {item.quantity}
+                              <div>
+                                {Number(item.quantity).toLocaleString(undefined, { maximumFractionDigits: 3 })}
+                                {isGroceryMode && item.base_unit ? <span className="text-xs font-medium text-muted-foreground ml-1">{item.base_unit}</span> : null}
+                              </div>
+                              {isGroceryMode && item.wholesale_unit && Number(item.conversion_factor) > 1 && Number(item.quantity) > 0 && (
+                                <div className="text-[10px] font-medium text-muted-foreground">
+                                  ≈ {(Number(item.quantity) / Number(item.conversion_factor)).toFixed(2)} {item.wholesale_unit}(s)
+                                </div>
+                              )}
                             </td>
                             <td className="px-6 py-4 text-center">
                               <StockBadge status={status} />
@@ -646,34 +711,139 @@ export default function InventoryPage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Cost Price <span className="text-destructive">*</span></label>
+                    <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">
+                      Cost Price {isGroceryMode && tab === 'product' && form.base_unit ? `(per ${form.base_unit})` : ''} <span className="text-destructive">*</span>
+                    </label>
                     <input type="number" step="0.01" value={form.cost_price} onChange={e => setForm(f => ({ ...f, cost_price: e.target.value }))} placeholder="0.00"
                       className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all" required />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Sell Price <span className="text-destructive">*</span></label>
-                    <input type="number" step="0.01" value={form.sell_price} onChange={e => setForm(f => ({ ...f, sell_price: e.target.value }))} placeholder="0.00"
+                    <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">
+                      {isGroceryMode && tab === 'product' ? `Retail Price (per ${form.base_unit || 'Base Unit'})` : 'Sell Price'} <span className="text-destructive">*</span>
+                    </label>
+                    <input type="number" step="0.01" value={form.sell_price} onChange={e => setForm(f => ({ ...f, sell_price: e.target.value, retail_price: e.target.value }))} placeholder="0.00"
                       className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all" required />
                   </div>
                 </div>
 
+                {tab === 'product' && isGroceryMode && (
+                  <div className="p-4 rounded-2xl border border-primary/20 bg-primary/5 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-xs font-bold text-foreground block">Grocery / Bulk Unit Configuration</span>
+                        <span className="text-[11px] text-muted-foreground">Track stock in Base Units and optionally sell in Wholesale Units</span>
+                      </div>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={form.allow_decimal_qty}
+                          onChange={e => setForm(f => ({ ...f, allow_decimal_qty: e.target.checked }))}
+                          className="w-4 h-4 rounded border-input text-primary focus:ring-primary"
+                        />
+                        <span className="text-xs font-bold text-foreground">Allow Decimal Qty (0.2, 0.5)</span>
+                      </label>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-bold text-muted-foreground capitalize tracking-wider mb-1">Base Unit (Stock Unit) *</label>
+                        <select
+                          value={form.base_unit}
+                          onChange={e => setForm(f => ({ ...f, base_unit: e.target.value }))}
+                          className="w-full px-3 h-10 rounded-xl border border-input bg-background text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        >
+                          <option value="KG">KG (Kilogram)</option>
+                          <option value="Liter">Liter (L)</option>
+                          <option value="Piece">Piece (Pcs)</option>
+                          <option value="Gram">Gram (g)</option>
+                          <option value="ML">Milliliter (mL)</option>
+                          <option value="Packet">Packet</option>
+                          <option value="Meter">Meter (m)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-muted-foreground capitalize tracking-wider mb-1">Wholesale Unit (Optional)</label>
+                        <input
+                          value={form.wholesale_unit}
+                          onChange={e => setForm(f => ({ ...f, wholesale_unit: e.target.value }))}
+                          placeholder="e.g. Can, Bag, Carton, Box"
+                          className="w-full px-3 h-10 rounded-xl border border-input bg-background text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                      </div>
+                    </div>
+
+                    {form.wholesale_unit.trim() !== '' && (
+                      <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border/50">
+                        <div>
+                          <label className="block text-[11px] font-bold text-muted-foreground capitalize tracking-wider mb-1">
+                            Conversion Factor ({form.base_unit}s per {form.wholesale_unit})
+                          </label>
+                          <input
+                            type="number"
+                            step="0.001"
+                            min="0.001"
+                            value={form.conversion_factor}
+                            onChange={e => setForm(f => ({ ...f, conversion_factor: e.target.value }))}
+                            placeholder="e.g. 20"
+                            className="w-full px-3 h-10 rounded-xl border border-input bg-background text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                          />
+                          <span className="text-[10px] text-primary font-semibold mt-1 block">
+                            1 {form.wholesale_unit} = {form.conversion_factor || 1} {form.base_unit}
+                          </span>
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-muted-foreground capitalize tracking-wider mb-1">
+                            Wholesale Price (per {form.wholesale_unit})
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={form.wholesale_price}
+                            onChange={e => setForm(f => ({ ...f, wholesale_price: e.target.value }))}
+                            placeholder={form.sell_price && form.conversion_factor ? String((Number(form.sell_price) * Number(form.conversion_factor)).toFixed(2)) : '0.00'}
+                            className="w-full px-3 h-10 rounded-xl border border-input bg-background text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {tab === 'product' && (
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Initial Quantity <span className="text-destructive">*</span></label>
-                      <input type="number" value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))} placeholder="0"
-                        className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all" required />
+                      <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">
+                        {isGroceryMode ? `Stock Quantity (in ${form.base_unit || 'Base Unit'})` : 'Initial Quantity'} <span className="text-destructive">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        step={isGroceryMode && form.allow_decimal_qty ? "0.001" : "1"}
+                        value={form.quantity}
+                        onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))}
+                        placeholder="0"
+                        className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all"
+                        required
+                      />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">Low Stock Alert</label>
-                      <input type="number" value={form.low_stock_threshold} onChange={e => setForm(f => ({ ...f, low_stock_threshold: e.target.value }))} placeholder="5"
-                        className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all" />
+                      <label className="block text-xs font-bold text-muted-foreground  capitalize tracking-wider mb-2">
+                        Low Stock Alert {isGroceryMode && form.base_unit ? `(${form.base_unit})` : ''}
+                      </label>
+                      <input
+                        type="number"
+                        step={isGroceryMode && form.allow_decimal_qty ? "0.001" : "1"}
+                        value={form.low_stock_threshold}
+                        onChange={e => setForm(f => ({ ...f, low_stock_threshold: e.target.value }))}
+                        placeholder="5"
+                        className="w-full px-4 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary shadow-sm transition-all"
+                      />
                     </div>
                   </div>
                 )}
 
                 <div className="flex gap-3 pt-6 border-t border-border mt-6">
-                  <button type="button" onClick={() => { setShowForm(false); setEditingItem(null); setForm({ name: '', category: '', sub_category_id: '', barcode: '', cost_price: '', sell_price: '', quantity: '', low_stock_threshold: '5', image_path: '' }); }} className="flex-1 py-3 rounded-xl bg-muted text-foreground text-sm font-bold hover:bg-accent transition-colors">Cancel</button>
+                  <button type="button" onClick={() => { setShowForm(false); setEditingItem(null); setForm(defaultFormState); }} className="flex-1 py-3 rounded-xl bg-muted text-foreground text-sm font-bold hover:bg-accent transition-colors">Cancel</button>
                   <button
                     type="submit"
                     disabled={isSubmitting}

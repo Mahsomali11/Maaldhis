@@ -13,7 +13,13 @@ class Item extends Model
     protected $casts = [
         'cost_price' => 'float',
         'sell_price' => 'float',
+        'retail_price' => 'float',
+        'wholesale_price' => 'float',
+        'conversion_factor' => 'float',
         'quantity' => 'float',
+        'low_stock_threshold' => 'float',
+        'allow_decimal_qty' => 'boolean',
+        'is_active' => 'boolean',
     ];
 
     public function subCategory()

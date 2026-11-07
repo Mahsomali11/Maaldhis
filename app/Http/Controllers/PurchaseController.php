@@ -23,9 +23,11 @@ class PurchaseController extends Controller
             'status' => 'required|in:pending,completed',
             'items' => 'required|array|min:1',
             'items.*.item_id' => 'required|uuid',
-            'items.*.quantity' => 'required|numeric|min:0.01',
+            'items.*.quantity' => 'required|numeric|min:0.001',
             'items.*.cost_price' => 'required|numeric|min:0',
-            'items.*.sell_price' => 'nullable|numeric|min:0'
+            'items.*.sell_price' => 'nullable|numeric|min:0',
+            'items.*.unit_type' => 'nullable|string|in:base,wholesale',
+            'items.*.conversion_factor' => 'nullable|numeric|min:0.001',
         ]);
 
         try {
@@ -43,6 +45,8 @@ class PurchaseController extends Controller
                     'quantity' => $item['quantity'],
                     'cost_price' => $item['cost_price'],
                     'sell_price' => $item['sell_price'] ?? null,
+                    'unit_type' => $item['unit_type'] ?? 'base',
+                    'conversion_factor' => $item['conversion_factor'] ?? null,
                     'subtotal' => $subtotal,
                 ];
             }
@@ -85,32 +89,45 @@ class PurchaseController extends Controller
 
             foreach ($itemsData as $itemData) {
                 $purchaseItemPayload = $itemData;
-                unset($purchaseItemPayload['sell_price']);
+                unset($purchaseItemPayload['sell_price'], $purchaseItemPayload['unit_type'], $purchaseItemPayload['conversion_factor']);
                 $purchaseItemPayload['purchase_id'] = $purchase->id;
                 PurchaseItem::create($purchaseItemPayload);
 
                 if ($request->status === 'completed') {
                     $inventoryItem = $inventoryItemsById->get($itemData['item_id']);
                     if ($inventoryItem) {
-                            $existingQty = $inventoryItem->quantity ?? 0;
-                            $existingCost = $inventoryItem->cost_price ?? 0;
-                            $newQty = $itemData['quantity'];
-                            $newCost = $itemData['cost_price'];
-                            
-                            $totalQty = $existingQty + $newQty;
-                            
-                            if ($totalQty > 0) {
-                                $weightedCost = (($existingQty * $existingCost) + ($newQty * $newCost)) / $totalQty;
-                                $inventoryItem->cost_price = round($weightedCost, 2);
-                            } else {
-                                $inventoryItem->cost_price = $newCost;
-                            }
-                        
-                        if (isset($itemData['sell_price']) && is_numeric($itemData['sell_price'])) {
-                            $inventoryItem->sell_price = $itemData['sell_price'];
+                        $unitType = $itemData['unit_type'] ?? 'base';
+                        $conversionFactor = 1.0;
+                        if ($unitType === 'wholesale') {
+                            $conversionFactor = max(0.001, (float) ($itemData['conversion_factor'] ?? $inventoryItem->conversion_factor ?? 1.0));
                         }
 
-                        $inventoryItem->quantity += $itemData['quantity'];
+                        $existingQty = (float) ($inventoryItem->quantity ?? 0);
+                        $existingCost = (float) ($inventoryItem->cost_price ?? 0);
+                        $newQty = round(((float) $itemData['quantity']) * $conversionFactor, 3);
+                        $newCost = $conversionFactor > 0
+                            ? (((float) $itemData['cost_price']) / $conversionFactor)
+                            : (float) $itemData['cost_price'];
+
+                        $totalQty = $existingQty + $newQty;
+
+                        if ($totalQty > 0) {
+                            $weightedCost = (($existingQty * $existingCost) + ($newQty * $newCost)) / $totalQty;
+                            $inventoryItem->cost_price = round($weightedCost, 2);
+                        } else {
+                            $inventoryItem->cost_price = round($newCost, 2);
+                        }
+
+                        if (isset($itemData['sell_price']) && is_numeric($itemData['sell_price']) && (float) $itemData['sell_price'] > 0) {
+                            if ($unitType === 'wholesale') {
+                                $inventoryItem->wholesale_price = (float) $itemData['sell_price'];
+                            } else {
+                                $inventoryItem->sell_price = (float) $itemData['sell_price'];
+                                $inventoryItem->retail_price = (float) $itemData['sell_price'];
+                            }
+                        }
+
+                        $inventoryItem->quantity = round($existingQty + $newQty, 3);
                         $inventoryItem->save();
                     }
                 }

@@ -34,6 +34,7 @@ export interface Store {
   tax_enabled?: boolean;
   tax_rate?: number;
   low_stock_threshold?: number;
+  business_type?: 'standard_retail' | 'grocery_bulk';
   created_at: string;
 }
 
@@ -80,7 +81,14 @@ export interface Item {
   quantity: number;
   low_stock_threshold: number;
   is_active: boolean;
+  is_service?: boolean;
   image_path?: string;
+  allow_decimal_qty?: boolean;
+  base_unit?: string | null;
+  wholesale_unit?: string | null;
+  conversion_factor?: number;
+  wholesale_price?: number | null;
+  retail_price?: number | null;
   created_at: string;
 }
 
@@ -234,6 +242,11 @@ export interface CartItem {
   item: Item;
   quantity: number;
   line_total: number;
+  unit_type?: 'retail' | 'wholesale';
+  unit_name?: string;
+  unit_price?: number;
+  conversion_factor?: number;
+  base_quantity?: number;
 }
 
 export interface StaffAccount {

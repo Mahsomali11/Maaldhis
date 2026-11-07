@@ -113,8 +113,10 @@ interface AppContextType extends Omit<AppState, 'session'> {
   refundExpense: (id: string, reason: string, refundAmount?: number, paymentAccountId?: string) => Promise<boolean>;
   updateExpense: (id: string, updates: Partial<Expense>) => Promise<boolean>;
   deleteExpense: (id: string) => Promise<boolean>;
-  addToCart: (item: Item, qty: number) => void;
+  addToCart: (item: Item, qty: number, unitType?: 'retail' | 'wholesale') => void;
   removeFromCart: (itemId: string) => void;
+  updateCartQuantity: (itemId: string, newQty: number) => void;
+  updateCartUnit: (itemId: string, unitType: 'retail' | 'wholesale') => void;
   updateCartPrice: (itemId: string, newPrice: number) => void;
   clearCart: () => void;
   completeSale: (saleType: 'cash' | 'credit' | 'mixed', customerId: string | null, paidAmount: number, paymentAccountId: string | null) => Promise<Sale | null>;
@@ -790,21 +792,77 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [state.currentStore, loadStoreData]);
 
   // Cart operations (local only)
-  const addToCart = useCallback((item: Item, qty: number) => {
+  const addToCart = useCallback((item: Item, qty: number, unitType?: 'retail' | 'wholesale') => {
     setState(prev => {
+      const isGroceryMode = prev.currentStore?.business_type === 'grocery_bulk';
+      const allowDecimals = isGroceryMode && Boolean(item.allow_decimal_qty);
       const existing = prev.cart.find(c => c.item.id === item.id);
+      const activeUnitType: 'retail' | 'wholesale' = isGroceryMode
+        ? (unitType || existing?.unit_type || 'retail')
+        : 'retail';
+
+      const factor = activeUnitType === 'wholesale' && item.wholesale_unit && Number(item.conversion_factor) > 0
+        ? Number(item.conversion_factor)
+        : 1;
+      const unitName = activeUnitType === 'wholesale' && item.wholesale_unit
+        ? item.wholesale_unit
+        : (item.base_unit || 'Piece');
+      const defaultUnitPrice = activeUnitType === 'wholesale' && item.wholesale_unit
+        ? (item.wholesale_price !== null && item.wholesale_price !== undefined && Number(item.wholesale_price) > 0
+            ? Number(item.wholesale_price)
+            : Number(((Number(item.retail_price ?? item.sell_price) || 0) * factor).toFixed(2)))
+        : Number(item.retail_price ?? item.sell_price ?? 0);
+
+      const currentQty = existing ? Number(existing.quantity) : 0;
+      const rawNextQty = currentQty + Number(qty);
+      const nextQty = allowDecimals
+        ? Number(Math.max(0.001, rawNextQty).toFixed(3))
+        : Math.max(1, Math.round(rawNextQty));
+      const baseQtyNeeded = Number((nextQty * factor).toFixed(3));
+
+      if (item.type === 'product' && !item.is_service && baseQtyNeeded > Number(item.quantity)) {
+        toast.error(`Insufficient stock: requires ${baseQtyNeeded} ${item.base_unit || 'units'}, only ${item.quantity} ${item.base_unit || 'units'} available.`);
+        return prev;
+      }
+
+      const activeUnitPrice = existing?.unit_price !== undefined && (!unitType || unitType === existing.unit_type)
+        ? Number(existing.unit_price)
+        : defaultUnitPrice;
+      const lineTotal = Number((nextQty * activeUnitPrice).toFixed(2));
+
       if (existing) {
         return {
           ...prev,
           cart: prev.cart.map(c => c.item.id === item.id
-            ? { ...c, quantity: c.quantity + qty, line_total: (c.quantity + qty) * c.item.sell_price }
+            ? {
+                ...c,
+                quantity: nextQty,
+                unit_type: activeUnitType,
+                unit_name: unitName,
+                unit_price: activeUnitPrice,
+                conversion_factor: factor,
+                base_quantity: baseQtyNeeded,
+                line_total: lineTotal,
+              }
             : c
           ),
         };
       }
       return {
         ...prev,
-        cart: [...prev.cart, { item, quantity: qty, line_total: qty * item.sell_price }],
+        cart: [
+          ...prev.cart,
+          {
+            item,
+            quantity: nextQty,
+            unit_type: activeUnitType,
+            unit_name: unitName,
+            unit_price: activeUnitPrice,
+            conversion_factor: factor,
+            base_quantity: baseQtyNeeded,
+            line_total: lineTotal,
+          },
+        ],
       };
     });
   }, []);
@@ -812,16 +870,105 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const removeFromCart = useCallback((itemId: string) => {
     setState(prev => {
       const existing = prev.cart.find(c => c.item.id === itemId);
-      if (existing && existing.quantity > 1) {
+      if (!existing) return prev;
+      const step = prev.currentStore?.business_type === 'grocery_bulk' && existing.item.allow_decimal_qty
+        ? (existing.quantity <= 1 && existing.quantity > 0.25 ? 0.25 : 1)
+        : 1;
+      const nextQty = Number((existing.quantity - step).toFixed(3));
+      if (nextQty > 0) {
+        const factor = existing.unit_type === 'wholesale' ? (Number(existing.conversion_factor || existing.item.conversion_factor) || 1) : 1;
+        const unitPrice = Number(existing.unit_price ?? existing.item.sell_price ?? 0);
         return {
           ...prev,
           cart: prev.cart.map(c => c.item.id === itemId
-            ? { ...c, quantity: c.quantity - 1, line_total: (c.quantity - 1) * c.item.sell_price }
+            ? {
+                ...c,
+                quantity: nextQty,
+                base_quantity: Number((nextQty * factor).toFixed(3)),
+                line_total: Number((nextQty * unitPrice).toFixed(2)),
+              }
             : c
           ),
         };
       }
       return { ...prev, cart: prev.cart.filter(c => c.item.id !== itemId) };
+    });
+  }, []);
+
+  const updateCartQuantity = useCallback((itemId: string, newQty: number) => {
+    setState(prev => {
+      const existing = prev.cart.find(c => c.item.id === itemId);
+      if (!existing) return prev;
+      if (isNaN(newQty) || newQty <= 0) {
+        return { ...prev, cart: prev.cart.filter(c => c.item.id !== itemId) };
+      }
+      const isGroceryMode = prev.currentStore?.business_type === 'grocery_bulk';
+      const allowDecimals = isGroceryMode && Boolean(existing.item.allow_decimal_qty);
+      const normalizedQty = allowDecimals
+        ? Number(Math.max(0.001, newQty).toFixed(3))
+        : Math.max(1, Math.round(newQty));
+      const factor = existing.unit_type === 'wholesale' ? (Number(existing.conversion_factor || existing.item.conversion_factor) || 1) : 1;
+      const baseQtyNeeded = Number((normalizedQty * factor).toFixed(3));
+
+      if (existing.item.type === 'product' && !existing.item.is_service && baseQtyNeeded > Number(existing.item.quantity)) {
+        toast.error(`Insufficient stock: requires ${baseQtyNeeded} ${existing.item.base_unit || 'units'}, only ${existing.item.quantity} ${existing.item.base_unit || 'units'} available.`);
+        return prev;
+      }
+
+      const unitPrice = Number(existing.unit_price ?? existing.item.sell_price ?? 0);
+      return {
+        ...prev,
+        cart: prev.cart.map(c => c.item.id === itemId
+          ? {
+              ...c,
+              quantity: normalizedQty,
+              base_quantity: baseQtyNeeded,
+              line_total: Number((normalizedQty * unitPrice).toFixed(2)),
+            }
+          : c
+        ),
+      };
+    });
+  }, []);
+
+  const updateCartUnit = useCallback((itemId: string, unitType: 'retail' | 'wholesale') => {
+    setState(prev => {
+      const existing = prev.cart.find(c => c.item.id === itemId);
+      if (!existing) return prev;
+      const item = existing.item;
+      const factor = unitType === 'wholesale' && item.wholesale_unit && Number(item.conversion_factor) > 0
+        ? Number(item.conversion_factor)
+        : 1;
+      const unitName = unitType === 'wholesale' && item.wholesale_unit
+        ? item.wholesale_unit
+        : (item.base_unit || 'Piece');
+      const unitPrice = unitType === 'wholesale' && item.wholesale_unit
+        ? (item.wholesale_price !== null && item.wholesale_price !== undefined && Number(item.wholesale_price) > 0
+            ? Number(item.wholesale_price)
+            : Number(((Number(item.retail_price ?? item.sell_price) || 0) * factor).toFixed(2)))
+        : Number(item.retail_price ?? item.sell_price ?? 0);
+
+      const baseQtyNeeded = Number((existing.quantity * factor).toFixed(3));
+      if (item.type === 'product' && !item.is_service && baseQtyNeeded > Number(item.quantity)) {
+        toast.error(`Insufficient stock for ${existing.quantity} ${unitName}: requires ${baseQtyNeeded} ${item.base_unit || 'units'}, only ${item.quantity} ${item.base_unit || 'units'} available.`);
+        return prev;
+      }
+
+      return {
+        ...prev,
+        cart: prev.cart.map(c => c.item.id === itemId
+          ? {
+              ...c,
+              unit_type: unitType,
+              unit_name: unitName,
+              unit_price: unitPrice,
+              conversion_factor: factor,
+              base_quantity: baseQtyNeeded,
+              line_total: Number((c.quantity * unitPrice).toFixed(2)),
+            }
+          : c
+        ),
+      };
     });
   }, []);
 
@@ -833,7 +980,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setState(prev => ({
       ...prev,
       cart: prev.cart.map(c => c.item.id === itemId
-        ? { ...c, item: { ...c.item, sell_price: newPrice }, line_total: c.quantity * newPrice }
+        ? { ...c, unit_price: newPrice, item: { ...c.item, sell_price: newPrice }, line_total: Number((c.quantity * newPrice).toFixed(2)) }
         : c
       ),
     }));
@@ -851,7 +998,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (subtotal === 0) return null;
 
       // Backend constraint: Prevent checkout if any item's selling price is less than its cost price
-      const invalidItem = state.cart.find(c => c.item.sell_price < c.item.cost_price);
+      const invalidItem = state.cart.find(c => {
+        const factor = c.unit_type === 'wholesale' ? (Number(c.conversion_factor || c.item.conversion_factor) || 1) : 1;
+        const effectiveUnitPrice = Number(c.unit_price ?? c.item.sell_price ?? 0);
+        const effectiveCostPrice = Number(c.item.cost_price || 0) * factor;
+        return effectiveUnitPrice < effectiveCostPrice;
+      });
       if (invalidItem) {
         throw new Error(`Transaction rejected: Selling price for ${invalidItem.item.name} is less than its cost price.`);
       }
@@ -904,15 +1056,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       const sale = saleData as unknown as Sale;
 
-      const saleItemsData = state.cart.map(c => ({
-        sale_id: saleData.id,
-        item_id: c.item.id,
-        item_name: c.item.name,
-        quantity: Number(c.quantity) || 1,
-        cost_price: Number(c.item.cost_price) || 0,
-        sell_price: Number(c.item.sell_price) || 0,
-        line_total: Number(c.line_total) || 0,
-      }));
+      const saleItemsData = state.cart.map(c => {
+        const factor = c.unit_type === 'wholesale' ? (Number(c.conversion_factor || c.item.conversion_factor) || 1) : 1;
+        const effectiveUnitPrice = Number(c.unit_price ?? c.item.sell_price ?? 0);
+        const effectiveCostPrice = Number(((Number(c.item.cost_price) || 0) * factor).toFixed(2));
+        const unitLabel = c.unit_type === 'wholesale' && c.item.wholesale_unit
+          ? ` [${c.item.wholesale_unit}]`
+          : (state.currentStore?.business_type === 'grocery_bulk' && c.item.base_unit && c.item.base_unit !== 'Piece' ? ` [${c.item.base_unit}]` : '');
+        return {
+          sale_id: saleData.id,
+          item_id: c.item.id,
+          item_name: `${c.item.name}${unitLabel}`,
+          quantity: Number(Number(c.quantity).toFixed(3)) || 1,
+          cost_price: effectiveCostPrice,
+          sell_price: effectiveUnitPrice,
+          line_total: Number(Number(c.line_total).toFixed(2)) || 0,
+        };
+      });
       const { error: itemsError } = await apiClient.from('sale_items').insert(saleItemsData as any);
       if (itemsError) {
         console.error("Sale items insertion error:", itemsError);
@@ -923,7 +1083,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         state.cart
           .filter(c => c.item.type === 'product' || !c.item.is_service)
           .map(c => {
-            const newQty = Math.max(0, Number(c.item.quantity) - Number(c.quantity));
+            const factor = c.unit_type === 'wholesale' ? (Number(c.conversion_factor || c.item.conversion_factor) || 1) : 1;
+            const deductedBaseQty = Number((Number(c.quantity) * factor).toFixed(3));
+            const newQty = Math.max(0, Number((Number(c.item.quantity) - deductedBaseQty).toFixed(3)));
             return apiClient.from('items').update({ quantity: newQty } as any).eq('id', c.item.id);
           })
       );
@@ -975,7 +1137,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         items: prev.items.map(it => {
           const cartItem = state.cart.find(ci => ci.item.id === it.id);
           if (cartItem && (it.type === 'product' || !it.is_service)) {
-            return { ...it, quantity: Math.max(0, Number(it.quantity) - Number(cartItem.quantity)) };
+            const factor = cartItem.unit_type === 'wholesale' ? (Number(cartItem.conversion_factor || cartItem.item.conversion_factor) || 1) : 1;
+            const deductedBaseQty = Number((Number(cartItem.quantity) * factor).toFixed(3));
+            return { ...it, quantity: Math.max(0, Number((Number(it.quantity) - deductedBaseQty).toFixed(3))) };
           }
           return it;
         })
@@ -1508,7 +1672,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addItem, addItemsBulk, updateItem, deleteItem,
       addCustomer, updateCustomer, addSupplier, deleteSupplier,
       addExpense, refundExpense, updateExpense, deleteExpense,
-      addToCart, removeFromCart, updateCartPrice, clearCart,
+      addToCart, removeFromCart, updateCartQuantity, updateCartUnit, updateCartPrice, clearCart,
       completeSale, recordPayment, recordReturn,
       addStore, deleteStore, updateStore, addCashMovement,
       addStaffAccount, deleteStaffAccount, updateStaffAccount,

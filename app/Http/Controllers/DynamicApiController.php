@@ -92,6 +92,45 @@ class DynamicApiController extends Controller
         return false;
     }
 
+    protected function normalizeItemPayload(array $body, bool $isCreate = false): array
+    {
+        if (isset($body['retail_price']) && (!isset($body['sell_price']) || $body['sell_price'] === '' || $body['sell_price'] === null)) {
+            $body['sell_price'] = $body['retail_price'];
+        } elseif (isset($body['sell_price']) && (!isset($body['retail_price']) || $body['retail_price'] === '' || $body['retail_price'] === null)) {
+            $body['retail_price'] = $body['sell_price'];
+        }
+
+        if ($isCreate) {
+            $body['allow_decimal_qty'] = isset($body['allow_decimal_qty']) ? (bool) $body['allow_decimal_qty'] : false;
+            $body['base_unit'] = !empty($body['base_unit']) ? trim((string) $body['base_unit']) : 'Piece';
+            $body['wholesale_unit'] = !empty($body['wholesale_unit']) ? trim((string) $body['wholesale_unit']) : null;
+            $body['conversion_factor'] = isset($body['conversion_factor']) && (float) $body['conversion_factor'] > 0
+                ? (float) $body['conversion_factor']
+                : 1.000;
+            if (array_key_exists('wholesale_price', $body) && ($body['wholesale_price'] === '' || $body['wholesale_price'] === null)) {
+                $body['wholesale_price'] = null;
+            }
+        } else {
+            if (array_key_exists('allow_decimal_qty', $body)) {
+                $body['allow_decimal_qty'] = (bool) $body['allow_decimal_qty'];
+            }
+            if (array_key_exists('base_unit', $body)) {
+                $body['base_unit'] = !empty($body['base_unit']) ? trim((string) $body['base_unit']) : 'Piece';
+            }
+            if (array_key_exists('wholesale_unit', $body)) {
+                $body['wholesale_unit'] = !empty($body['wholesale_unit']) ? trim((string) $body['wholesale_unit']) : null;
+            }
+            if (array_key_exists('conversion_factor', $body)) {
+                $body['conversion_factor'] = (float) $body['conversion_factor'] > 0 ? (float) $body['conversion_factor'] : 1.000;
+            }
+            if (array_key_exists('wholesale_price', $body) && ($body['wholesale_price'] === '' || $body['wholesale_price'] === null)) {
+                $body['wholesale_price'] = null;
+            }
+        }
+
+        return $body;
+    }
+
     protected function getModelClass($table)
     {
         // Special cases
@@ -298,6 +337,14 @@ class DynamicApiController extends Controller
             $body = $request->post();
         }
 
+        if ($table === 'items') {
+            $body = $this->normalizeItemPayload($body, false);
+        } elseif ($table === 'stores' && array_key_exists('business_type', $body)) {
+            $body['business_type'] = in_array($body['business_type'], ['standard_retail', 'grocery_bulk'], true)
+                ? $body['business_type']
+                : 'standard_retail';
+        }
+
         if (is_array($body) && isset($body[0]) && is_array($body[0])) {
             // Check for rapid duplicate bulk insert (e.g. sale_items for the same sale)
             if ($table === 'sale_items' && isset($body[0]['sale_id'])) {
@@ -431,6 +478,12 @@ class DynamicApiController extends Controller
                 unset($body['updated_at']);
             }
         }
+        if ($table === 'items') {
+            $body = $this->normalizeItemPayload($body, true);
+        } elseif ($table === 'stores' && empty($body['business_type'])) {
+            $body['business_type'] = 'standard_retail';
+        }
+
         try {
             $record = $class::create($body);
             $this->invalidateTableCache($table, $body, $request);
@@ -473,6 +526,14 @@ class DynamicApiController extends Controller
         $body = $request->json()->all();
         if (empty($body)) {
             $body = $request->post();
+        }
+
+        if ($table === 'items') {
+            $body = $this->normalizeItemPayload($body, false);
+        } elseif ($table === 'stores' && array_key_exists('business_type', $body)) {
+            $body['business_type'] = in_array($body['business_type'], ['standard_retail', 'grocery_bulk'], true)
+                ? $body['business_type']
+                : 'standard_retail';
         }
 
         if ($id) {

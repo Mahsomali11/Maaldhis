@@ -156,7 +156,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
   };
 
   return (
-    <div className={cn("relative w-full", className)}>
+    <div className={cn("relative w-full min-w-0", className)}>
       {/* Hidden input for native HTML form validity */}
       {required && (
         <input
@@ -181,7 +181,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
             disabled={disabled}
             onKeyDown={handleKeyDown}
             className={cn(
-              "w-full px-3.5 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground",
+              "w-full min-w-0 overflow-hidden px-3.5 py-2 h-11 rounded-xl border border-input bg-background text-sm text-foreground",
               "flex items-center justify-between text-left transition-all shadow-sm outline-none",
               "hover:border-primary/40 focus:ring-2 focus:ring-primary/20 focus:border-primary",
               disabled && "opacity-50 cursor-not-allowed pointer-events-none bg-muted/30",
@@ -189,7 +189,7 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
               triggerClassName
             )}
           >
-            <span className="truncate flex-1 pr-2">
+            <span className="truncate flex-1 min-w-0 pr-2">
               {selectedOption ? (
                 <span className="font-medium text-foreground">
                   {selectedOption.label}

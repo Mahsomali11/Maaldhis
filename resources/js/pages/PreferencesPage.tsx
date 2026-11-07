@@ -13,6 +13,9 @@ export default function PreferencesPage() {
   const [taxRate, setTaxRate] = useState((currentStore?.tax_rate || 0).toString());
   const [receiptFooter, setReceiptFooter] = useState(currentStore?.receipt_footer_text || 'Thank you for shopping with us!');
   const [lowStockThreshold, setLowStockThreshold] = useState((currentStore?.low_stock_threshold || 5).toString());
+  const [businessType, setBusinessType] = useState<'standard_retail' | 'grocery_bulk'>(
+    currentStore?.business_type === 'grocery_bulk' ? 'grocery_bulk' : 'standard_retail'
+  );
   const [currencies, setCurrencies] = useState<ExchangeRate[]>([]);
   const navigate = (url, options) => router.visit(url, options);
 
@@ -27,7 +30,8 @@ export default function PreferencesPage() {
         tax_enabled: taxEnabled,
         tax_rate: parseFloat(taxRate) || 0,
         receipt_footer_text: receiptFooter,
-        low_stock_threshold: parseInt(lowStockThreshold, 10) || 5
+        low_stock_threshold: parseInt(lowStockThreshold, 10) || 5,
+        business_type: businessType,
       });
       toast.success('Preferences saved');
     }
@@ -97,6 +101,23 @@ export default function PreferencesPage() {
                     />
                     <p className="text-[10px] text-muted-foreground mt-1">
                       You will receive dashboard warnings when item quantities fall below this number.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2 pt-2 border-t border-border/60">
+                    <label className="text-xs font-bold text-muted-foreground capitalize tracking-wider">Business Type / Store Mode</label>
+                    <select
+                      value={businessType}
+                      onChange={e => setBusinessType(e.target.value as 'standard_retail' | 'grocery_bulk')}
+                      className="w-full px-4 h-11 rounded-md border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all shadow-sm"
+                    >
+                      <option value="standard_retail">Standard Retail (Default — Integer quantities, single-unit items)</option>
+                      <option value="grocery_bulk">Grocery / Bulk Retail (Decimal quantities & Wholesale/Retail unit conversion)</option>
+                    </select>
+                    <p className="text-[10px] text-muted-foreground mt-1">
+                      {businessType === 'grocery_bulk'
+                        ? 'Enables fractional quantities (e.g. 0.25, 0.5) and dual-unit conversion (Wholesale vs Base Retail unit) in Inventory & POS.'
+                        : 'Standard integer-only quantities and single-unit product management.'}
                     </p>
                   </div>
 

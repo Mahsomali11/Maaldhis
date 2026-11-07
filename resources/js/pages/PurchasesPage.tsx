@@ -8,6 +8,7 @@ import { SearchableSelect } from '@/components/ui/searchable-select';
 const BarcodeScanner = lazy(() => import('@/components/BarcodeScanner'));
 export default function PurchasesPage() {
   const { purchases, purchaseItems: globalPurchaseItems, suppliers, items, categories, currentStore, formatCurrency, recordPurchase, refreshData } = useApp();
+  const isGroceryMode = currentStore?.business_type === 'grocery_bulk';
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPurchase, setSelectedPurchase] = useState<any | null>(null);
@@ -20,7 +21,14 @@ export default function PurchasesPage() {
   const [paymentAccounts, setPaymentAccounts] = useState<any[]>([]);
   const [paidAmount, setPaidAmount] = useState('');
   const [notes, setNotes] = useState('');
-  const [purchaseItems, setPurchaseItems] = useState<{ item_id: string; quantity: number; cost_price: number; sell_price: number }[]>([]);
+  const [purchaseItems, setPurchaseItems] = useState<{
+    item_id: string;
+    quantity: number;
+    cost_price: number;
+    sell_price: number;
+    unit_type?: 'base' | 'wholesale';
+    conversion_factor?: number;
+  }[]>([]);
   const [updateCostPrice, setUpdateCostPrice] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -32,6 +40,11 @@ export default function PurchasesPage() {
   const [quickAddBarcode, setQuickAddBarcode] = useState('');
   const [quickAddCostPrice, setQuickAddCostPrice] = useState('');
   const [quickAddSellingPrice, setQuickAddSellingPrice] = useState('');
+  const [quickAddWholesalePrice, setQuickAddWholesalePrice] = useState('');
+  const [quickAddAllowDecimalQty, setQuickAddAllowDecimalQty] = useState(false);
+  const [quickAddBaseUnit, setQuickAddBaseUnit] = useState('KG');
+  const [quickAddWholesaleUnit, setQuickAddWholesaleUnit] = useState('');
+  const [quickAddConversionFactor, setQuickAddConversionFactor] = useState('1');
   const [quickAddInitialQuantity, setQuickAddInitialQuantity] = useState('');
   const [quickAddLowStock, setQuickAddLowStock] = useState('5');
   const [showScanner, setShowScanner] = useState(false);
@@ -75,7 +88,7 @@ export default function PurchasesPage() {
   }, [purchaseItems]);
 
   const handleAddItem = () => {
-    setPurchaseItems([...purchaseItems, { item_id: '', quantity: 1, cost_price: 0, sell_price: 0 }]);
+    setPurchaseItems([...purchaseItems, { item_id: '', quantity: 1, cost_price: 0, sell_price: 0, unit_type: 'base', conversion_factor: 1 }]);
   };
 
   const handleRemoveItem = (index: number) => {
@@ -89,9 +102,44 @@ export default function PurchasesPage() {
       newItems[index] = {
         ...newItems[index],
         item_id: value,
-        cost_price: selectedItem ? selectedItem.cost_price : 0,
-        sell_price: selectedItem ? selectedItem.sell_price : 0
+        unit_type: 'base',
+        conversion_factor: 1,
+        cost_price: selectedItem ? Number(selectedItem.cost_price) : 0,
+        sell_price: selectedItem ? Number(selectedItem.retail_price ?? selectedItem.sell_price) : 0
       };
+    } else if (field === 'unit_type') {
+      const currentRow = newItems[index];
+      const selectedItem = items.find(i => i.id === currentRow.item_id);
+      const factor = Math.max(0.001, Number(selectedItem?.conversion_factor) || 1);
+      const prevUnit = currentRow.unit_type || 'base';
+
+      if (value === 'wholesale' && prevUnit !== 'wholesale') {
+        const baseCost = currentRow.cost_price > 0 ? Number(currentRow.cost_price) : Number(selectedItem?.cost_price || 0);
+        const newCost = Number((baseCost * factor).toFixed(2));
+        const newSell = selectedItem?.wholesale_price && Number(selectedItem.wholesale_price) > 0
+          ? Number(selectedItem.wholesale_price)
+          : Number(((Number(selectedItem?.retail_price ?? selectedItem?.sell_price) || 0) * factor).toFixed(2));
+        newItems[index] = {
+          ...currentRow,
+          unit_type: 'wholesale',
+          conversion_factor: factor,
+          cost_price: newCost,
+          sell_price: newSell,
+        };
+      } else if (value === 'base' && prevUnit === 'wholesale') {
+        const wholesaleCost = currentRow.cost_price > 0 ? Number(currentRow.cost_price) : (Number(selectedItem?.cost_price || 0) * factor);
+        const newCost = Number((wholesaleCost / factor).toFixed(2));
+        const newSell = Number(selectedItem?.retail_price ?? selectedItem?.sell_price ?? 0);
+        newItems[index] = {
+          ...currentRow,
+          unit_type: 'base',
+          conversion_factor: 1,
+          cost_price: newCost,
+          sell_price: newSell,
+        };
+      } else {
+        newItems[index] = { ...currentRow, unit_type: value };
+      }
     } else {
       newItems[index] = { ...newItems[index], [field]: value };
     }
@@ -104,6 +152,14 @@ export default function PurchasesPage() {
     setIsSubmittingProduct(true);
 
     try {
+      const parsedRetailPrice = Number(quickAddSellingPrice) || 0;
+      const parsedWholesalePrice = isGroceryMode && quickAddWholesaleUnit.trim() && quickAddWholesalePrice !== ''
+        ? Number(quickAddWholesalePrice)
+        : null;
+      const parsedConversionFactor = isGroceryMode && quickAddWholesaleUnit.trim() && Number(quickAddConversionFactor) > 0
+        ? Number(quickAddConversionFactor)
+        : 1;
+
       const { data, error } = await apiClient.from('items').insert({
         store_id: currentStore.id,
         name: quickAddName,
@@ -113,7 +169,13 @@ export default function PurchasesPage() {
         barcode: quickAddBarcode,
         low_stock_threshold: Number(quickAddLowStock) || 5,
         cost_price: Number(quickAddCostPrice) || 0,
-        sell_price: Number(quickAddSellingPrice) || 0,
+        sell_price: parsedRetailPrice,
+        retail_price: parsedRetailPrice,
+        allow_decimal_qty: isGroceryMode ? Boolean(quickAddAllowDecimalQty) : false,
+        base_unit: isGroceryMode ? (quickAddBaseUnit.trim() || 'KG') : 'Piece',
+        wholesale_unit: isGroceryMode && quickAddWholesaleUnit.trim() ? quickAddWholesaleUnit.trim() : null,
+        conversion_factor: isGroceryMode ? parsedConversionFactor : 1,
+        wholesale_price: isGroceryMode ? parsedWholesalePrice : null,
         quantity: 0,
         is_active: true
       });
@@ -133,7 +195,9 @@ export default function PurchasesPage() {
           item_id: newItem.id,
           quantity: Number(quickAddInitialQuantity) || 1,
           cost_price: Number(quickAddCostPrice) || 0,
-          sell_price: Number(quickAddSellingPrice) || 0
+          sell_price: parsedRetailPrice,
+          unit_type: 'base',
+          conversion_factor: 1,
         });
         setPurchaseItems(newItems);
       }
@@ -148,6 +212,11 @@ export default function PurchasesPage() {
       setQuickAddBarcode('');
       setQuickAddCostPrice('');
       setQuickAddSellingPrice('');
+      setQuickAddWholesalePrice('');
+      setQuickAddAllowDecimalQty(false);
+      setQuickAddBaseUnit(isGroceryMode ? 'KG' : 'Piece');
+      setQuickAddWholesaleUnit('');
+      setQuickAddConversionFactor('1');
       setQuickAddInitialQuantity('');
       setQuickAddLowStock('5');
     } catch (err: any) {
@@ -446,7 +515,7 @@ export default function PurchasesPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6">
+            <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto overflow-x-hidden p-6 sm:p-8 space-y-6">
 
               {/* Header Information */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -505,8 +574,15 @@ export default function PurchasesPage() {
                       onClick={() => {
                         setQuickAddName('');
                         setQuickAddCategory('');
+                        setQuickAddSubCategory('');
+                        setQuickAddBarcode('');
                         setQuickAddCostPrice('');
                         setQuickAddSellingPrice('');
+                        setQuickAddWholesalePrice('');
+                        setQuickAddAllowDecimalQty(false);
+                        setQuickAddBaseUnit(isGroceryMode ? 'KG' : 'Piece');
+                        setQuickAddWholesaleUnit('');
+                        setQuickAddConversionFactor('1');
                         setQuickAddInitialQuantity('');
                         setShowQuickAddProduct(true);
                       }}
@@ -525,71 +601,159 @@ export default function PurchasesPage() {
                 </div>
 
                 <div className="space-y-3">
-                  {purchaseItems.map((item, index) => (
-                    <div key={index} className="flex flex-wrap sm:flex-nowrap items-center gap-3 bg-background p-3 rounded-xl border border-border shadow-sm">
-                      <div className="flex-1 min-w-[200px]">
-                        <SearchableSelect
-                          value={item.item_id}
-                          onChange={val => handleItemChange(index, 'item_id', val)}
-                          options={items.filter(i => i.type === 'product').map(i => ({
-                            value: i.id,
-                            label: i.name,
-                            subLabel: `Stock: ${i.quantity}`,
-                            badge: i.barcode ? `Barcode: ${i.barcode}` : undefined
-                          }))}
-                          placeholder="Select Inventory Item"
-                          searchPlaceholder="Search item name or barcode..."
-                          triggerClassName="h-10 text-xs sm:text-sm rounded-lg"
-                          required
-                        />
+                  {purchaseItems.map((item, index) => {
+                    const selectedItem = items.find(i => i.id === item.item_id);
+                    const baseUnitLabel = selectedItem?.base_unit || (isGroceryMode ? 'KG' : 'Piece');
+                    const wholesaleUnitLabel = selectedItem?.wholesale_unit?.trim() || '';
+                    const hasWholesaleUnit = isGroceryMode && Boolean(wholesaleUnitLabel);
+                    const factor = Math.max(0.001, Number(selectedItem?.conversion_factor) || 1);
+                    const activeUnitLabel = isGroceryMode
+                      ? (item.unit_type === 'wholesale' && hasWholesaleUnit ? wholesaleUnitLabel : baseUnitLabel)
+                      : '';
+                    const addedBaseQty = item.unit_type === 'wholesale' && hasWholesaleUnit
+                      ? Number(((Number(item.quantity) || 0) * factor).toFixed(3))
+                      : Number((Number(item.quantity) || 0).toFixed(3));
+
+                    return (
+                      <div key={index} className="bg-background p-3.5 rounded-xl border border-border shadow-sm space-y-2.5 overflow-hidden">
+                        <div
+                          className={
+                            isGroceryMode
+                              ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[minmax(0,2.1fr)_minmax(0,1.35fr)_minmax(0,0.85fr)_minmax(0,1.1fr)_minmax(0,1.1fr)_auto] gap-2.5 items-end'
+                              : 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[minmax(0,2.6fr)_minmax(0,0.9fr)_minmax(0,1.2fr)_minmax(0,1.2fr)_auto] gap-2.5 items-end'
+                          }
+                        >
+                          <div className="min-w-0 sm:col-span-2 md:col-span-1">
+                            <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1 truncate">
+                              Product
+                            </label>
+                            <SearchableSelect
+                              value={item.item_id}
+                              onChange={val => handleItemChange(index, 'item_id', val)}
+                              options={items.filter(i => i.type === 'product').map(i => {
+                                const bUnit = i.base_unit || (isGroceryMode ? 'KG' : 'Piece');
+                                const wUnit = i.wholesale_unit?.trim();
+                                const cFactor = Number(i.conversion_factor || 1);
+                                return {
+                                  value: i.id,
+                                  label: i.name,
+                                  subLabel: isGroceryMode
+                                    ? `Stock: ${i.quantity} ${bUnit}${wUnit && cFactor > 1 ? ` • 1 ${wUnit} = ${cFactor} ${bUnit}` : ''}`
+                                    : `Stock: ${i.quantity}`,
+                                  badge: i.barcode ? `Barcode: ${i.barcode}` : undefined
+                                };
+                              })}
+                              placeholder="Select Inventory Item"
+                              searchPlaceholder="Search item name or barcode..."
+                              triggerClassName="h-10 text-xs sm:text-sm rounded-lg px-2.5"
+                              required
+                            />
+                          </div>
+
+                          {isGroceryMode && (
+                            <div className="min-w-0">
+                              <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1 truncate">
+                                Unit
+                              </label>
+                              <select
+                                value={item.unit_type || 'base'}
+                                onChange={e => handleItemChange(index, 'unit_type', e.target.value)}
+                                disabled={!selectedItem}
+                                title="Purchase Unit"
+                                className="w-full min-w-0 px-2.5 py-2 h-10 rounded-lg border border-input bg-background text-xs font-bold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-50 truncate"
+                              >
+                                <option value="base">{baseUnitLabel} (Base)</option>
+                                {hasWholesaleUnit && (
+                                  <option value="wholesale">
+                                    {wholesaleUnitLabel} ({factor} {baseUnitLabel})
+                                  </option>
+                                )}
+                              </select>
+                            </div>
+                          )}
+
+                          <div className="min-w-0">
+                            <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1 truncate">
+                              {isGroceryMode && activeUnitLabel ? `Qty (${activeUnitLabel})` : 'Qty'}
+                            </label>
+                            <input
+                              type="number"
+                              placeholder="Qty"
+                              min={isGroceryMode ? '0.001' : '0.01'}
+                              step={isGroceryMode ? '0.001' : '0.01'}
+                              value={item.quantity || ''}
+                              onChange={e => handleItemChange(index, 'quantity', Number(e.target.value))}
+                              className="w-full min-w-0 px-2.5 py-2 h-10 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                              required
+                            />
+                          </div>
+
+                          <div className="min-w-0">
+                            <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1 truncate">
+                              {isGroceryMode && activeUnitLabel ? `Cost / ${activeUnitLabel}` : 'Cost Price'}
+                            </label>
+                            <input
+                              type="number"
+                              placeholder="0.00"
+                              min="0"
+                              step="0.01"
+                              value={item.cost_price === 0 ? '' : item.cost_price}
+                              onChange={e => handleItemChange(index, 'cost_price', Number(e.target.value))}
+                              className="w-full min-w-0 px-2.5 py-2 h-10 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                              required
+                            />
+                          </div>
+
+                          <div className="min-w-0">
+                            <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1 truncate">
+                              {isGroceryMode && activeUnitLabel ? `Sell / ${activeUnitLabel}` : 'Sell Price'}
+                            </label>
+                            <input
+                              type="number"
+                              placeholder="0.00"
+                              min="0"
+                              step="0.01"
+                              value={item.sell_price === 0 ? '' : item.sell_price}
+                              onChange={e => handleItemChange(index, 'sell_price', Number(e.target.value))}
+                              className="w-full min-w-0 px-2.5 py-2 h-10 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                            />
+                          </div>
+
+                          <div className="flex items-center justify-between sm:justify-end gap-2 h-10 shrink-0 pl-1">
+                            <span className="font-bold text-sm text-foreground whitespace-nowrap">
+                              {formatCurrency(item.quantity * item.cost_price)}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveItem(index)}
+                              className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors shrink-0"
+                              title="Remove item"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </div>
+
+                        {isGroceryMode && selectedItem && (
+                          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-3 py-1.5 rounded-lg bg-primary/5 border border-primary/15 text-xs">
+                            <span className="font-semibold text-foreground">
+                              Stock Added: <strong className="text-primary">+{addedBaseQty} {baseUnitLabel}</strong>
+                              {item.unit_type === 'wholesale' && hasWholesaleUnit && (
+                                <span className="text-muted-foreground ml-1.5">
+                                  ({item.quantity || 0} {wholesaleUnitLabel} × {factor} {baseUnitLabel})
+                                </span>
+                              )}
+                            </span>
+                            {item.unit_type === 'wholesale' && hasWholesaleUnit && factor > 0 && (
+                              <span className="text-muted-foreground font-medium">
+                                Base Cost: <strong className="text-foreground">{formatCurrency((Number(item.cost_price) || 0) / factor)}</strong> / {baseUnitLabel}
+                              </span>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      <div className="w-24 shrink-0">
-                        <input
-                          type="number"
-                          placeholder="Qty"
-                          min="0.01"
-                          step="0.01"
-                          value={item.quantity || ''}
-                          onChange={e => handleItemChange(index, 'quantity', Number(e.target.value))}
-                          className="w-full px-3 py-2 h-10 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-                          required
-                        />
-                      </div>
-                      <div className="w-32 shrink-0">
-                        <input
-                          type="number"
-                          placeholder="Cost Price"
-                          min="0"
-                          step="0.01"
-                          value={item.cost_price === 0 ? '' : item.cost_price}
-                          onChange={e => handleItemChange(index, 'cost_price', Number(e.target.value))}
-                          className="w-full px-3 py-2 h-10 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-                          required
-                        />
-                      </div>
-                      <div className="w-32 shrink-0">
-                        <input
-                          type="number"
-                          placeholder="Sell Price"
-                          min="0"
-                          step="0.01"
-                          value={item.sell_price === 0 ? '' : item.sell_price}
-                          onChange={e => handleItemChange(index, 'sell_price', Number(e.target.value))}
-                          className="w-full px-3 py-2 h-10 rounded-lg border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
-                        />
-                      </div>
-                      <div className="w-24 shrink-0 text-right font-bold text-foreground pr-2">
-                        {formatCurrency(item.quantity * item.cost_price)}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveItem(index)}
-                        className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  ))}
+                    );
+                  })}
                   {purchaseItems.length === 0 && (
                     <div className="text-center py-6 text-sm font-medium text-muted-foreground border-2 border-dashed border-border rounded-xl">
                       No items added yet. Click "Add Item" to begin.
@@ -706,7 +870,7 @@ export default function PurchasesPage() {
       {/* Quick Add Product Modal */}
       {showQuickAddProduct && (
         <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-card rounded-2xl sm:rounded-3xl border border-border shadow-2xl flex flex-col animate-in zoom-in-95 duration-200">
+          <div className="w-full max-w-md max-h-[90vh] bg-card rounded-2xl sm:rounded-3xl border border-border shadow-2xl flex flex-col animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center px-6 py-5 border-b border-border bg-muted/10 shrink-0">
               <h3 className="text-xl font-bold text-foreground">Quick Add Product</h3>
               <button
@@ -716,7 +880,7 @@ export default function PurchasesPage() {
                 <X size={16} />
               </button>
             </div>
-            <form onSubmit={handleQuickAddProduct} className="p-6 space-y-4">
+            <form onSubmit={handleQuickAddProduct} className="p-6 space-y-4 overflow-y-auto flex-1">
               <div>
                 <label className="block text-xs font-bold text-muted-foreground capitalize tracking-wider mb-2">Item Name <span className="text-destructive">*</span></label>
                 <input
@@ -786,7 +950,9 @@ export default function PurchasesPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-muted-foreground capitalize tracking-wider mb-2">Cost Price <span className="text-destructive">*</span></label>
+                  <label className="block text-xs font-bold text-muted-foreground capitalize tracking-wider mb-2">
+                    Cost Price {isGroceryMode && quickAddBaseUnit ? `(per ${quickAddBaseUnit})` : ''} <span className="text-destructive">*</span>
+                  </label>
                   <input
                     type="number"
                     step="0.01"
@@ -798,7 +964,9 @@ export default function PurchasesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-muted-foreground capitalize tracking-wider mb-2">Sell Price <span className="text-destructive">*</span></label>
+                  <label className="block text-xs font-bold text-muted-foreground capitalize tracking-wider mb-2">
+                    {isGroceryMode ? `Retail Price (per ${quickAddBaseUnit || 'Base Unit'})` : 'Sell Price'} <span className="text-destructive">*</span>
+                  </label>
                   <input
                     type="number"
                     step="0.01"
@@ -811,11 +979,98 @@ export default function PurchasesPage() {
                 </div>
               </div>
 
+              {isGroceryMode && (
+                <div className="p-4 rounded-2xl border border-primary/20 bg-primary/5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-bold text-foreground block">Grocery / Bulk Unit Configuration</span>
+                      <span className="text-[11px] text-muted-foreground">Track stock in Base Units and optionally buy/sell in Wholesale Units</span>
+                    </div>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={quickAddAllowDecimalQty}
+                        onChange={e => setQuickAddAllowDecimalQty(e.target.checked)}
+                        className="w-4 h-4 rounded border-input text-primary focus:ring-primary"
+                      />
+                      <span className="text-xs font-bold text-foreground">Allow Decimal Qty (0.2, 0.5)</span>
+                    </label>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-muted-foreground capitalize tracking-wider mb-1">Base Unit (Stock Unit) *</label>
+                      <select
+                        value={quickAddBaseUnit}
+                        onChange={e => setQuickAddBaseUnit(e.target.value)}
+                        className="w-full px-3 h-10 rounded-xl border border-input bg-background text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      >
+                        <option value="KG">KG (Kilogram)</option>
+                        <option value="Liter">Liter (L)</option>
+                        <option value="Piece">Piece (Pcs)</option>
+                        <option value="Gram">Gram (g)</option>
+                        <option value="ML">Milliliter (mL)</option>
+                        <option value="Packet">Packet</option>
+                        <option value="Meter">Meter (m)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-muted-foreground capitalize tracking-wider mb-1">Wholesale Unit (Optional)</label>
+                      <input
+                        value={quickAddWholesaleUnit}
+                        onChange={e => setQuickAddWholesaleUnit(e.target.value)}
+                        placeholder="e.g. Jawaan, Can, Bag, Carton"
+                        className="w-full px-3 h-10 rounded-xl border border-input bg-background text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
+                  </div>
+
+                  {quickAddWholesaleUnit.trim() !== '' && (
+                    <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border/50">
+                      <div>
+                        <label className="block text-[11px] font-bold text-muted-foreground capitalize tracking-wider mb-1">
+                          Conversion Factor ({quickAddBaseUnit}s per {quickAddWholesaleUnit})
+                        </label>
+                        <input
+                          type="number"
+                          step="0.001"
+                          min="0.001"
+                          value={quickAddConversionFactor}
+                          onChange={e => setQuickAddConversionFactor(e.target.value)}
+                          placeholder="e.g. 20"
+                          className="w-full px-3 h-10 rounded-xl border border-input bg-background text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                        <span className="text-[10px] text-primary font-semibold mt-1 block">
+                          1 {quickAddWholesaleUnit} = {quickAddConversionFactor || 1} {quickAddBaseUnit}
+                        </span>
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-muted-foreground capitalize tracking-wider mb-1">
+                          Wholesale Price (per {quickAddWholesaleUnit})
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={quickAddWholesalePrice}
+                          onChange={e => setQuickAddWholesalePrice(e.target.value)}
+                          placeholder={quickAddSellingPrice && quickAddConversionFactor ? String((Number(quickAddSellingPrice) * Number(quickAddConversionFactor)).toFixed(2)) : '0.00'}
+                          className="w-full px-3 h-10 rounded-xl border border-input bg-background text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-muted-foreground capitalize tracking-wider mb-2">Initial Quantity <span className="text-destructive">*</span></label>
+                  <label className="block text-xs font-bold text-muted-foreground capitalize tracking-wider mb-2">
+                    {isGroceryMode ? `Purchase Qty (in ${quickAddBaseUnit || 'Base Unit'})` : 'Initial Quantity'} <span className="text-destructive">*</span>
+                  </label>
                   <input
                     type="number"
+                    step={isGroceryMode && quickAddAllowDecimalQty ? '0.001' : '1'}
                     value={quickAddInitialQuantity}
                     onChange={e => setQuickAddInitialQuantity(e.target.value)}
                     placeholder="0"
@@ -824,9 +1079,12 @@ export default function PurchasesPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-muted-foreground capitalize tracking-wider mb-2">Low Stock Alert</label>
+                  <label className="block text-xs font-bold text-muted-foreground capitalize tracking-wider mb-2">
+                    Low Stock Alert {isGroceryMode && quickAddBaseUnit ? `(${quickAddBaseUnit})` : ''}
+                  </label>
                   <input
                     type="number"
+                    step={isGroceryMode && quickAddAllowDecimalQty ? '0.001' : '1'}
                     value={quickAddLowStock}
                     onChange={e => setQuickAddLowStock(e.target.value)}
                     placeholder="5"

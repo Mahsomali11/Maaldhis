@@ -54,7 +54,7 @@ class HandleInertiaRequests extends Middleware
                     'id', 'owner_user_id', 'store_name', 'store_code', 'location', 'phone',
                     'currency', 'logo_url', 'show_logo_on_receipt', 'receipt_thank_you_message',
                     'receipt_footer_text', 'receipt_template', 'primary_color', 'secondary_color',
-                    'country', 'tax_enabled', 'tax_rate', 'low_stock_threshold', 'created_at',
+                    'country', 'tax_enabled', 'tax_rate', 'low_stock_threshold', 'business_type', 'created_at',
                 ];
                 try {
                     if ($ctx['is_owner']) {

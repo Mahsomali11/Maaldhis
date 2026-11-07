@@ -48,6 +48,21 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        if ($this->app->runningInConsole()) {
+            return;
+        }
+
+        $flagFile = rtrim(sys_get_temp_dir(), '\\/') . DIRECTORY_SEPARATOR . 'maaldhis_storage' . DIRECTORY_SEPARATOR . 'schema_bulk_units_v1.flag';
+        if (!is_file($flagFile)) {
+            try {
+                $migration = include base_path('database/migrations/2026_11_07_182000_add_business_type_and_bulk_units_to_stores_and_items.php');
+                if (is_object($migration) && method_exists($migration, 'up')) {
+                    $migration->up();
+                    @file_put_contents($flagFile, date('c'));
+                }
+            } catch (\Throwable $e) {
+                // Ignore if DB is temporarily unreachable; will retry on next request
+            }
+        }
     }
 }
