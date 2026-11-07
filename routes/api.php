@@ -52,6 +52,10 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Process Return, Purchase, Transfers, and Expense Reversals
     Route::post('/rest/v1/process-return', [\App\Http\Controllers\ReturnController::class, 'processReturn']);
     Route::post('/rest/v1/process-purchase', [\App\Http\Controllers\PurchaseController::class, 'processPurchase']);
+    Route::post('/rest/v1/return-purchase', [\App\Http\Controllers\PurchaseController::class, 'returnPurchase']);
+    Route::post('/rest/v1/purchases/{id}/return', [\App\Http\Controllers\PurchaseController::class, 'returnPurchase']);
+    Route::post('/rest/v1/delete-purchase', [\App\Http\Controllers\PurchaseController::class, 'deletePurchase']);
+    Route::delete('/rest/v1/purchases/{id}', [\App\Http\Controllers\PurchaseController::class, 'deletePurchase']);
     Route::post('/rest/v1/pay-supplier-debt', [\App\Http\Controllers\PurchaseController::class, 'paySupplierDebt']);
     Route::post('/rest/v1/process-transfer', [\App\Http\Controllers\TransferController::class, 'processTransfer']);
     Route::post('/rest/v1/refund-expense', [\App\Http\Controllers\ExpenseController::class, 'refundExpense']);

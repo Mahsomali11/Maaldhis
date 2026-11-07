@@ -65,6 +65,27 @@ return new class extends Migration
         }
 
         if (Schema::hasTable('purchase_items')) {
+            Schema::table('purchase_items', function (Blueprint $table) {
+                if (!Schema::hasColumn('purchase_items', 'unit_type')) {
+                    $table->string('unit_type')->default('base');
+                }
+                if (!Schema::hasColumn('purchase_items', 'unit_name')) {
+                    $table->string('unit_name')->nullable();
+                }
+                if (!Schema::hasColumn('purchase_items', 'conversion_factor')) {
+                    $table->decimal('conversion_factor', 12, 3)->default(1.000);
+                }
+                if (!Schema::hasColumn('purchase_items', 'base_quantity')) {
+                    $table->decimal('base_quantity', 12, 3)->nullable();
+                }
+                if (!Schema::hasColumn('purchase_items', 'returned_quantity')) {
+                    $table->decimal('returned_quantity', 12, 3)->default(0.000);
+                }
+                if (!Schema::hasColumn('purchase_items', 'returned_base_quantity')) {
+                    $table->decimal('returned_base_quantity', 12, 3)->default(0.000);
+                }
+            });
+
             try {
                 DB::statement('ALTER TABLE `purchase_items` MODIFY COLUMN `quantity` DECIMAL(12, 3) NOT NULL DEFAULT 1.000');
             } catch (\Throwable $e) {

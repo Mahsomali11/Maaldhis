@@ -271,7 +271,7 @@ export interface Purchase {
   total_amount: number;
   paid_amount: number;
   payment_account_id: string | null;
-  status: 'pending' | 'completed' | 'Pending' | 'Completed';
+  status: 'pending' | 'completed' | 'returned' | 'Pending' | 'Completed' | 'Returned';
   notes?: string;
   created_at: string;
   items?: PurchaseItem[];
@@ -284,4 +284,10 @@ export interface PurchaseItem {
   quantity: number;
   cost_price: number;
   subtotal: number;
+  unit_type?: 'base' | 'wholesale';
+  unit_name?: string | null;
+  conversion_factor?: number;
+  base_quantity?: number | null;
+  returned_quantity?: number;
+  returned_base_quantity?: number;
 }
