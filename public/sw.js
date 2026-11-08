@@ -1,14 +1,18 @@
 /**
- * Maaldhis PWA Service Worker (v3)
- * Comprehensive SPA Offline Navigation Fallback & Isolated Inertia Routing Engine.
- * Prevents raw JSON on document refresh and eliminates white screen crashes on offline client-side visits.
+ * Maaldhis PWA Service Worker (v4)
+ * Comprehensive SPA Offline Navigation Fallback, Universal Manifest Pre-Caching & Isolated Inertia Routing Engine.
+ * Ensures all system pages, assets, and routes are available offline regardless of entry point.
  */
 
-const CACHE_VERSION = 'maaldhis-pwa-v3';
+const CACHE_VERSION = 'maaldhis-pwa-v4';
 const STATIC_CACHE = `maaldhis-static-${CACHE_VERSION}`;
 const HTML_SHELL_CACHE = `maaldhis-html-${CACHE_VERSION}`;
 const INERTIA_DATA_CACHE = `maaldhis-inertia-${CACHE_VERSION}`;
 const API_CACHE = `maaldhis-api-${CACHE_VERSION}`;
+
+let lastKnownAuth = null;
+let lastKnownStores = [];
+let lastKnownBranding = { system_name: 'Maaldhis' };
 
 const PRECACHE_ASSETS = [
   '/',
@@ -58,6 +62,10 @@ const SW_ROUTE_PAGE_MAP = {
   '/dental-catalog': 'dental/DentalCatalogPage',
   '/dental-doctors': 'dental/DoctorsPage',
   '/doctors': 'dental/DoctorsPage',
+  '/license-blocked': 'LicenseBlockPage',
+  '/login': 'LoginPage',
+  '/signup': 'SignupPage',
+  '/reset-password': 'ResetPasswordPage',
   '/admin/dashboard': 'admin/AdminDashboardPage',
   '/admin/stores': 'admin/AdminStoresPage',
   '/admin/licenses': 'admin/AdminLicensesPage',
@@ -104,21 +112,56 @@ async function isValidHtmlResponse(response) {
     const text = await clone.text();
     const trimmed = text.trim();
     // Must start with HTML tag or DOCTYPE, never a JSON object
-    return trimmed.startsWith('<') && !trimmed.startsWith('{');
+    return (trimmed.startsWith('<!DOCTYPE') || trimmed.startsWith('<html') || trimmed.startsWith('<')) && !trimmed.startsWith('{');
   } catch (_) {
     return false;
   }
 }
 
-// 1. Install Event: Pre-cache core shell resources, HTML App Shell and skip waiting
+// Helper: precache all chunks and assets from Vite manifest.json
+async function precacheViteManifest(cache) {
+  try {
+    const manifestRes = await fetch('/build/manifest.json', { cache: 'no-cache' });
+    if (manifestRes && manifestRes.ok) {
+      const manifest = await manifestRes.json();
+      const urlsToCache = new Set();
+      urlsToCache.add('/build/manifest.json');
+
+      for (const entry of Object.values(manifest)) {
+        if (entry.file) urlsToCache.add(`/build/${entry.file}`);
+        if (Array.isArray(entry.css)) {
+          entry.css.forEach((c) => urlsToCache.add(`/build/${c}`));
+        }
+        if (Array.isArray(entry.assets)) {
+          entry.assets.forEach((a) => urlsToCache.add(`/build/${a}`));
+        }
+      }
+
+      await Promise.allSettled(
+        Array.from(urlsToCache).map((u) => cache.add(u).catch((err) => {
+          console.warn('[SW] Manifest asset skipped:', u, err);
+        }))
+      );
+    }
+  } catch (err) {
+    console.warn('[SW] Could not precache Vite manifest:', err);
+  }
+}
+
+// 1. Install Event: Pre-cache static shell, Vite chunks manifest, and HTML App Shell
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
     (async () => {
       const staticCache = await caches.open(STATIC_CACHE);
+
+      // Pre-cache core root assets
       await staticCache.addAll(PRECACHE_ASSETS).catch((err) => {
-        console.warn('[SW] Initial static precaching partial failure:', err);
+        console.warn('[SW] Initial static precaching partial notice:', err);
       });
+
+      // Pre-cache all generated Vite chunks & assets
+      await precacheViteManifest(staticCache);
 
       // Warm HTML_SHELL_CACHE immediately with root App Shell
       try {
@@ -153,17 +196,47 @@ self.addEventListener('activate', (event) => {
           }
         })
       );
-    }).then(() => self.clients.claim())
+    }).then(() => self.clients.claim()).then(async () => {
+      // Ensure any newly added manifest chunks are cached
+      const staticCache = await caches.open(STATIC_CACHE);
+      await precacheViteManifest(staticCache);
+    })
   );
 });
 
-// 3. Message Event: Pre-cache HTML App Shells for critical routes
+// 3. Message Event: Pre-cache HTML App Shells, Inertia route payloads & app session state
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'PRECACHE_ROUTES') {
+  if (!event.data) return;
+
+  if (event.data.type === 'SYNC_APP_STATE') {
+    if (event.data.auth) lastKnownAuth = event.data.auth;
+    if (event.data.stores) lastKnownStores = event.data.stores;
+    if (event.data.systemBranding) lastKnownBranding = event.data.systemBranding;
+    return;
+  }
+
+  if (event.data.type === 'CACHE_HTML_SHELL' && typeof event.data.html === 'string') {
+    const html = event.data.html;
+    const response = new Response(html, {
+      headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    });
+    caches.open(HTML_SHELL_CACHE).then((cache) => {
+      cache.put('/index.html', response.clone());
+      cache.put('__app_shell__', response.clone());
+      cache.put('/', response.clone());
+      if (event.data.url) {
+        cache.put(event.data.url, response.clone());
+      }
+    });
+    return;
+  }
+
+  if (event.data.type === 'PRECACHE_ROUTES') {
     const routes = event.data.routes || [];
+
+    // Pre-cache HTML document shell for each route
     caches.open(HTML_SHELL_CACHE).then((cache) => {
       routes.forEach((route) => {
-        // Explicitly request text/html so Laravel renders app.blade.php
         fetch(route, {
           credentials: 'same-origin',
           headers: { 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' },
@@ -181,6 +254,39 @@ self.addEventListener('message', (event) => {
                 cache.put('__app_shell__', res.clone());
                 cache.put('/index.html', res.clone());
               }
+            }
+          })
+          .catch(() => {});
+      });
+    });
+
+    // Also pre-cache Inertia JSON for client-side visits
+    caches.open(INERTIA_DATA_CACHE).then((inertiaCache) => {
+      routes.forEach((route) => {
+        fetch(route, {
+          credentials: 'same-origin',
+          headers: {
+            'X-Inertia': 'true',
+            'Accept': 'text/html, application/xhtml+xml',
+          },
+        })
+          .then(async (res) => {
+            if (res && res.status === 200) {
+              const clone = res.clone();
+              inertiaCache.put(route, clone.clone());
+              try {
+                const fullUrl = new URL(route, self.location.origin).href;
+                inertiaCache.put(fullUrl, clone.clone());
+              } catch (_) {}
+
+              try {
+                const data = await res.json();
+                if (data && data.props) {
+                  if (data.props.auth?.user) lastKnownAuth = data.props.auth;
+                  if (data.props.initialStores?.length) lastKnownStores = data.props.initialStores;
+                  if (data.props.systemBranding) lastKnownBranding = data.props.systemBranding;
+                }
+              } catch (_) {}
             }
           })
           .catch(() => {});
@@ -262,7 +368,7 @@ self.addEventListener('fetch', (event) => {
             }
           }
 
-          // 6. If no cached HTML exists, return clean fallback HTML
+          // 6. Return default offline HTML
           return new Response(getOfflineHtml(), {
             headers: { 'Content-Type': 'text/html; charset=utf-8' },
           });
@@ -282,9 +388,17 @@ self.addEventListener('fetch', (event) => {
         .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
             const clone = networkResponse.clone();
-            caches.open(INERTIA_DATA_CACHE).then((cache) => {
-              cache.put(url.pathname, clone);
-              cache.put(request.url, clone);
+            caches.open(INERTIA_DATA_CACHE).then(async (cache) => {
+              cache.put(url.pathname, clone.clone());
+              cache.put(request.url, clone.clone());
+              try {
+                const data = await clone.json();
+                if (data && data.props) {
+                  if (data.props.auth?.user) lastKnownAuth = data.props.auth;
+                  if (data.props.initialStores?.length) lastKnownStores = data.props.initialStores;
+                  if (data.props.systemBranding) lastKnownBranding = data.props.systemBranding;
+                }
+              } catch (_) {}
             });
           }
           return networkResponse;
@@ -301,9 +415,9 @@ self.addEventListener('fetch', (event) => {
           const payload = {
             component,
             props: {
-              auth: { user: null },
-              initialStores: [],
-              systemBranding: { system_name: 'Maaldhis' },
+              auth: lastKnownAuth || { user: null },
+              initialStores: lastKnownStores || [],
+              systemBranding: lastKnownBranding || { system_name: 'Maaldhis' },
               isOfflineFallback: true,
               ...routeProps,
             },
@@ -347,12 +461,20 @@ self.addEventListener('fetch', (event) => {
   if (isStaticAsset) {
     event.respondWith(
       caches.open(STATIC_CACHE).then(async (cache) => {
-        const cachedResponse = await cache.match(request);
+        let cachedResponse = await cache.match(request);
+        if (!cachedResponse) {
+          cachedResponse = await cache.match(url.pathname, { ignoreSearch: true });
+        }
+        if (!cachedResponse) {
+          cachedResponse = await cache.match(request.url, { ignoreSearch: true });
+        }
+
         if (cachedResponse) {
           fetch(request)
             .then((networkResponse) => {
               if (networkResponse && (networkResponse.status === 200 || networkResponse.type === 'opaque')) {
-                cache.put(request, networkResponse);
+                cache.put(request, networkResponse.clone());
+                cache.put(url.pathname, networkResponse.clone());
               }
             })
             .catch(() => {});
@@ -362,6 +484,7 @@ self.addEventListener('fetch', (event) => {
         return fetch(request).then((networkResponse) => {
           if (networkResponse && (networkResponse.status === 200 || networkResponse.type === 'opaque')) {
             cache.put(request, networkResponse.clone());
+            cache.put(url.pathname, networkResponse.clone());
           }
           return networkResponse;
         }).catch((err) => {

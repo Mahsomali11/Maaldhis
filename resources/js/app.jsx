@@ -66,6 +66,72 @@ router.visit = (url, options = {}) => {
     }
 };
 
+// Preserve authenticated user and store state across all offline Inertia navigations
+router.on('navigate', (event) => {
+    const page = event.detail?.page;
+    if (page && page.props) {
+        let cachedUser = null;
+        let cachedStores = [];
+        try {
+            const u = localStorage.getItem('cached_auth_user');
+            if (u) cachedUser = JSON.parse(u);
+            const s = localStorage.getItem('cached_stores');
+            if (s) cachedStores = JSON.parse(s);
+        } catch (_) {}
+
+        if (!page.props.auth?.user && cachedUser) {
+            if (!page.props.auth) page.props.auth = {};
+            page.props.auth.user = cachedUser;
+        }
+        if ((!page.props.initialStores || page.props.initialStores.length === 0) && cachedStores?.length) {
+            page.props.initialStores = cachedStores;
+        }
+        if (!page.props.systemBranding) {
+            page.props.systemBranding = { system_name: 'Maaldhis' };
+        }
+    }
+});
+
+const ALL_SYSTEM_ROUTES = [
+    '/dashboard',
+    '/start-sale',
+    '/pos',
+    '/sale',
+    '/inventory',
+    '/categories',
+    '/customers',
+    '/suppliers',
+    '/purchases',
+    '/sales-report',
+    '/expenses',
+    '/cash-flow',
+    '/credit-record',
+    '/returns',
+    '/stock-transfers',
+    '/stock-report',
+    '/receipt-history',
+    '/staff-accounts',
+    '/payment-accounts',
+    '/profile',
+    '/preferences',
+    '/store-edit',
+    '/help',
+    '/learning-center',
+    '/devices',
+    '/upgrade',
+    '/create-store',
+    '/setup-wizard',
+    '/select-store',
+    '/patients',
+    '/dental/patients',
+    '/appointments',
+    '/dental-charting',
+    '/dental-billing',
+    '/dental-catalog',
+    '/doctors',
+    '/dental-doctors',
+];
+
 // Register PWA Service Worker for seamless offline caching & refresh support
 if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
     window.addEventListener('load', () => {
@@ -76,27 +142,28 @@ if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
                     if (sw) {
                         sw.postMessage({
                             type: 'PRECACHE_ROUTES',
-                            routes: [
-                                '/dashboard',
-                                '/start-sale',
-                                '/inventory',
-                                '/patients',
-                                '/dental/patients',
-                                '/appointments',
-                                '/dental-billing',
-                                '/dental-charting',
-                                '/dental-catalog',
-                                '/doctors',
-                                '/dental-doctors',
-                                '/payment-accounts',
-                                '/categories',
-                                '/customers',
-                                '/suppliers',
-                                '/purchases',
-                                '/sales-report',
-                                '/expenses',
-                            ],
+                            routes: ALL_SYSTEM_ROUTES,
                         });
+
+                        // Sync local auth user and stores
+                        try {
+                            const u = localStorage.getItem('cached_auth_user');
+                            const s = localStorage.getItem('cached_stores');
+                            sw.postMessage({
+                                type: 'SYNC_APP_STATE',
+                                auth: u ? { user: JSON.parse(u) } : null,
+                                stores: s ? JSON.parse(s) : [],
+                            });
+                        } catch (_) {}
+
+                        // Persist current page HTML shell
+                        try {
+                            sw.postMessage({
+                                type: 'CACHE_HTML_SHELL',
+                                html: '<!DOCTYPE html>\n' + document.documentElement.outerHTML,
+                                url: window.location.pathname,
+                            });
+                        } catch (_) {}
                     }
                 };
 
@@ -178,6 +245,10 @@ const ROUTE_PAGE_MAP = {
     '/dental-catalog': 'dental/DentalCatalogPage',
     '/dental-doctors': 'dental/DoctorsPage',
     '/doctors': 'dental/DoctorsPage',
+    '/license-blocked': 'LicenseBlockPage',
+    '/login': 'LoginPage',
+    '/signup': 'SignupPage',
+    '/reset-password': 'ResetPasswordPage',
     '/admin/dashboard': 'admin/AdminDashboardPage',
     '/admin/stores': 'admin/AdminStoresPage',
     '/admin/licenses': 'admin/AdminLicensesPage',
@@ -262,6 +333,27 @@ if (typeof window !== 'undefined') {
 
 const pages = import.meta.glob('./pages/**/*.tsx');
 
+// Universal dynamic chunk warming during online idle time
+if (typeof window !== 'undefined') {
+    window.addEventListener('load', () => {
+        if (navigator.onLine) {
+            const warmChunks = () => {
+                Object.values(pages).forEach((loader) => {
+                    try {
+                        loader().catch(() => {});
+                    } catch (_) {}
+                });
+            };
+
+            if ('requestIdleCallback' in window) {
+                window.requestIdleCallback(warmChunks, { timeout: 3500 });
+            } else {
+                setTimeout(warmChunks, 2000);
+            }
+        }
+    });
+}
+
 createInertiaApp({
     title: (title) => title ? `${title} - ${getPlatformName()}` : getPlatformName(),
     page: initialPageData,
@@ -278,7 +370,17 @@ createInertiaApp({
             importPage = pages['./pages/DashboardPage.tsx'];
         }
 
-        const page = await importPage();
+        let page;
+        try {
+            page = await importPage();
+        } catch (err) {
+            console.warn(`[Inertia Resolver] Dynamic import for ${name} failed offline, falling back to DashboardPage:`, err);
+            try {
+                page = await pages['./pages/DashboardPage.tsx']();
+            } catch (fallbackErr) {
+                console.error('[Inertia Resolver] Dashboard fallback failed:', fallbackErr);
+            }
+        }
 
         // If it has a default export
         if (page && page.default) {
