@@ -5,6 +5,7 @@ import type { User as SupabaseUser, Session } from '@/api';
 import type { Store, Item, Customer, Supplier, Expense, Sale, SaleItem, CustomerDebt, CashSession, CashMovement, Payment, Return, StockTransfer, CartItem, StaffAccount, Category, Purchase, PurchaseItem } from '@/types';
 import { getDeviceId } from '@/lib/device';
 import { proactivelyCacheStore } from '@/lib/offline/syncManager';
+import { cacheRecord, enqueueSyncItem } from '@/lib/offline/indexedDb';
 
 export function getCsrfToken(): string {
   if (typeof document === 'undefined') return '';
@@ -1304,6 +1305,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
     isRecordingTransferRef.current = true;
 
     const storeId = state.currentStore?.id || '';
+    const isBrowserOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+
+    if (isBrowserOffline) {
+      try {
+        const localId = `transfer_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        const localRecord = {
+          id: localId,
+          store_id: storeId,
+          ...transfer,
+          created_at: new Date().toISOString(),
+        };
+        await cacheRecord('account_transfers', localRecord);
+        await enqueueSyncItem({
+          store_id: storeId,
+          table: 'account_transfers',
+          action: 'custom_post',
+          url: '/api/rest/v1/process-transfer',
+          method: 'POST',
+          payload: { store_id: storeId, ...transfer },
+        });
+        await loadStoreData(storeId);
+      } catch (e) {
+        console.warn('Offline transfer save:', e);
+      } finally {
+        setTimeout(() => { isRecordingTransferRef.current = false; }, 1000);
+      }
+      return;
+    }
 
     try {
       const res = await fetch('/api/rest/v1/process-transfer', {
@@ -1328,8 +1357,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       await loadStoreData(storeId);
     } catch (e: any) {
-      console.error('Process transfer failed:', e);
-      throw e;
+      const localId = `transfer_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const localRecord = {
+        id: localId,
+        store_id: storeId,
+        ...transfer,
+        created_at: new Date().toISOString(),
+      };
+      await cacheRecord('account_transfers', localRecord);
+      await enqueueSyncItem({
+        store_id: storeId,
+        table: 'account_transfers',
+        action: 'custom_post',
+        url: '/api/rest/v1/process-transfer',
+        method: 'POST',
+        payload: { store_id: storeId, ...transfer },
+      });
+      await loadStoreData(storeId);
     } finally {
       setTimeout(() => { isRecordingTransferRef.current = false; }, 1000);
     }
@@ -1343,6 +1387,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
     isRecordingReturnRef.current = true;
 
     const storeId = state.currentStore?.id || '';
+    const isBrowserOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+
+    if (isBrowserOffline) {
+      try {
+        const localId = `return_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        const localRecord = {
+          id: localId,
+          store_id: storeId,
+          sale_id: saleId,
+          items,
+          refund_method: refundMethod,
+          created_at: new Date().toISOString(),
+        };
+        await cacheRecord('returns', localRecord);
+        await enqueueSyncItem({
+          store_id: storeId,
+          table: 'returns',
+          action: 'custom_post',
+          url: '/api/rest/v1/process-return',
+          method: 'POST',
+          payload: { saleId, items, refundMethod, storeId },
+        });
+        if (state.currentStore) await loadStoreData(state.currentStore.id);
+      } catch (e) {
+        console.warn('Offline return save:', e);
+      } finally {
+        setTimeout(() => { isRecordingReturnRef.current = false; }, 1000);
+      }
+      return;
+    }
 
     try {
       const res = await fetch('/api/rest/v1/process-return', {
@@ -1367,8 +1441,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
         throw new Error(err.message || 'Failed to process return');
       }
     } catch (e: any) {
-      console.error(e);
-      throw e;
+      const localId = `return_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const localRecord = {
+        id: localId,
+        store_id: storeId,
+        sale_id: saleId,
+        items,
+        refund_method: refundMethod,
+        created_at: new Date().toISOString(),
+      };
+      await cacheRecord('returns', localRecord);
+      await enqueueSyncItem({
+        store_id: storeId,
+        table: 'returns',
+        action: 'custom_post',
+        url: '/api/rest/v1/process-return',
+        method: 'POST',
+        payload: { saleId, items, refundMethod, storeId },
+      });
     } finally {
       setTimeout(() => { isRecordingReturnRef.current = false; }, 1000);
     }
@@ -1382,6 +1472,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return;
     }
     isRecordingPurchaseRef.current = true;
+
+    const isBrowserOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+
+    if (isBrowserOffline) {
+      try {
+        const localId = `purchase_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        const localRecord = {
+          id: localId,
+          ...purchaseData,
+          created_at: new Date().toISOString(),
+        };
+        await cacheRecord('purchases', localRecord);
+        await enqueueSyncItem({
+          store_id: purchaseData.store_id || state.currentStore?.id,
+          table: 'purchases',
+          action: 'custom_post',
+          url: '/api/rest/v1/process-purchase',
+          method: 'POST',
+          payload: purchaseData,
+        });
+        if (state.currentStore) await loadStoreData(state.currentStore.id);
+      } catch (e) {
+        console.warn('Offline purchase save:', e);
+      } finally {
+        setTimeout(() => { isRecordingPurchaseRef.current = false; }, 1000);
+      }
+      return;
+    }
 
     try {
       const res = await fetch('/api/rest/v1/process-purchase', {
@@ -1403,8 +1521,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       if (state.currentStore) await loadStoreData(state.currentStore.id);
     } catch (e: any) {
-      console.error(e);
-      throw e;
+      const localId = `purchase_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const localRecord = {
+        id: localId,
+        ...purchaseData,
+        created_at: new Date().toISOString(),
+      };
+      await cacheRecord('purchases', localRecord);
+      await enqueueSyncItem({
+        store_id: purchaseData.store_id || state.currentStore?.id,
+        table: 'purchases',
+        action: 'custom_post',
+        url: '/api/rest/v1/process-purchase',
+        method: 'POST',
+        payload: purchaseData,
+      });
+      if (state.currentStore) await loadStoreData(state.currentStore.id);
     } finally {
       setTimeout(() => { isRecordingPurchaseRef.current = false; }, 1000);
     }
@@ -1567,6 +1699,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [state.currentStore, loadStoreData]);
 
   const addStaffAccount = useCallback(async (staff: Omit<StaffAccount, 'id' | 'created_at'> & { password?: string }) => {
+    const isBrowserOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+
+    if (isBrowserOffline) {
+      const storeId = staff.store_id || state.currentStore?.id || '';
+      const localId = `staff_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const newStaff: StaffAccount = {
+        id: localId,
+        store_id: storeId,
+        name: staff.name,
+        email: staff.email,
+        phone: staff.phone || '',
+        role: staff.role || 'cashier',
+        is_active: staff.is_active ?? true,
+        created_at: new Date().toISOString(),
+      };
+
+      await cacheRecord('staff_accounts', newStaff);
+      await enqueueSyncItem({
+        store_id: storeId,
+        table: 'staff_accounts',
+        action: 'custom_post',
+        url: '/api/auth/v1/create-staff',
+        method: 'POST',
+        payload: staff,
+      });
+
+      setState(prev => ({ ...prev, staffAccounts: [...prev.staffAccounts, newStaff] }));
+      return;
+    }
+
     // Check user limit server-side before adding
     if (staff.store_id) {
       const { data: userCheck } = await apiClient.rpc('check_user_limit', { _store_id: staff.store_id });
@@ -1576,26 +1738,52 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    const token = localStorage.getItem('access_token');
-    const res = await fetch('/api/auth/v1/create-staff', {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-Requested-With': 'XMLHttpRequest',
-        'X-XSRF-TOKEN': getCsrfToken()
-      },
-      body: JSON.stringify(staff)
-    });
+    try {
+      const res = await fetch('/api/auth/v1/create-staff', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-XSRF-TOKEN': getCsrfToken()
+        },
+        body: JSON.stringify(staff)
+      });
 
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.message || err.error || 'Failed to create staff account');
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || err.error || 'Failed to create staff account');
+      }
+      const { staff: newStaff } = await res.json();
+      setState(prev => ({ ...prev, staffAccounts: [...prev.staffAccounts, newStaff as StaffAccount] }));
+    } catch (networkErr: any) {
+      const storeId = staff.store_id || state.currentStore?.id || '';
+      const localId = `staff_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const newStaff: StaffAccount = {
+        id: localId,
+        store_id: storeId,
+        name: staff.name,
+        email: staff.email,
+        phone: staff.phone || '',
+        role: staff.role || 'cashier',
+        is_active: staff.is_active ?? true,
+        created_at: new Date().toISOString(),
+      };
+
+      await cacheRecord('staff_accounts', newStaff);
+      await enqueueSyncItem({
+        store_id: storeId,
+        table: 'staff_accounts',
+        action: 'custom_post',
+        url: '/api/auth/v1/create-staff',
+        method: 'POST',
+        payload: staff,
+      });
+
+      setState(prev => ({ ...prev, staffAccounts: [...prev.staffAccounts, newStaff] }));
     }
-    const { staff: newStaff } = await res.json();
-    setState(prev => ({ ...prev, staffAccounts: [...prev.staffAccounts, newStaff as StaffAccount] }));
-  }, []);
+  }, [state.currentStore?.id]);
 
   const updateProfile = useCallback(async (updates: { full_name?: string; phone?: string }) => {
     const userId = state.session?.user?.id;

@@ -1,10 +1,10 @@
 /**
- * Maaldhis PWA Service Worker (v4)
- * Comprehensive SPA Offline Navigation Fallback, Universal Manifest Pre-Caching & Isolated Inertia Routing Engine.
- * Ensures all system pages, assets, and routes are available offline regardless of entry point.
+ * Maaldhis PWA Service Worker (v5)
+ * Comprehensive SPA Offline Navigation Fallback, Batch Manifest Pre-Caching & Isolated Inertia Routing Engine.
+ * Strictly separates Inertia AJAX requests (JSON) from browser document navigations (HTML).
  */
 
-const CACHE_VERSION = 'maaldhis-pwa-v4';
+const CACHE_VERSION = 'maaldhis-pwa-v5';
 const STATIC_CACHE = `maaldhis-static-${CACHE_VERSION}`;
 const HTML_SHELL_CACHE = `maaldhis-html-${CACHE_VERSION}`;
 const INERTIA_DATA_CACHE = `maaldhis-inertia-${CACHE_VERSION}`;
@@ -15,8 +15,6 @@ let lastKnownStores = [];
 let lastKnownBranding = { system_name: 'Maaldhis' };
 
 const PRECACHE_ASSETS = [
-  '/',
-  '/index.html',
   '/manifest.json',
   '/pwa-icon.svg',
   '/favicon.ico',
@@ -111,40 +109,52 @@ async function isValidHtmlResponse(response) {
     const clone = response.clone();
     const text = await clone.text();
     const trimmed = text.trim();
-    // Must start with HTML tag or DOCTYPE, never a JSON object
     return (trimmed.startsWith('<!DOCTYPE') || trimmed.startsWith('<html') || trimmed.startsWith('<')) && !trimmed.startsWith('{');
   } catch (_) {
     return false;
   }
 }
 
-// Helper: precache all chunks and assets from Vite manifest.json
+// Helper: precache all chunks and assets from Vite manifest.json in controlled batches
 async function precacheViteManifest(cache) {
   try {
     const manifestRes = await fetch('/build/manifest.json', { cache: 'no-cache' });
     if (manifestRes && manifestRes.ok) {
       const manifest = await manifestRes.json();
-      const urlsToCache = new Set();
-      urlsToCache.add('/build/manifest.json');
+      const urlsToCache = [];
+      urlsToCache.push('/build/manifest.json');
 
       for (const entry of Object.values(manifest)) {
-        if (entry.file) urlsToCache.add(`/build/${entry.file}`);
+        if (entry.file) urlsToCache.push(`/build/${entry.file}`);
         if (Array.isArray(entry.css)) {
-          entry.css.forEach((c) => urlsToCache.add(`/build/${c}`));
+          entry.css.forEach((c) => urlsToCache.push(`/build/${c}`));
         }
         if (Array.isArray(entry.assets)) {
-          entry.assets.forEach((a) => urlsToCache.add(`/build/${a}`));
+          entry.assets.forEach((a) => urlsToCache.push(`/build/${a}`));
         }
       }
 
-      await Promise.allSettled(
-        Array.from(urlsToCache).map((u) => cache.add(u).catch((err) => {
-          console.warn('[SW] Manifest asset skipped:', u, err);
-        }))
-      );
+      // Concurrency-limited batching (6 at a time) to prevent connection timeouts
+      const batchSize = 6;
+      for (let i = 0; i < urlsToCache.length; i += batchSize) {
+        const batch = urlsToCache.slice(i, i + batchSize);
+        await Promise.allSettled(
+          batch.map(async (u) => {
+            try {
+              const existing = await cache.match(u);
+              if (!existing) {
+                const res = await fetch(u);
+                if (res && res.status === 200) {
+                  await cache.put(u, res);
+                }
+              }
+            } catch (_) {}
+          })
+        );
+      }
     }
   } catch (err) {
-    console.warn('[SW] Could not precache Vite manifest:', err);
+    console.warn('[SW] Manifest build precache error:', err);
   }
 }
 
@@ -155,17 +165,19 @@ self.addEventListener('install', (event) => {
     (async () => {
       const staticCache = await caches.open(STATIC_CACHE);
 
-      // Pre-cache core root assets
-      await staticCache.addAll(PRECACHE_ASSETS).catch((err) => {
-        console.warn('[SW] Initial static precaching partial notice:', err);
-      });
+      // Pre-cache core root assets individually
+      for (const asset of PRECACHE_ASSETS) {
+        try {
+          await staticCache.add(asset);
+        } catch (_) {}
+      }
 
       // Pre-cache all generated Vite chunks & assets
       await precacheViteManifest(staticCache);
 
-      // Warm HTML_SHELL_CACHE immediately with root App Shell
+      // Warm HTML_SHELL_CACHE with root App Shell
       try {
-        const rootRes = await fetch('/', {
+        const rootRes = await fetch('/dashboard', {
           credentials: 'same-origin',
           headers: { 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' },
         });
@@ -174,7 +186,7 @@ self.addEventListener('install', (event) => {
           if (isHtml) {
             const htmlCache = await caches.open(HTML_SHELL_CACHE);
             await htmlCache.put('/', rootRes.clone());
-            await htmlCache.put('/index.html', rootRes.clone());
+            await htmlCache.put('/dashboard', rootRes.clone());
             await htmlCache.put('__app_shell__', rootRes.clone());
           }
         }
@@ -197,7 +209,6 @@ self.addEventListener('activate', (event) => {
         })
       );
     }).then(() => self.clients.claim()).then(async () => {
-      // Ensure any newly added manifest chunks are cached
       const staticCache = await caches.open(STATIC_CACHE);
       await precacheViteManifest(staticCache);
     })
@@ -221,9 +232,9 @@ self.addEventListener('message', (event) => {
       headers: { 'Content-Type': 'text/html; charset=utf-8' },
     });
     caches.open(HTML_SHELL_CACHE).then((cache) => {
-      cache.put('/index.html', response.clone());
       cache.put('__app_shell__', response.clone());
       cache.put('/', response.clone());
+      cache.put('/dashboard', response.clone());
       if (event.data.url) {
         cache.put(event.data.url, response.clone());
       }
@@ -250,9 +261,7 @@ self.addEventListener('message', (event) => {
                   const fullUrl = new URL(route, self.location.origin).href;
                   cache.put(fullUrl, res.clone());
                 } catch (_) {}
-                // Keep App Shell and /index.html updated
                 cache.put('__app_shell__', res.clone());
-                cache.put('/index.html', res.clone());
               }
             }
           })
@@ -306,17 +315,97 @@ self.addEventListener('fetch', (event) => {
   }
 
   // =========================================================================
-  // Strategy A: Full Document Navigation (F5 / Hard Refresh / Address Bar)
-  // Must ALWAYS return a verified HTML Application Shell, NEVER raw JSON!
+  // Strategy 1: Inertia AJAX Client-Side Visits (X-Inertia: true)
+  // MUST BE CHECKED FIRST! Strictly isolated in INERTIA_DATA_CACHE.
+  // NEVER return HTML to an Inertia AJAX request!
   // =========================================================================
-  const isNavigation =
-    request.mode === 'navigate' ||
-    (request.headers.get('accept') && request.headers.get('accept').includes('text/html'));
+  const isInertia = request.headers.get('x-inertia') === 'true';
+
+  if (isInertia) {
+    event.respondWith(
+      (async () => {
+        const inertiaVersion = request.headers.get('x-inertia-version') || '';
+
+        // Try network first if online
+        try {
+          const networkResponse = await fetch(request);
+          if (networkResponse && networkResponse.status === 200) {
+            const clone = networkResponse.clone();
+            const cache = await caches.open(INERTIA_DATA_CACHE);
+            cache.put(url.pathname, clone.clone());
+            cache.put(request.url, clone.clone());
+
+            try {
+              const data = await clone.json();
+              if (data && data.props) {
+                if (data.props.auth?.user) lastKnownAuth = data.props.auth;
+                if (data.props.initialStores?.length) lastKnownStores = data.props.initialStores;
+                if (data.props.systemBranding) lastKnownBranding = data.props.systemBranding;
+              }
+            } catch (_) {}
+            return networkResponse;
+          }
+        } catch (fetchErr) {
+          // Network failed or offline - fall through to local cache/synthetic resolution
+        }
+
+        // Offline: Check INERTIA_DATA_CACHE
+        const cache = await caches.open(INERTIA_DATA_CACHE);
+        let cached = (await cache.match(request.url)) || (await cache.match(url.pathname));
+        if (cached) {
+          const cachedHeaders = new Headers(cached.headers);
+          cachedHeaders.set('Content-Type', 'application/json');
+          cachedHeaders.set('X-Inertia', 'true');
+          if (inertiaVersion) {
+            cachedHeaders.set('X-Inertia-Version', inertiaVersion);
+          }
+          const body = await cached.blob();
+          return new Response(body, {
+            status: 200,
+            headers: cachedHeaders,
+          });
+        }
+
+        // Offline Synthetic Fallback: Resolve mapped component for the requested route
+        const { component, props: routeProps } = resolveRouteComponent(url.pathname);
+        const payload = {
+          component,
+          props: {
+            auth: lastKnownAuth || { user: null },
+            initialStores: lastKnownStores || [],
+            systemBranding: lastKnownBranding || { system_name: 'Maaldhis' },
+            isOfflineFallback: true,
+            ...routeProps,
+          },
+          url: url.pathname,
+          version: inertiaVersion,
+        };
+
+        return new Response(JSON.stringify(payload), {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Inertia': 'true',
+            'X-Inertia-Version': inertiaVersion,
+          },
+        });
+      })()
+    );
+    return;
+  }
+
+  // =========================================================================
+  // Strategy 2: Full Document Navigation (F5 / Hard Refresh / Address Bar)
+  // ONLY for genuine browser document navigations. NEVER for Inertia AJAX calls!
+  // =========================================================================
+  const isNavigation = request.mode === 'navigate' || request.destination === 'document';
 
   if (isNavigation) {
     event.respondWith(
-      fetch(request)
-        .then(async (networkResponse) => {
+      (async () => {
+        // Try network first if online
+        try {
+          const networkResponse = await fetch(request);
           if (networkResponse && networkResponse.status === 200) {
             const isHtml = await isValidHtmlResponse(networkResponse);
             if (isHtml) {
@@ -324,125 +413,50 @@ self.addEventListener('fetch', (event) => {
               cache.put(request.url, networkResponse.clone());
               cache.put(url.pathname, networkResponse.clone());
               cache.put('__app_shell__', networkResponse.clone());
-              cache.put('/index.html', networkResponse.clone());
               cache.put('/', networkResponse.clone());
             }
+            return networkResponse;
           }
-          return networkResponse;
-        })
-        .catch(async () => {
-          console.warn('[SW] Offline document navigation intercepted for:', request.url);
-          const cache = await caches.open(HTML_SHELL_CACHE);
+        } catch (fetchErr) {
+          // Network failed or offline - fall through to offline shell
+        }
 
-          // 1. Try exact match by full URL
-          let candidate = await cache.match(request.url);
-          if (await isValidHtmlResponse(candidate)) {
-            return candidate;
+        console.warn('[SW] Offline document navigation intercepted for:', request.url);
+        const cache = await caches.open(HTML_SHELL_CACHE);
+
+        // 1. Exact match by full URL or pathname
+        let candidate = (await cache.match(request.url)) || (await cache.match(url.pathname));
+        if (await isValidHtmlResponse(candidate)) {
+          return candidate;
+        }
+
+        // 2. Global cached App Shell (__app_shell__, /dashboard, /)
+        candidate = (await cache.match('__app_shell__')) || (await cache.match('/dashboard')) || (await cache.match('/'));
+        if (await isValidHtmlResponse(candidate)) {
+          return candidate;
+        }
+
+        // 3. Search all keys in HTML_SHELL_CACHE for any valid HTML document
+        const keys = await cache.keys();
+        for (const req of keys) {
+          const res = await cache.match(req);
+          if (await isValidHtmlResponse(res)) {
+            return res;
           }
+        }
 
-          // 2. Try match by pathname
-          candidate = await cache.match(url.pathname);
-          if (await isValidHtmlResponse(candidate)) {
-            return candidate;
-          }
-
-          // 3. Try global App Shell fallback (/index.html, /, __app_shell__)
-          candidate = await cache.match('/index.html') || await cache.match('/') || await cache.match('__app_shell__');
-          if (await isValidHtmlResponse(candidate)) {
-            return candidate;
-          }
-
-          // 4. Check static cache for / or /index.html
-          const staticCache = await caches.open(STATIC_CACHE);
-          candidate = await staticCache.match('/index.html') || await staticCache.match('/');
-          if (await isValidHtmlResponse(candidate)) {
-            return candidate;
-          }
-
-          // 5. Search all keys in HTML_SHELL_CACHE for any valid HTML document
-          const keys = await cache.keys();
-          for (const req of keys) {
-            const res = await cache.match(req);
-            if (await isValidHtmlResponse(res)) {
-              return res;
-            }
-          }
-
-          // 6. Return default offline HTML
-          return new Response(getOfflineHtml(), {
-            headers: { 'Content-Type': 'text/html; charset=utf-8' },
-          });
-        })
+        // 4. Return clean fallback HTML
+        return new Response(getOfflineHtml(), {
+          headers: { 'Content-Type': 'text/html; charset=utf-8' },
+        });
+      })()
     );
     return;
   }
 
   // =========================================================================
-  // Strategy B: Inertia AJAX Client-Side Visits (X-Inertia: true)
-  // Strictly isolated in INERTIA_DATA_CACHE — never stored in HTML_SHELL_CACHE!
-  // =========================================================================
-  const isInertia = request.headers.get('x-inertia') === 'true';
-  if (isInertia) {
-    event.respondWith(
-      fetch(request)
-        .then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            const clone = networkResponse.clone();
-            caches.open(INERTIA_DATA_CACHE).then(async (cache) => {
-              cache.put(url.pathname, clone.clone());
-              cache.put(request.url, clone.clone());
-              try {
-                const data = await clone.json();
-                if (data && data.props) {
-                  if (data.props.auth?.user) lastKnownAuth = data.props.auth;
-                  if (data.props.initialStores?.length) lastKnownStores = data.props.initialStores;
-                  if (data.props.systemBranding) lastKnownBranding = data.props.systemBranding;
-                }
-              } catch (_) {}
-            });
-          }
-          return networkResponse;
-        })
-        .catch(async () => {
-          const cache = await caches.open(INERTIA_DATA_CACHE);
-          let cached = await cache.match(request.url) || await cache.match(url.pathname);
-          if (cached) return cached;
-
-          // Resolve target component and route props cleanly from SW_ROUTE_PAGE_MAP
-          const { component, props: routeProps } = resolveRouteComponent(url.pathname);
-          const inertiaVersion = request.headers.get('x-inertia-version') || '';
-
-          const payload = {
-            component,
-            props: {
-              auth: lastKnownAuth || { user: null },
-              initialStores: lastKnownStores || [],
-              systemBranding: lastKnownBranding || { system_name: 'Maaldhis' },
-              isOfflineFallback: true,
-              ...routeProps,
-            },
-            url: url.pathname,
-            version: inertiaVersion,
-          };
-
-          return new Response(
-            JSON.stringify(payload),
-            {
-              status: 200,
-              headers: {
-                'Content-Type': 'application/json',
-                'X-Inertia': 'true',
-                'X-Inertia-Version': inertiaVersion,
-              },
-            }
-          );
-        })
-    );
-    return;
-  }
-
-  // =========================================================================
-  // Strategy C: Static Bundles & Assets (/build/*, .js, .css, fonts, images)
+  // Strategy 3: Static Bundles & Assets (/build/*, .js, .css, fonts, images)
+  // Cache-First strategy with background revalidation.
   // =========================================================================
   const isStaticAsset =
     url.pathname.startsWith('/build/') ||
@@ -460,7 +474,9 @@ self.addEventListener('fetch', (event) => {
 
   if (isStaticAsset) {
     event.respondWith(
-      caches.open(STATIC_CACHE).then(async (cache) => {
+      (async () => {
+        const cache = await caches.open(STATIC_CACHE);
+
         let cachedResponse = await cache.match(request);
         if (!cachedResponse) {
           cachedResponse = await cache.match(url.pathname, { ignoreSearch: true });
@@ -470,6 +486,7 @@ self.addEventListener('fetch', (event) => {
         }
 
         if (cachedResponse) {
+          // Background revalidation when online
           fetch(request)
             .then((networkResponse) => {
               if (networkResponse && (networkResponse.status === 200 || networkResponse.type === 'opaque')) {
@@ -481,23 +498,24 @@ self.addEventListener('fetch', (event) => {
           return cachedResponse;
         }
 
-        return fetch(request).then((networkResponse) => {
+        try {
+          const networkResponse = await fetch(request);
           if (networkResponse && (networkResponse.status === 200 || networkResponse.type === 'opaque')) {
             cache.put(request, networkResponse.clone());
             cache.put(url.pathname, networkResponse.clone());
           }
           return networkResponse;
-        }).catch((err) => {
+        } catch (err) {
           console.warn('[SW] Failed to fetch static asset offline:', request.url);
           return cachedResponse || new Response('', { status: 408 });
-        });
-      })
+        }
+      })()
     );
     return;
   }
 
   // =========================================================================
-  // Strategy D: GET API Requests (/api/*)
+  // Strategy 4: GET API Requests (/api/*)
   // =========================================================================
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(

@@ -15,8 +15,140 @@ import ErrorBoundary from '@/components/ErrorBoundary';
 import { initSubmitGuard } from '@/lib/submit-guard';
 import { getPlatformName, syncDocumentBranding } from '@/hooks/usePlatformName';
 
+// Route to Page Component Map for Instant Offline Routing
+const ROUTE_PAGE_MAP = {
+    '/': 'DashboardPage',
+    '/dashboard': 'DashboardPage',
+    '/pos': 'StartSalePage',
+    '/start-sale': 'StartSalePage',
+    '/sale': 'StartSalePage',
+    '/customer-display': 'CustomerDisplayPage',
+    '/inventory': 'InventoryPage',
+    '/categories': 'CategoriesPage',
+    '/sales-report': 'SalesReportPage',
+    '/customers': 'CustomersPage',
+    '/suppliers': 'SuppliersPage',
+    '/purchases': 'PurchasesPage',
+    '/expenses': 'ExpensesPage',
+    '/cash-flow': 'CashFlowPage',
+    '/credit-record': 'CreditRecordPage',
+    '/returns': 'ReturnsPage',
+    '/stock-transfers': 'StockTransfersPage',
+    '/stock-report': 'StockReportPage',
+    '/receipt-history': 'ReceiptHistoryPage',
+    '/staff-accounts': 'StaffAccountsPage',
+    '/payment-accounts': 'PaymentAccountsPage',
+    '/profile': 'ProfilePage',
+    '/preferences': 'PreferencesPage',
+    '/store-edit': 'StoreEditPage',
+    '/help': 'HelpPage',
+    '/learning-center': 'LearningCenterPage',
+    '/devices': 'DeviceManagementPage',
+    '/upgrade': 'UpgradePage',
+    '/create-store': 'CreateStorePage',
+    '/setup-wizard': 'SetupWizardPage',
+    '/select-store': 'SelectStorePage',
+    '/patients': 'dental/PatientsPage',
+    '/dental/patients': 'dental/PatientsPage',
+    '/appointments': 'dental/AppointmentsPage',
+    '/dental-charting': 'dental/DentalChartingPage',
+    '/dental-billing': 'dental/DentalBillingPage',
+    '/dental-catalog': 'dental/DentalCatalogPage',
+    '/dental-doctors': 'dental/DoctorsPage',
+    '/doctors': 'dental/DoctorsPage',
+    '/license-blocked': 'LicenseBlockPage',
+    '/login': 'LoginPage',
+    '/signup': 'SignupPage',
+    '/reset-password': 'ResetPasswordPage',
+    '/admin/dashboard': 'admin/AdminDashboardPage',
+    '/admin/stores': 'admin/AdminStoresPage',
+    '/admin/licenses': 'admin/AdminLicensesPage',
+    '/admin/subscriptions': 'admin/AdminSubscriptionsPage',
+    '/admin/payments': 'admin/AdminPaymentsPage',
+    '/admin/users': 'admin/AdminUsersPage',
+    '/admin/plans': 'admin/AdminPlansPage',
+    '/admin/analytics': 'admin/AdminAnalyticsPage',
+    '/admin/support': 'admin/AdminSupportPage',
+    '/admin/settings': 'admin/AdminSettingsPage',
+    '/admin/exchange-rates': 'admin/AdminExchangeRatesPage',
+    '/admin/mpesa-settings': 'admin/AdminMpesaSettingsPage',
+};
+
 // Initialize global double-click & duplicate submission guard
 initSubmitGuard();
+
+// Global client-side fetch interceptor: guarantees Inertia navigation never fails when offline
+if (typeof window !== 'undefined') {
+    const nativeFetch = window.fetch.bind(window);
+    window.fetch = async (input, init = {}) => {
+        const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+        const requestHeaders = new Headers(init.headers || (input instanceof Request ? input.headers : {}));
+        const isInertia = requestHeaders.get('x-inertia') === 'true';
+
+        if (isOffline && isInertia) {
+            try {
+                // Let service worker respond if active
+                const swRes = await nativeFetch(input, init);
+                if (swRes && swRes.status === 200) {
+                    return swRes;
+                }
+            } catch (_) {}
+
+            const rawUrl = typeof input === 'string' ? input : (input instanceof Request ? input.url : '');
+            let pathname = '/';
+            try {
+                pathname = new URL(rawUrl, window.location.origin).pathname;
+            } catch (_) {
+                pathname = rawUrl;
+            }
+
+            const inertiaVersion = requestHeaders.get('x-inertia-version') || '';
+            let matchedComp = ROUTE_PAGE_MAP[pathname] || 'DashboardPage';
+            let extraProps = {};
+
+            if (pathname.startsWith('/dental/patients/') && pathname !== '/dental/patients') {
+                matchedComp = 'dental/PatientDetailsPage';
+                extraProps.patientId = pathname.split('/').filter(Boolean).pop();
+            } else if (pathname.startsWith('/receipt/')) {
+                matchedComp = 'ReceiptPage';
+                extraProps.saleId = pathname.split('/').filter(Boolean).pop();
+            }
+
+            let cachedUser = null;
+            let cachedStores = [];
+            try {
+                const u = localStorage.getItem('cached_auth_user');
+                if (u) cachedUser = JSON.parse(u);
+                const s = localStorage.getItem('cached_stores');
+                if (s) cachedStores = JSON.parse(s);
+            } catch (_) {}
+
+            const payload = {
+                component: matchedComp,
+                props: {
+                    auth: { user: cachedUser },
+                    initialStores: cachedStores,
+                    systemBranding: { system_name: 'Maaldhis' },
+                    isOfflineFallback: true,
+                    ...extraProps,
+                },
+                url: pathname,
+                version: inertiaVersion,
+            };
+
+            return new Response(JSON.stringify(payload), {
+                status: 200,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Inertia': 'true',
+                    'X-Inertia-Version': inertiaVersion,
+                },
+            });
+        }
+
+        return nativeFetch(input, init);
+    };
+}
 
 // Global Inertia offline navigation resilience
 router.on('exception', (event) => {
@@ -205,63 +337,6 @@ if (appEl && appEl.dataset.page) {
     }
 }
 
-const ROUTE_PAGE_MAP = {
-    '/': 'DashboardPage',
-    '/dashboard': 'DashboardPage',
-    '/pos': 'StartSalePage',
-    '/start-sale': 'StartSalePage',
-    '/sale': 'StartSalePage',
-    '/customer-display': 'CustomerDisplayPage',
-    '/inventory': 'InventoryPage',
-    '/categories': 'CategoriesPage',
-    '/sales-report': 'SalesReportPage',
-    '/customers': 'CustomersPage',
-    '/suppliers': 'SuppliersPage',
-    '/purchases': 'PurchasesPage',
-    '/expenses': 'ExpensesPage',
-    '/cash-flow': 'CashFlowPage',
-    '/credit-record': 'CreditRecordPage',
-    '/returns': 'ReturnsPage',
-    '/stock-transfers': 'StockTransfersPage',
-    '/stock-report': 'StockReportPage',
-    '/receipt-history': 'ReceiptHistoryPage',
-    '/staff-accounts': 'StaffAccountsPage',
-    '/payment-accounts': 'PaymentAccountsPage',
-    '/profile': 'ProfilePage',
-    '/preferences': 'PreferencesPage',
-    '/store-edit': 'StoreEditPage',
-    '/help': 'HelpPage',
-    '/learning-center': 'LearningCenterPage',
-    '/devices': 'DeviceManagementPage',
-    '/upgrade': 'UpgradePage',
-    '/create-store': 'CreateStorePage',
-    '/setup-wizard': 'SetupWizardPage',
-    '/select-store': 'SelectStorePage',
-    '/patients': 'dental/PatientsPage',
-    '/dental/patients': 'dental/PatientsPage',
-    '/appointments': 'dental/AppointmentsPage',
-    '/dental-charting': 'dental/DentalChartingPage',
-    '/dental-billing': 'dental/DentalBillingPage',
-    '/dental-catalog': 'dental/DentalCatalogPage',
-    '/dental-doctors': 'dental/DoctorsPage',
-    '/doctors': 'dental/DoctorsPage',
-    '/license-blocked': 'LicenseBlockPage',
-    '/login': 'LoginPage',
-    '/signup': 'SignupPage',
-    '/reset-password': 'ResetPasswordPage',
-    '/admin/dashboard': 'admin/AdminDashboardPage',
-    '/admin/stores': 'admin/AdminStoresPage',
-    '/admin/licenses': 'admin/AdminLicensesPage',
-    '/admin/subscriptions': 'admin/AdminSubscriptionsPage',
-    '/admin/payments': 'admin/AdminPaymentsPage',
-    '/admin/users': 'admin/AdminUsersPage',
-    '/admin/plans': 'admin/AdminPlansPage',
-    '/admin/analytics': 'admin/AdminAnalyticsPage',
-    '/admin/support': 'admin/AdminSupportPage',
-    '/admin/settings': 'admin/AdminSettingsPage',
-    '/admin/exchange-rates': 'admin/AdminExchangeRatesPage',
-    '/admin/mpesa-settings': 'admin/AdminMpesaSettingsPage',
-};
 
 if (typeof window !== 'undefined') {
     const currentPath = window.location.pathname;
