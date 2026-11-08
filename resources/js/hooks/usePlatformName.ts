@@ -108,6 +108,9 @@ export function updateSystemBrandingCache(updates: Partial<SystemBranding>) {
 }
 
 async function fetchBrandingFromApi(force = false): Promise<SystemBranding> {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return cachedBranding;
+  }
   if (hasFetchedFromApi && !force) {
     return cachedBranding;
   }
@@ -117,10 +120,14 @@ async function fetchBrandingFromApi(force = false): Promise<SystemBranding> {
 
   fetchPromise = (async () => {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 1500);
       const res = await fetch('/api/system-branding', {
         headers: { Accept: 'application/json' },
         credentials: 'same-origin',
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
       if (res.ok) {
         const data = await res.json();
         cachedBranding = {

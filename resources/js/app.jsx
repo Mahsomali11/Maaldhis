@@ -85,15 +85,8 @@ if (typeof window !== 'undefined') {
         const requestHeaders = new Headers(init.headers || (input instanceof Request ? input.headers : {}));
         const isInertia = requestHeaders.get('x-inertia') === 'true';
 
+        // 1. Instant zero-latency offline resolution (bypass network immediately!)
         if (isOffline && isInertia) {
-            try {
-                // Let service worker respond if active
-                const swRes = await nativeFetch(input, init);
-                if (swRes && swRes.status === 200) {
-                    return swRes;
-                }
-            } catch (_) {}
-
             const rawUrl = typeof input === 'string' ? input : (input instanceof Request ? input.url : '');
             let pathname = '/';
             try {
@@ -144,6 +137,70 @@ if (typeof window !== 'undefined') {
                     'X-Inertia-Version': inertiaVersion,
                 },
             });
+        }
+
+        // 2. Fast timeout for online Inertia requests to prevent hanging on dropped connections
+        if (isInertia) {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 1800);
+                const res = await nativeFetch(input, { ...init, signal: controller.signal });
+                clearTimeout(timeoutId);
+                if (res && res.status === 200) {
+                    return res;
+                }
+            } catch (err) {
+                const rawUrl = typeof input === 'string' ? input : (input instanceof Request ? input.url : '');
+                let pathname = '/';
+                try {
+                    pathname = new URL(rawUrl, window.location.origin).pathname;
+                } catch (_) {
+                    pathname = rawUrl;
+                }
+
+                const inertiaVersion = requestHeaders.get('x-inertia-version') || '';
+                let matchedComp = ROUTE_PAGE_MAP[pathname] || 'DashboardPage';
+                let extraProps = {};
+
+                if (pathname.startsWith('/dental/patients/') && pathname !== '/dental/patients') {
+                    matchedComp = 'dental/PatientDetailsPage';
+                    extraProps.patientId = pathname.split('/').filter(Boolean).pop();
+                } else if (pathname.startsWith('/receipt/')) {
+                    matchedComp = 'ReceiptPage';
+                    extraProps.saleId = pathname.split('/').filter(Boolean).pop();
+                }
+
+                let cachedUser = null;
+                let cachedStores = [];
+                try {
+                    const u = localStorage.getItem('cached_auth_user');
+                    if (u) cachedUser = JSON.parse(u);
+                    const s = localStorage.getItem('cached_stores');
+                    if (s) cachedStores = JSON.parse(s);
+                } catch (_) {}
+
+                const payload = {
+                    component: matchedComp,
+                    props: {
+                        auth: { user: cachedUser },
+                        initialStores: cachedStores,
+                        systemBranding: { system_name: 'Maaldhis' },
+                        isOfflineFallback: true,
+                        ...extraProps,
+                    },
+                    url: pathname,
+                    version: inertiaVersion,
+                };
+
+                return new Response(JSON.stringify(payload), {
+                    status: 200,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Inertia': 'true',
+                        'X-Inertia-Version': inertiaVersion,
+                    },
+                });
+            }
         }
 
         return nativeFetch(input, init);
@@ -408,14 +465,37 @@ if (typeof window !== 'undefined') {
 
 const pages = import.meta.glob('./pages/**/*.tsx');
 
+// In-memory module cache to eliminate dynamic import overhead and promise creation on navigation
+const pageCache = new Map();
+
+function applyDefaultLayout(name, page) {
+    if (page && page.default) {
+        if (!name.startsWith('LoginPage') &&
+            !name.startsWith('SignupPage') &&
+            !name.startsWith('ResetPasswordPage') &&
+            !name.startsWith('CustomerDisplayPage') &&
+            !name.startsWith('admin/AdminLoginPage') &&
+            !name.startsWith('NotFound') &&
+            !page.default.layout) {
+
+            page.default.layout = (pageElement) => <DesktopLayout>{pageElement}</DesktopLayout>;
+        }
+    }
+}
+
 // Universal dynamic chunk warming during online idle time
 if (typeof window !== 'undefined') {
     window.addEventListener('load', () => {
         if (navigator.onLine) {
             const warmChunks = () => {
-                Object.values(pages).forEach((loader) => {
+                Object.entries(pages).forEach(([path, loader]) => {
                     try {
-                        loader().catch(() => {});
+                        loader().then((mod) => {
+                            if (mod) {
+                                const cleanName = path.replace(/^\.\/pages\//, '').replace(/\.tsx$/, '');
+                                pageCache.set(cleanName, mod);
+                            }
+                        }).catch(() => {});
                     } catch (_) {}
                 });
             };
@@ -433,6 +513,15 @@ createInertiaApp({
     title: (title) => title ? `${title} - ${getPlatformName()}` : getPlatformName(),
     page: initialPageData,
     resolve: async (name) => {
+        // 1. Instant in-memory cache check (0ms)
+        if (pageCache.has(name)) {
+            const cachedPage = pageCache.get(name);
+            if (cachedPage) {
+                applyDefaultLayout(name, cachedPage);
+                return cachedPage;
+            }
+        }
+
         let importPage = pages[`./pages/${name}.tsx`];
         if (!importPage) {
             const fallbackKey = Object.keys(pages).find(k => k.toLowerCase().endsWith(`/${name.toLowerCase()}.tsx`));
@@ -457,18 +546,9 @@ createInertiaApp({
             }
         }
 
-        // If it has a default export
-        if (page && page.default) {
-            if (!name.startsWith('LoginPage') &&
-                !name.startsWith('SignupPage') &&
-                !name.startsWith('ResetPasswordPage') &&
-                !name.startsWith('CustomerDisplayPage') &&
-                !name.startsWith('admin/AdminLoginPage') &&
-                !name.startsWith('NotFound') &&
-                !page.default.layout) {
-
-                page.default.layout = (pageElement) => <DesktopLayout>{pageElement}</DesktopLayout>;
-            }
+        if (page) {
+            pageCache.set(name, page);
+            applyDefaultLayout(name, page);
         }
         return page;
     },

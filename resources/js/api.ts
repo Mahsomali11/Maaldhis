@@ -360,12 +360,16 @@ class QueryBuilder {
           extraHeaders['X-Idempotency-Key'] = generateIdempotencyKey(requestKey);
         }
 
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2500);
         const res = await fetch(url, {
           method,
           credentials: 'same-origin',
           headers: getHeaders(extraHeaders),
-          body: this.payload ? JSON.stringify(this.payload) : undefined
+          body: this.payload ? JSON.stringify(this.payload) : undefined,
+          signal: controller.signal,
         });
+        clearTimeout(timeoutId);
 
         if (res.status === 401 || res.status === 419) {
           // Force a reload to trigger Inertia redirect to login if session expires
@@ -527,11 +531,20 @@ class LaravelAuthMock {
       } catch (_) {}
     }
 
+    const isBrowserOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+    if (isBrowserOffline) {
+      return { data: { session: null }, error: null };
+    }
+
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 1500);
       const res = await fetch(`${API_URL}/user`, {
         headers: getHeaders(),
-        credentials: 'same-origin'
+        credentials: 'same-origin',
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
       if (res.ok) {
         const user = await res.json();
         const session: Session = { access_token: 'session', user };
@@ -621,6 +634,22 @@ class LaravelAuthMock {
 const storeLicenseRpcCache = new Map<string, { promise: Promise<{ status: any; features: any }>; expiresAt: number }>();
 
 async function fetchStoreLicenseCombined(storeId: string): Promise<{ status: any; features: any }> {
+  // Instant offline resolution (0ms): Never attempt network when offline
+  const isBrowserOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+  if (isBrowserOffline) {
+    try {
+      const cached = localStorage.getItem(`cached_license_${storeId}`);
+      if (cached) {
+        return JSON.parse(cached);
+      }
+    } catch (_) {}
+
+    return {
+      status: { status: 'active', plan_name: 'Offline Active', days_remaining: 999 },
+      features: {},
+    };
+  }
+
   const cached = storeLicenseRpcCache.get(storeId);
   if (cached && cached.expiresAt > Date.now()) {
     return cached.promise;
@@ -628,12 +657,16 @@ async function fetchStoreLicenseCombined(storeId: string): Promise<{ status: any
 
   const promise = (async () => {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
       const res = await fetch(`${API_URL}/rest/v1/rpc/get_store_license`, {
         method: 'POST',
         headers: getHeaders(),
         credentials: 'same-origin',
         body: JSON.stringify({ _store_id: storeId }),
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
       if (res.ok) {
         const data = await res.json();
         if (data && data.status) {
@@ -649,14 +682,35 @@ async function fetchStoreLicenseCombined(storeId: string): Promise<{ status: any
 
     // Fallback to direct store/license lookup if needed
     try {
-      const storeRes = await fetch(`${API_URL}/rest/v1/stores?id=eq.${storeId}`, { headers: getHeaders(), credentials: 'same-origin' });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
+      const storeRes = await fetch(`${API_URL}/rest/v1/stores?id=eq.${storeId}`, {
+        headers: getHeaders(),
+        credentials: 'same-origin',
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
       const storeData = await storeRes.json();
       if (storeData && storeData.length > 0) {
         const ownerId = storeData[0].owner_user_id;
-        let licRes = await fetch(`${API_URL}/rest/v1/licenses?owner_user_id=eq.${ownerId}&status=eq.active&order=expiry_date.desc&select=*,plans(name)`, { headers: getHeaders(), credentials: 'same-origin' });
+        const licController = new AbortController();
+        const licTimeoutId = setTimeout(() => licController.abort(), 2000);
+        let licRes = await fetch(`${API_URL}/rest/v1/licenses?owner_user_id=eq.${ownerId}&status=eq.active&order=expiry_date.desc&select=*,plans(name)`, {
+          headers: getHeaders(),
+          credentials: 'same-origin',
+          signal: licController.signal,
+        });
+        clearTimeout(licTimeoutId);
         let licData = await licRes.json();
         if (!licData || licData.length === 0) {
-          licRes = await fetch(`${API_URL}/rest/v1/licenses?owner_user_id=eq.${ownerId}&order=created_at.desc&limit=1&select=*,plans(name)`, { headers: getHeaders(), credentials: 'same-origin' });
+          const fallbackLicController = new AbortController();
+          const fallbackLicTimeoutId = setTimeout(() => fallbackLicController.abort(), 2000);
+          licRes = await fetch(`${API_URL}/rest/v1/licenses?owner_user_id=eq.${ownerId}&order=created_at.desc&limit=1&select=*,plans(name)`, {
+            headers: getHeaders(),
+            credentials: 'same-origin',
+            signal: fallbackLicController.signal,
+          });
+          clearTimeout(fallbackLicTimeoutId);
           licData = await licRes.json();
         }
         if (licData && licData.length > 0) {
@@ -733,8 +787,24 @@ export const api = {
       return { data: { allowed: true } };
     }
     if (fn === 'get_admin_role') {
+      const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+      if (isOffline) {
+        try {
+          const cached = localStorage.getItem(`cached_admin_role_${params._user_id}`);
+          if (cached) return { data: cached };
+        } catch (_) {}
+        return { data: null };
+      }
+
       try {
-        const res = await fetch(`${API_URL}/rest/v1/admin_roles?user_id=eq.${params._user_id}`, { headers: getHeaders(), credentials: 'same-origin' });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+        const res = await fetch(`${API_URL}/rest/v1/admin_roles?user_id=eq.${params._user_id}`, {
+          headers: getHeaders(),
+          credentials: 'same-origin',
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
         const roles = await res.json();
         if (roles && roles.length > 0) {
           try { localStorage.setItem(`cached_admin_role_${params._user_id}`, roles[0].role); } catch (_) {}
@@ -865,12 +935,16 @@ export const api = {
       }
 
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2500);
         const res = await fetch(`${API_URL}/rest/v1/rpc/get_store_data`, {
           method: 'POST',
           headers: getHeaders(),
           credentials: 'same-origin',
-          body: JSON.stringify(params)
+          body: JSON.stringify(params),
+          signal: controller.signal,
         });
+        clearTimeout(timeoutId);
         if (res.ok) {
           const data = await res.json();
           try {
@@ -934,12 +1008,16 @@ export const api = {
         const extraHeaders: Record<string, string> = {
           'X-Idempotency-Key': generateIdempotencyKey(requestKey)
         };
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
         const res = await fetch(fullUrl, {
           method: 'POST',
           headers: getHeaders(extraHeaders),
           credentials: 'same-origin',
-          body: JSON.stringify(body)
+          body: JSON.stringify(body),
+          signal: controller.signal,
         });
+        clearTimeout(timeoutId);
         const data = await res.json();
         window.dispatchEvent(new CustomEvent('action-complete'));
         if (!res.ok) return { data: { error: data.error || data.message || 'Error' }, error: null };

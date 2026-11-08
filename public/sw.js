@@ -1,10 +1,10 @@
 /**
- * Maaldhis PWA Service Worker (v5)
- * Comprehensive SPA Offline Navigation Fallback, Batch Manifest Pre-Caching & Isolated Inertia Routing Engine.
- * Strictly separates Inertia AJAX requests (JSON) from browser document navigations (HTML).
+ * Maaldhis PWA Service Worker (v6)
+ * Instant Offline Rendering Strategy & Zero-Latency Cache-First Asset Resolution.
+ * Strictly checks navigator.onLine to bypass all network timeouts immediately when offline.
  */
 
-const CACHE_VERSION = 'maaldhis-pwa-v5';
+const CACHE_VERSION = 'maaldhis-pwa-v6';
 const STATIC_CACHE = `maaldhis-static-${CACHE_VERSION}`;
 const HTML_SHELL_CACHE = `maaldhis-html-${CACHE_VERSION}`;
 const INERTIA_DATA_CACHE = `maaldhis-inertia-${CACHE_VERSION}`;
@@ -97,6 +97,13 @@ function resolveRouteComponent(pathname) {
     };
   }
   return { component: 'DashboardPage', props: {} };
+}
+
+// Helper: Fast network fetch with aggressive timeout to prevent lagging on dead connections
+function fetchWithTimeout(request, timeoutMs = 2000) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(request, { signal: controller.signal }).finally(() => clearTimeout(timeoutId));
 }
 
 // Helper: strictly check if a response is a real HTML document and not JSON
@@ -304,7 +311,7 @@ self.addEventListener('message', (event) => {
   }
 });
 
-// 4. Fetch Event: Tailored routing strategies
+// 4. Fetch Event: Tailored instant routing strategies
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   const url = new URL(request.url);
@@ -314,10 +321,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+
   // =========================================================================
   // Strategy 1: Inertia AJAX Client-Side Visits (X-Inertia: true)
-  // MUST BE CHECKED FIRST! Strictly isolated in INERTIA_DATA_CACHE.
-  // NEVER return HTML to an Inertia AJAX request!
+  // MUST BE CHECKED FIRST! Instant zero-timeout resolution when offline.
   // =========================================================================
   const isInertia = request.headers.get('x-inertia') === 'true';
 
@@ -326,9 +334,51 @@ self.addEventListener('fetch', (event) => {
       (async () => {
         const inertiaVersion = request.headers.get('x-inertia-version') || '';
 
-        // Try network first if online
+        // INSTANT OFFLINE BYPASS: When offline, do NOT attempt network fetch!
+        if (isOffline) {
+          const cache = await caches.open(INERTIA_DATA_CACHE);
+          let cached = (await cache.match(request.url)) || (await cache.match(url.pathname));
+          if (cached) {
+            const cachedHeaders = new Headers(cached.headers);
+            cachedHeaders.set('Content-Type', 'application/json');
+            cachedHeaders.set('X-Inertia', 'true');
+            if (inertiaVersion) {
+              cachedHeaders.set('X-Inertia-Version', inertiaVersion);
+            }
+            const body = await cached.blob();
+            return new Response(body, {
+              status: 200,
+              headers: cachedHeaders,
+            });
+          }
+
+          const { component, props: routeProps } = resolveRouteComponent(url.pathname);
+          const payload = {
+            component,
+            props: {
+              auth: lastKnownAuth || { user: null },
+              initialStores: lastKnownStores || [],
+              systemBranding: lastKnownBranding || { system_name: 'Maaldhis' },
+              isOfflineFallback: true,
+              ...routeProps,
+            },
+            url: url.pathname,
+            version: inertiaVersion,
+          };
+
+          return new Response(JSON.stringify(payload), {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Inertia': 'true',
+              'X-Inertia-Version': inertiaVersion,
+            },
+          });
+        }
+
+        // Online: Network first with fast 2s timeout
         try {
-          const networkResponse = await fetch(request);
+          const networkResponse = await fetchWithTimeout(request, 2000);
           if (networkResponse && networkResponse.status === 200) {
             const clone = networkResponse.clone();
             const cache = await caches.open(INERTIA_DATA_CACHE);
@@ -346,10 +396,10 @@ self.addEventListener('fetch', (event) => {
             return networkResponse;
           }
         } catch (fetchErr) {
-          // Network failed or offline - fall through to local cache/synthetic resolution
+          // Network failed or timed out
         }
 
-        // Offline: Check INERTIA_DATA_CACHE
+        // Fallback to local cached Inertia response or synthetic payload
         const cache = await caches.open(INERTIA_DATA_CACHE);
         let cached = (await cache.match(request.url)) || (await cache.match(url.pathname));
         if (cached) {
@@ -366,7 +416,6 @@ self.addEventListener('fetch', (event) => {
           });
         }
 
-        // Offline Synthetic Fallback: Resolve mapped component for the requested route
         const { component, props: routeProps } = resolveRouteComponent(url.pathname);
         const payload = {
           component,
@@ -403,13 +452,31 @@ self.addEventListener('fetch', (event) => {
   if (isNavigation) {
     event.respondWith(
       (async () => {
-        // Try network first if online
+        const cache = await caches.open(HTML_SHELL_CACHE);
+
+        // INSTANT OFFLINE BYPASS: When offline, do NOT attempt network fetch!
+        if (isOffline) {
+          let candidate = (await cache.match(request.url)) || (await cache.match(url.pathname));
+          if (await isValidHtmlResponse(candidate)) return candidate;
+
+          candidate = (await cache.match('__app_shell__')) || (await cache.match('/dashboard')) || (await cache.match('/'));
+          if (await isValidHtmlResponse(candidate)) return candidate;
+
+          const keys = await cache.keys();
+          for (const req of keys) {
+            const res = await cache.match(req);
+            if (await isValidHtmlResponse(res)) return res;
+          }
+
+          return new Response(getOfflineHtml(), { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+        }
+
+        // Online: Network first with fast 2s timeout
         try {
-          const networkResponse = await fetch(request);
+          const networkResponse = await fetchWithTimeout(request, 2000);
           if (networkResponse && networkResponse.status === 200) {
             const isHtml = await isValidHtmlResponse(networkResponse);
             if (isHtml) {
-              const cache = await caches.open(HTML_SHELL_CACHE);
               cache.put(request.url, networkResponse.clone());
               cache.put(url.pathname, networkResponse.clone());
               cache.put('__app_shell__', networkResponse.clone());
@@ -418,37 +485,23 @@ self.addEventListener('fetch', (event) => {
             return networkResponse;
           }
         } catch (fetchErr) {
-          // Network failed or offline - fall through to offline shell
+          // Network failed or timed out
         }
 
-        console.warn('[SW] Offline document navigation intercepted for:', request.url);
-        const cache = await caches.open(HTML_SHELL_CACHE);
-
-        // 1. Exact match by full URL or pathname
+        // Fallback to cached shell
         let candidate = (await cache.match(request.url)) || (await cache.match(url.pathname));
-        if (await isValidHtmlResponse(candidate)) {
-          return candidate;
-        }
+        if (await isValidHtmlResponse(candidate)) return candidate;
 
-        // 2. Global cached App Shell (__app_shell__, /dashboard, /)
         candidate = (await cache.match('__app_shell__')) || (await cache.match('/dashboard')) || (await cache.match('/'));
-        if (await isValidHtmlResponse(candidate)) {
-          return candidate;
-        }
+        if (await isValidHtmlResponse(candidate)) return candidate;
 
-        // 3. Search all keys in HTML_SHELL_CACHE for any valid HTML document
         const keys = await cache.keys();
         for (const req of keys) {
           const res = await cache.match(req);
-          if (await isValidHtmlResponse(res)) {
-            return res;
-          }
+          if (await isValidHtmlResponse(res)) return res;
         }
 
-        // 4. Return clean fallback HTML
-        return new Response(getOfflineHtml(), {
-          headers: { 'Content-Type': 'text/html; charset=utf-8' },
-        });
+        return new Response(getOfflineHtml(), { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
       })()
     );
     return;
@@ -456,7 +509,7 @@ self.addEventListener('fetch', (event) => {
 
   // =========================================================================
   // Strategy 3: Static Bundles & Assets (/build/*, .js, .css, fonts, images)
-  // Cache-First strategy with background revalidation.
+  // Cache-First strategy with non-blocking background revalidation.
   // =========================================================================
   const isStaticAsset =
     url.pathname.startsWith('/build/') ||
@@ -478,36 +531,31 @@ self.addEventListener('fetch', (event) => {
         const cache = await caches.open(STATIC_CACHE);
 
         let cachedResponse = await cache.match(request);
-        if (!cachedResponse) {
-          cachedResponse = await cache.match(url.pathname, { ignoreSearch: true });
-        }
-        if (!cachedResponse) {
-          cachedResponse = await cache.match(request.url, { ignoreSearch: true });
-        }
+        if (!cachedResponse) cachedResponse = await cache.match(url.pathname, { ignoreSearch: true });
+        if (!cachedResponse) cachedResponse = await cache.match(request.url, { ignoreSearch: true });
 
         if (cachedResponse) {
-          // Background revalidation when online
-          fetch(request)
-            .then((networkResponse) => {
-              if (networkResponse && (networkResponse.status === 200 || networkResponse.type === 'opaque')) {
-                cache.put(request, networkResponse.clone());
-                cache.put(url.pathname, networkResponse.clone());
-              }
-            })
-            .catch(() => {});
+          // Non-blocking background revalidation only when online
+          if (!isOffline) {
+            fetch(request).then(res => { if (res && res.ok) cache.put(request, res); }).catch(() => {});
+          }
           return cachedResponse;
         }
 
+        // When offline, do NOT hang on network
+        if (isOffline) {
+          return new Response('', { status: 408 });
+        }
+
         try {
-          const networkResponse = await fetch(request);
+          const networkResponse = await fetchWithTimeout(request, 3000);
           if (networkResponse && (networkResponse.status === 200 || networkResponse.type === 'opaque')) {
             cache.put(request, networkResponse.clone());
             cache.put(url.pathname, networkResponse.clone());
           }
           return networkResponse;
         } catch (err) {
-          console.warn('[SW] Failed to fetch static asset offline:', request.url);
-          return cachedResponse || new Response('', { status: 408 });
+          return new Response('', { status: 408 });
         }
       })()
     );
@@ -519,24 +567,33 @@ self.addEventListener('fetch', (event) => {
   // =========================================================================
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
-      fetch(request)
-        .then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            const clone = networkResponse.clone();
-            caches.open(API_CACHE).then((cache) => {
-              cache.put(request, clone);
-            });
-          }
-          return networkResponse;
-        })
-        .catch(async () => {
-          const cache = await caches.open(API_CACHE);
+      (async () => {
+        const cache = await caches.open(API_CACHE);
+
+        // Immediate offline resolution for cached API endpoints
+        if (isOffline) {
           const cached = await cache.match(request);
           if (cached) return cached;
           return new Response(JSON.stringify({ offline: true, data: null }), {
             headers: { 'Content-Type': 'application/json' },
           });
-        })
+        }
+
+        // Online: Network first with fast 2.5s timeout
+        try {
+          const res = await fetchWithTimeout(request, 2500);
+          if (res && res.status === 200) {
+            cache.put(request, res.clone());
+            return res;
+          }
+        } catch (_) {}
+
+        const cached = await cache.match(request);
+        if (cached) return cached;
+        return new Response(JSON.stringify({ offline: true, data: null }), {
+          headers: { 'Content-Type': 'application/json' },
+        });
+      })()
     );
     return;
   }
