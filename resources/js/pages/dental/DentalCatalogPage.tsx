@@ -3,6 +3,7 @@ import { router } from '@inertiajs/react';
 import PageHeader from '@/components/PageHeader';
 import { useApp } from '@/context/AppContext';
 import { api as apiClient } from '@/api';
+import { cacheRecords } from '@/lib/offline/indexedDb';
 import { toast } from 'sonner';
 import {
   Layers, Stethoscope, Package, Plus, Search, Edit2, Trash2,
@@ -134,6 +135,7 @@ export default function DentalCatalogPage() {
 
       let services: DentalService[] = [];
       if (Array.isArray(srvFetchRes)) {
+        cacheRecords('dental_services', srvFetchRes).catch(() => {});
         services = srvFetchRes.map(s => ({
           ...s,
           item_code: s.code || '',
@@ -161,6 +163,7 @@ export default function DentalCatalogPage() {
 
       let items: DentalItem[] = [];
       if (Array.isArray(itmFetchRes)) {
+        cacheRecords('dental_items', itmFetchRes).catch(() => {});
         items = itmFetchRes.map(i => ({
           ...i,
           item_code: i.code || '',
@@ -289,19 +292,23 @@ export default function DentalCatalogPage() {
 
     try {
       if (editingService) {
-        const res = await fetch(`/api/dental/services/${editingService.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-          },
-          credentials: 'same-origin',
-          body: JSON.stringify(payload),
-        });
+        let updatedViaApi = false;
+        try {
+          const res = await fetch(`/api/dental/services/${editingService.id}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify(payload),
+          });
+          if (res.ok) updatedViaApi = true;
+        } catch (_) {}
 
-        if (!res.ok) {
-          // Fallback to apiClient
+        if (!updatedViaApi) {
+          // Fallback to apiClient (handles offline IndexedDB & sync queue)
           const { error: apiErr } = await apiClient
             .from('dental_services')
             .update({
@@ -314,30 +321,32 @@ export default function DentalCatalogPage() {
             .eq('id', editingService.id);
 
           if (apiErr) {
-            const errJson = await res.json().catch(() => ({}));
-            throw new Error(errJson.message || 'Failed to update service');
+            throw new Error(apiErr.message || 'Failed to update service');
           }
         }
 
         toast.success(`Service "${serviceForm.name}" updated successfully`);
       } else {
-        const res = await fetch('/api/dental/services', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-          },
-          credentials: 'same-origin',
-          body: JSON.stringify(payload),
-        });
+        let createdViaApi = false;
+        try {
+          const res = await fetch('/api/dental/services', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify(payload),
+          });
+          if (res.ok) createdViaApi = true;
+        } catch (_) {}
 
-        if (!res.ok) {
-          // Fallback to apiClient
+        if (!createdViaApi) {
+          // Fallback to apiClient (handles offline IndexedDB & sync queue)
           const { error: apiErr } = await apiClient.from('dental_services').insert(payload as any);
           if (apiErr) {
-            const errJson = await res.json().catch(() => ({}));
-            throw new Error(errJson.message || 'Failed to add service');
+            throw new Error(apiErr.message || 'Failed to add service');
           }
         }
 
@@ -413,19 +422,23 @@ export default function DentalCatalogPage() {
 
     try {
       if (editingItem) {
-        const res = await fetch(`/api/dental/items/${editingItem.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-          },
-          credentials: 'same-origin',
-          body: JSON.stringify(payload),
-        });
+        let updatedViaApi = false;
+        try {
+          const res = await fetch(`/api/dental/items/${editingItem.id}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify(payload),
+          });
+          if (res.ok) updatedViaApi = true;
+        } catch (_) {}
 
-        if (!res.ok) {
-          // Fallback to apiClient
+        if (!updatedViaApi) {
+          // Fallback to apiClient (handles offline IndexedDB & sync queue)
           const { error: apiErr } = await apiClient
             .from('dental_items')
             .update({
@@ -441,30 +454,32 @@ export default function DentalCatalogPage() {
             .eq('id', editingItem.id);
 
           if (apiErr) {
-            const errJson = await res.json().catch(() => ({}));
-            throw new Error(errJson.message || 'Failed to update dental item');
+            throw new Error(apiErr.message || 'Failed to update dental item');
           }
         }
 
         toast.success(`Dental item "${itemForm.name}" updated successfully`);
       } else {
-        const res = await fetch('/api/dental/items', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-          },
-          credentials: 'same-origin',
-          body: JSON.stringify(payload),
-        });
+        let createdViaApi = false;
+        try {
+          const res = await fetch('/api/dental/items', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify(payload),
+          });
+          if (res.ok) createdViaApi = true;
+        } catch (_) {}
 
-        if (!res.ok) {
-          // Fallback to apiClient
+        if (!createdViaApi) {
+          // Fallback to apiClient (handles offline IndexedDB & sync queue)
           const { error: apiErr } = await apiClient.from('dental_items').insert(payload as any);
           if (apiErr) {
-            const errJson = await res.json().catch(() => ({}));
-            throw new Error(errJson.message || 'Failed to add dental item');
+            throw new Error(apiErr.message || 'Failed to add dental item');
           }
         }
 
@@ -484,16 +499,20 @@ export default function DentalCatalogPage() {
   const handleDeleteService = async (service: DentalService) => {
     if (!confirm(`Are you sure you want to remove "${service.name}" from the catalog?`)) return;
     try {
-      const res = await fetch(`/api/dental/services/${service.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Accept': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-        credentials: 'same-origin',
-      });
+      let deletedViaApi = false;
+      try {
+        const res = await fetch(`/api/dental/services/${service.id}`, {
+          method: 'DELETE',
+          headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+          },
+          credentials: 'same-origin',
+        });
+        if (res.ok) deletedViaApi = true;
+      } catch (_) {}
 
-      if (!res.ok) {
+      if (!deletedViaApi) {
         await apiClient
           .from('dental_services')
           .update({ is_active: false } as any)
@@ -510,16 +529,20 @@ export default function DentalCatalogPage() {
   const handleDeleteItem = async (item: DentalItem) => {
     if (!confirm(`Are you sure you want to remove "${item.name}" from inventory?`)) return;
     try {
-      const res = await fetch(`/api/dental/items/${item.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Accept': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-        credentials: 'same-origin',
-      });
+      let deletedViaApi = false;
+      try {
+        const res = await fetch(`/api/dental/items/${item.id}`, {
+          method: 'DELETE',
+          headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+          },
+          credentials: 'same-origin',
+        });
+        if (res.ok) deletedViaApi = true;
+      } catch (_) {}
 
-      if (!res.ok) {
+      if (!deletedViaApi) {
         await apiClient
           .from('dental_items')
           .update({ is_active: false } as any)

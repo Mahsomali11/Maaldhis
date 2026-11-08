@@ -4,6 +4,7 @@ import { api as apiClient } from '@/api';
 import type { User as SupabaseUser, Session } from '@/api';
 import type { Store, Item, Customer, Supplier, Expense, Sale, SaleItem, CustomerDebt, CashSession, CashMovement, Payment, Return, StockTransfer, CartItem, StaffAccount, Category, Purchase, PurchaseItem } from '@/types';
 import { getDeviceId } from '@/lib/device';
+import { proactivelyCacheStore } from '@/lib/offline/syncManager';
 
 export function getCsrfToken(): string {
   if (typeof document === 'undefined') return '';
@@ -361,11 +362,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
           licenseStatus: normalizedLicense ?? prev.licenseStatus,
           storeFeatures: data.storeFeatures ? (data.storeFeatures as unknown as StoreFeatures) : prev.storeFeatures,
         }));
+
+        if (typeof navigator !== 'undefined' && navigator.onLine) {
+          proactivelyCacheStore(storeId).catch(() => {});
+        }
       }
     } catch (e) {
       console.error('Failed to load store data:', e);
     }
   }, []);
+
+  // Listen for network reconnection to refresh store state and proactive cache
+  useEffect(() => {
+    const handleNetChange = (e: any) => {
+      const isOnline = e.detail?.isOnline ?? navigator.onLine;
+      if (isOnline && state.currentStore?.id) {
+        loadStoreData(state.currentStore.id);
+        proactivelyCacheStore(state.currentStore.id).catch(() => {});
+      }
+    };
+    window.addEventListener('network-status-changed', handleNetChange);
+    return () => window.removeEventListener('network-status-changed', handleNetChange);
+  }, [state.currentStore?.id, loadStoreData]);
 
 
   const loadUserData = useCallback(async (userId: string, session: Session, preloadedStores?: Store[]) => {

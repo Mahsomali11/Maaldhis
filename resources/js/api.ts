@@ -65,18 +65,48 @@ function filterCachedRecords(records: any[], query: Record<string, string>): any
   for (const [key, val] of Object.entries(query)) {
     if (key === 'select' || key === 'order' || key === 'limit' || key === 'count' || key === 'head') continue;
 
+    if (key === 'or') {
+      const conditions = val.split(',');
+      result = result.filter(r => {
+        return conditions.some(cond => {
+          const parts = cond.split('.');
+          if (parts.length >= 3 && parts[1] === 'eq') {
+            return String(r[parts[0]] ?? '') === parts[2];
+          }
+          return false;
+        });
+      });
+      continue;
+    }
+
     if (val.startsWith('eq.')) {
       const target = val.slice(3);
+      const targetLower = target.toLowerCase();
       result = result.filter(r => {
         const itemVal = r[key];
+        // Robust boolean comparison (handles 1, '1', true, 'true' vs 0, '0', false, 'false')
+        if (targetLower === 'true' || targetLower === 'false') {
+          const isTargetTrue = targetLower === 'true';
+          const isItemTrue = itemVal === true || itemVal === 1 || itemVal === '1' || itemVal === 'true';
+          return isTargetTrue === isItemTrue;
+        }
         if (typeof itemVal === 'boolean') {
-          return String(itemVal) === target.toLowerCase();
+          return String(itemVal) === targetLower;
         }
         return String(itemVal ?? '') === target;
       });
     } else if (val.startsWith('neq.')) {
       const target = val.slice(4);
-      result = result.filter(r => String(r[key] ?? '') !== target);
+      const targetLower = target.toLowerCase();
+      result = result.filter(r => {
+        const itemVal = r[key];
+        if (targetLower === 'true' || targetLower === 'false') {
+          const isTargetTrue = targetLower === 'true';
+          const isItemTrue = itemVal === true || itemVal === 1 || itemVal === '1' || itemVal === 'true';
+          return isTargetTrue !== isItemTrue;
+        }
+        return String(itemVal ?? '') !== target;
+      });
     } else if (val.startsWith('in.')) {
       const list = val.slice(4, -1).split(',');
       result = result.filter(r => list.includes(String(r[key] ?? '')));
@@ -413,7 +443,11 @@ class QueryBuilder {
 
         if (isNetworkFailure) {
           console.warn(`[Offline Mode] Network request failed for ${method} ${url}. Switching to local persistence.`);
-          return this.handleOfflineFallback(method, url);
+          if (this.action !== 'select') {
+            return this.handleOfflineMutation(method, url);
+          } else {
+            return this.handleOfflineFallback(method, url);
+          }
         }
 
         window.dispatchEvent(new CustomEvent('action-error', { detail: error }));
@@ -718,20 +752,116 @@ export const api = {
     if (fn === 'get_store_data') {
       const isBrowserOffline = typeof navigator !== 'undefined' && !navigator.onLine;
 
-      if (isBrowserOffline) {
+      const resolveOfflineStoreData = async (storeId: string) => {
+        let cachedData: any = null;
         try {
-          const cachedStr = localStorage.getItem(`cached_store_data_${params._store_id}`);
+          const cachedStr = localStorage.getItem(`cached_store_data_${storeId}`);
           if (cachedStr) {
-            const cachedData = JSON.parse(cachedStr);
-            const offlineSales = await getCachedRecords('sales', params._store_id);
-            if (offlineSales && offlineSales.length > 0) {
-              const existingIds = new Set((cachedData.sales || []).map((s: any) => s.id));
-              const newSales = offlineSales.filter((s: any) => !existingIds.has(s.id));
-              cachedData.sales = [...newSales, ...(cachedData.sales || [])];
-            }
-            return { data: cachedData, error: null };
+            cachedData = JSON.parse(cachedStr);
           }
         } catch (_) {}
+
+        if (!cachedData) {
+          cachedData = {
+            items: [],
+            customers: [],
+            suppliers: [],
+            expenses: [],
+            sales: [],
+            saleItems: [],
+            customerDebts: [],
+            payments: [],
+            returns: [],
+            staffAccounts: [],
+            stockTransfers: [],
+            categories: [],
+            purchases: [],
+            purchaseItems: [],
+            accountTransfers: [],
+            paymentAccounts: [],
+            patients: [],
+            dentalServices: [],
+            dentalItems: [],
+            treatments: [],
+            appointments: [],
+            dentalCharts: [],
+            doctors: [],
+            licenseStatus: { status: 'active', plan_name: 'Offline Active', days_remaining: 999 },
+            storeFeatures: {},
+          };
+        }
+
+        // Overlay with latest local modifications from IndexedDB
+        try {
+          const [
+            dbItems,
+            dbSales,
+            dbPatients,
+            dbTreatments,
+            dbAppointments,
+            dbDentalCharts,
+            dbPaymentAccounts,
+            dbDentalServices,
+            dbDentalItems,
+            dbDoctors,
+            dbCategories,
+            dbCustomers,
+            dbExpenses,
+            dbPayments,
+          ] = await Promise.all([
+            getCachedRecords('items', storeId),
+            getCachedRecords('sales', storeId),
+            getCachedRecords('patients', storeId),
+            getCachedRecords('treatments', storeId),
+            getCachedRecords('appointments', storeId),
+            getCachedRecords('dental_charts', storeId),
+            getCachedRecords('payment_accounts', storeId),
+            getCachedRecords('dental_services', storeId),
+            getCachedRecords('dental_items', storeId),
+            getCachedRecords('doctors', storeId),
+            getCachedRecords('categories', storeId),
+            getCachedRecords('customers', storeId),
+            getCachedRecords('expenses', storeId),
+            getCachedRecords('payments', storeId),
+          ]);
+
+          if (dbItems && dbItems.length > 0) cachedData.items = dbItems;
+          if (dbSales && dbSales.length > 0) {
+            const existingIds = new Set((cachedData.sales || []).map((s: any) => s.id));
+            const newSales = dbSales.filter((s: any) => !existingIds.has(s.id));
+            cachedData.sales = [...newSales, ...(cachedData.sales || [])];
+          }
+          if (dbPatients && dbPatients.length > 0) {
+            const existingIds = new Set((cachedData.patients || []).map((p: any) => p.id));
+            const newPts = dbPatients.filter((p: any) => !existingIds.has(p.id));
+            cachedData.patients = [...newPts, ...(cachedData.patients || [])];
+          }
+          if (dbTreatments && dbTreatments.length > 0) {
+            const existingIds = new Set((cachedData.treatments || []).map((t: any) => t.id));
+            const newTrs = dbTreatments.filter((t: any) => !existingIds.has(t.id));
+            cachedData.treatments = [...newTrs, ...(cachedData.treatments || [])];
+          }
+          if (dbAppointments && dbAppointments.length > 0) {
+            const existingIds = new Set((cachedData.appointments || []).map((a: any) => a.id));
+            const newAppts = dbAppointments.filter((a: any) => !existingIds.has(a.id));
+            cachedData.appointments = [...newAppts, ...(cachedData.appointments || [])];
+          }
+          if (dbDentalCharts && dbDentalCharts.length > 0) cachedData.dentalCharts = dbDentalCharts;
+          if (dbPaymentAccounts && dbPaymentAccounts.length > 0) cachedData.paymentAccounts = dbPaymentAccounts;
+          if (dbDentalServices && dbDentalServices.length > 0) cachedData.dentalServices = dbDentalServices;
+          if (dbDentalItems && dbDentalItems.length > 0) cachedData.dentalItems = dbDentalItems;
+          if (dbDoctors && dbDoctors.length > 0) cachedData.doctors = dbDoctors;
+          if (dbCategories && dbCategories.length > 0) cachedData.categories = dbCategories;
+          if (dbCustomers && dbCustomers.length > 0) cachedData.customers = dbCustomers;
+          if (dbExpenses && dbExpenses.length > 0) cachedData.expenses = dbExpenses;
+          if (dbPayments && dbPayments.length > 0) cachedData.payments = dbPayments;
+        } catch (_) {}
+
+        return { data: cachedData, error: null };
+      };
+
+      if (isBrowserOffline) {
+        return resolveOfflineStoreData(params._store_id);
       }
 
       try {
@@ -756,21 +886,21 @@ export const api = {
             if (Array.isArray(data.stockTransfers)) cacheRecords('stock_transfers', data.stockTransfers).catch(() => {});
             if (Array.isArray(data.purchases)) cacheRecords('purchases', data.purchases).catch(() => {});
             if (Array.isArray(data.staffAccounts)) cacheRecords('staff_accounts', data.staffAccounts).catch(() => {});
+            if (Array.isArray(data.paymentAccounts)) cacheRecords('payment_accounts', data.paymentAccounts).catch(() => {});
+            if (Array.isArray(data.patients)) cacheRecords('patients', data.patients).catch(() => {});
+            if (Array.isArray(data.dentalServices)) cacheRecords('dental_services', data.dentalServices).catch(() => {});
+            if (Array.isArray(data.dentalItems)) cacheRecords('dental_items', data.dentalItems).catch(() => {});
+            if (Array.isArray(data.treatments)) cacheRecords('treatments', data.treatments).catch(() => {});
+            if (Array.isArray(data.appointments)) cacheRecords('appointments', data.appointments).catch(() => {});
+            if (Array.isArray(data.dentalCharts)) cacheRecords('dental_charts', data.dentalCharts).catch(() => {});
+            if (Array.isArray(data.doctors)) cacheRecords('doctors', data.doctors).catch(() => {});
           } catch (_) {}
           return { data, error: null };
         } else {
-          const err = await res.json();
-          return { data: null, error: err };
+          return resolveOfflineStoreData(params._store_id);
         }
       } catch (e) {
-        try {
-          const cachedStr = localStorage.getItem(`cached_store_data_${params._store_id}`);
-          if (cachedStr) {
-            const cachedData = JSON.parse(cachedStr);
-            return { data: cachedData, error: null };
-          }
-        } catch (_) {}
-        return { data: null, error: e };
+        return resolveOfflineStoreData(params._store_id);
       }
     }
 

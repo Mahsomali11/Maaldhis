@@ -3,6 +3,7 @@ import { router } from '@inertiajs/react';
 import PageHeader from '@/components/PageHeader';
 import { useApp } from '@/context/AppContext';
 import { api as apiClient } from '@/api';
+import { cacheRecord, cacheRecords } from '@/lib/offline/indexedDb';
 import type { Patient, DentalTreatment, DentalChartEntry, Appointment, TreatmentLineItem } from '@/types';
 import { toast } from 'sonner';
 import {
@@ -133,15 +134,25 @@ export default function PatientDetailsPage({ patientId, initialPatient }: Props)
   const loadPatient = useCallback(async () => {
     if (!patientId) return;
     try {
-      const res = await fetch(`/api/dental/patients/${patientId}`, {
-        headers: { 'Accept': 'application/json' },
-        credentials: 'same-origin',
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setPatient(data);
-      } else {
-        // Fallback to apiClient
+      let loadedFromApi = false;
+      try {
+        const res = await fetch(`/api/dental/patients/${patientId}`, {
+          headers: { 'Accept': 'application/json' },
+          credentials: 'same-origin',
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setPatient(data);
+          loadedFromApi = true;
+          cacheRecord('patients', data).catch(() => {});
+          if (Array.isArray(data.invoices)) cacheRecords('treatments', data.invoices).catch(() => {});
+          if (Array.isArray(data.appointments)) cacheRecords('appointments', data.appointments).catch(() => {});
+          if (Array.isArray(data.dentalCharts)) cacheRecords('dental_charts', data.dentalCharts).catch(() => {});
+        }
+      } catch (_) {}
+
+      if (!loadedFromApi) {
+        // Fallback to apiClient (reads directly from IndexedDB when offline)
         const { data: pt } = await apiClient
           .from('patients')
           .select('*')

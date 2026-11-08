@@ -154,21 +154,27 @@ export async function getCachedRecords(table: string, storeId?: string): Promise
     const tx = db.transaction('cached_records', 'readonly');
     const store = tx.objectStore('cached_records');
 
-    let request: IDBRequest<any[]>;
-    if (storeId) {
-      const index = store.index('by_table_and_store');
-      request = index.getAll([table, String(storeId)]);
-    } else {
-      const index = store.index('by_table');
-      request = index.getAll(table);
-    }
+    const index = store.index('by_table');
+    const request = index.getAll(table);
 
     const results = await new Promise<CachedRecordEntry[]>((resolve, reject) => {
       request.onsuccess = () => resolve(request.result || []);
       request.onerror = () => reject(request.error);
     });
 
-    return results.map(entry => entry.data);
+    if (!storeId) {
+      return results.map(entry => entry.data);
+    }
+
+    const targetStoreId = String(storeId);
+    return results
+      .filter(entry => {
+        const itemStoreId = entry.store_id || entry.data?.store_id;
+        // If the record has no store_id (e.g. global categories or settings), include it
+        if (!itemStoreId) return true;
+        return String(itemStoreId) === targetStoreId;
+      })
+      .map(entry => entry.data);
   } catch (err) {
     console.warn(`[OfflineDB] Failed to get cached records for ${table}:`, err);
     return [];

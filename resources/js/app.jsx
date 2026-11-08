@@ -23,22 +23,47 @@ if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
         navigator.serviceWorker
             .register('/sw.js', { scope: '/' })
             .then((registration) => {
+                const sendPrecache = (sw) => {
+                    if (sw) {
+                        sw.postMessage({
+                            type: 'PRECACHE_ROUTES',
+                            routes: [
+                                '/dashboard',
+                                '/start-sale',
+                                '/inventory',
+                                '/patients',
+                                '/dental/patients',
+                                '/appointments',
+                                '/dental-billing',
+                                '/dental-charting',
+                                '/dental-catalog',
+                                '/doctors',
+                                '/dental-doctors',
+                                '/payment-accounts',
+                                '/categories',
+                                '/customers',
+                                '/suppliers',
+                                '/purchases',
+                                '/sales-report',
+                                '/expenses',
+                            ],
+                        });
+                    }
+                };
+
                 if (registration.active) {
-                    registration.active.postMessage({
-                        type: 'PRECACHE_ROUTES',
-                        routes: [
-                            '/dashboard',
-                            '/start-sale',
-                            '/inventory',
-                            '/patients',
-                            '/dental-billing',
-                            '/dental-charting',
-                            '/dental-catalog',
-                            '/sales-report',
-                            '/expenses'
-                        ],
-                    });
+                    sendPrecache(registration.active);
                 }
+                registration.addEventListener('updatefound', () => {
+                    const newWorker = registration.installing;
+                    if (newWorker) {
+                        newWorker.addEventListener('statechange', () => {
+                            if (newWorker.state === 'activated') {
+                                sendPrecache(newWorker);
+                            }
+                        });
+                    }
+                });
             })
             .catch((error) => {
                 console.warn('[PWA] Service Worker registration failed:', error);
@@ -103,15 +128,30 @@ const ROUTE_PAGE_MAP = {
 
 if (typeof window !== 'undefined') {
     const currentPath = window.location.pathname;
+    const isDynamicPatient = currentPath.startsWith('/dental/patients/') && currentPath !== '/dental/patients';
+    const patientId = isDynamicPatient ? currentPath.split('/').filter(Boolean).pop() : undefined;
+
     if (initialPageData) {
         // If an offline reload served the base App Shell whose URL doesn't match current route
         if (ROUTE_PAGE_MAP[currentPath] && initialPageData.url !== currentPath) {
             initialPageData.component = ROUTE_PAGE_MAP[currentPath];
             initialPageData.url = currentPath;
+        } else if (isDynamicPatient && initialPageData.component !== 'dental/PatientDetailsPage') {
+            initialPageData.component = 'dental/PatientDetailsPage';
+            initialPageData.url = currentPath;
+            if (initialPageData.props) {
+                initialPageData.props.patientId = patientId;
+            }
         }
     } else {
         // Fallback if data-page attribute is missing
-        const matchedComp = ROUTE_PAGE_MAP[currentPath] || 'DashboardPage';
+        let matchedComp = ROUTE_PAGE_MAP[currentPath] || 'DashboardPage';
+        let extraProps = {};
+        if (isDynamicPatient) {
+            matchedComp = 'dental/PatientDetailsPage';
+            extraProps.patientId = patientId;
+        }
+
         let cachedUser = null;
         let cachedStores = [];
         try {
@@ -127,6 +167,7 @@ if (typeof window !== 'undefined') {
                 auth: { user: cachedUser },
                 initialStores: cachedStores,
                 isOfflineFallback: true,
+                ...extraProps,
             },
             url: currentPath,
             version: '',

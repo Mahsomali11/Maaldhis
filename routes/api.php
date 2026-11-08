@@ -115,6 +115,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
                 'features' => $licenseCtx['features'] ?? [],
             ];
 
+            $hasPatients = \Illuminate\Support\Facades\Schema::hasTable('patients');
+            $hasServices = \Illuminate\Support\Facades\Schema::hasTable('dental_services');
+            $hasDentalItems = \Illuminate\Support\Facades\Schema::hasTable('dental_items');
+            $hasTreatments = \Illuminate\Support\Facades\Schema::hasTable('treatments');
+            $hasAppointments = \Illuminate\Support\Facades\Schema::hasTable('appointments');
+            $hasDentalCharts = \Illuminate\Support\Facades\Schema::hasTable('dental_charts');
+            $hasDoctors = \Illuminate\Support\Facades\Schema::hasTable('doctors');
+
             return response()->json([
                 'items' => \App\Models\Item::with(['subCategory:id,store_id,name,parent_id'])->where('store_id', $storeId)->get(),
                 'customers' => \App\Models\Customer::where('store_id', $storeId)->get(),
@@ -134,6 +142,14 @@ Route::middleware(['auth:sanctum'])->group(function () {
                 'purchases' => $purchases,
                 'purchaseItems' => $purchaseIds->isEmpty() ? [] : \App\Models\PurchaseItem::whereIn('purchase_id', $purchaseIds)->get(),
                 'accountTransfers' => \App\Models\AccountTransfer::where('store_id', $storeId)->orderBy('created_at', 'desc')->take(200)->get(),
+                'paymentAccounts' => \App\Models\PaymentAccount::where('store_id', $storeId)->get(),
+                'patients' => $hasPatients ? \App\Models\Patient::where('store_id', $storeId)->orderBy('created_at', 'desc')->get() : [],
+                'dentalServices' => $hasServices ? \App\Models\DentalService::where('store_id', $storeId)->get() : [],
+                'dentalItems' => $hasDentalItems ? \App\Models\DentalItem::where('store_id', $storeId)->get() : [],
+                'treatments' => $hasTreatments ? \App\Models\Treatment::where('store_id', $storeId)->orderBy('created_at', 'desc')->take(300)->get() : [],
+                'appointments' => $hasAppointments ? \App\Models\Appointment::where('store_id', $storeId)->orderBy('appointment_date', 'asc')->get() : [],
+                'dentalCharts' => $hasDentalCharts ? \App\Models\DentalChart::where('store_id', $storeId)->get() : [],
+                'doctors' => $hasDoctors ? \App\Models\Doctor::where('store_id', $storeId)->get() : [],
                 'licenseStatus' => $licenseStatusObj,
                 'storeFeatures' => $licenseCtx['features'] ?? [],
             ]);

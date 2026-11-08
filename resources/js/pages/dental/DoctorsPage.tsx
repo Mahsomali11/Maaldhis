@@ -3,6 +3,7 @@ import { router } from '@inertiajs/react';
 import PageHeader from '@/components/PageHeader';
 import { useApp } from '@/context/AppContext';
 import { api as apiClient } from '@/api';
+import { cacheRecords } from '@/lib/offline/indexedDb';
 import type { Doctor } from '@/types';
 import { toast } from 'sonner';
 import {
@@ -83,27 +84,26 @@ export default function DoctorsPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setDoctors(Array.isArray(data) ? data : []);
-      } else {
-        // Fallback to apiClient dynamic table
-        const { data } = await apiClient
-          .from('doctors')
-          .select('*')
-          .eq('store_id', currentStore.id)
-          .order('name', { ascending: true });
-        if (data) setDoctors(data as Doctor[]);
+        const list = Array.isArray(data) ? data : [];
+        setDoctors(list);
+        if (list.length > 0) {
+          cacheRecords('doctors', list).catch(() => {});
+        }
+        setLoading(false);
+        return;
       }
     } catch (err) {
-      // Fallback
-      const { data } = await apiClient
-        .from('doctors')
-        .select('*')
-        .eq('store_id', currentStore.id)
-        .order('name', { ascending: true });
-      if (data) setDoctors(data as Doctor[]);
-    } finally {
-      setLoading(false);
+      // Offline fallback
     }
+
+    // Fallback to apiClient dynamic table (reads from IndexedDB when offline)
+    const { data } = await apiClient
+      .from('doctors')
+      .select('*')
+      .eq('store_id', currentStore.id)
+      .order('name', { ascending: true });
+    if (data) setDoctors(data as Doctor[]);
+    setLoading(false);
   }, [currentStore?.id]);
 
   useEffect(() => {
@@ -180,20 +180,27 @@ export default function DoctorsPage() {
           payload.password = form.password.trim();
         }
 
-        const res = await fetch(`/api/dental/doctors/${editingDoctor.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-          },
-          credentials: 'same-origin',
-          body: JSON.stringify(payload),
-        });
+        let updatedViaApi = false;
+        try {
+          const res = await fetch(`/api/dental/doctors/${editingDoctor.id}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify(payload),
+          });
+          if (res.ok) updatedViaApi = true;
+        } catch (_) {}
 
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.message || 'Failed to update doctor');
+        if (!updatedViaApi) {
+          const { error: apiErr } = await apiClient
+            .from('doctors')
+            .update(payload)
+            .eq('id', editingDoctor.id);
+          if (apiErr) throw new Error(apiErr.message || 'Failed to update doctor');
         }
 
         toast.success('Doctor profile and staff credentials updated successfully!');
@@ -207,22 +214,29 @@ export default function DoctorsPage() {
           working_hours: form.working_hours.trim(),
           password: form.password.trim() || 'Doctor@123',
           notes: form.notes.trim(),
+          is_active: true,
         };
 
-        const res = await fetch('/api/dental/doctors', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest',
-          },
-          credentials: 'same-origin',
-          body: JSON.stringify(payload),
-        });
+        let createdViaApi = false;
+        try {
+          const res = await fetch('/api/dental/doctors', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify(payload),
+          });
+          if (res.ok) createdViaApi = true;
+        } catch (_) {}
 
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.message || 'Failed to create doctor');
+        if (!createdViaApi) {
+          const { error: apiErr } = await apiClient
+            .from('doctors')
+            .insert(payload as any);
+          if (apiErr) throw new Error(apiErr.message || 'Failed to create doctor');
         }
 
         toast.success('Doctor created & synchronized with Staff Accounts (Role: Dentist)!');
@@ -240,18 +254,21 @@ export default function DoctorsPage() {
   const handleDelete = async () => {
     if (!deleteTarget) return;
     try {
-      const res = await fetch(`/api/dental/doctors/${deleteTarget.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Accept': 'application/json',
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-        credentials: 'same-origin',
-      });
+      let deletedViaApi = false;
+      try {
+        const res = await fetch(`/api/dental/doctors/${deleteTarget.id}`, {
+          method: 'DELETE',
+          headers: {
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+          },
+          credentials: 'same-origin',
+        });
+        if (res.ok) deletedViaApi = true;
+      } catch (_) {}
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || 'Failed to delete doctor');
+      if (!deletedViaApi) {
+        await apiClient.from('doctors').delete().eq('id', deleteTarget.id);
       }
 
       toast.success('Doctor removed or deactivated safely');

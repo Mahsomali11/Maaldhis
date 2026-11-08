@@ -9,6 +9,7 @@ import {
   updateSyncItem,
   getSyncQueueCount,
   cacheRecord,
+  cacheRecords,
   SyncQueueItem,
 } from './indexedDb';
 
@@ -234,6 +235,11 @@ class OfflineSyncManager {
     this.dispatchStatus(this.isOnlineStatus ? 'online' : 'offline');
 
     if (synced > 0 && typeof window !== 'undefined') {
+      const activeStoreId = localStorage.getItem('currentStoreId');
+      if (activeStoreId) {
+        proactivelyCacheStore(activeStoreId).catch(() => {});
+      }
+
       window.dispatchEvent(
         new CustomEvent('sync-completed', {
           detail: { synced, remaining: this.pendingCountStatus },
@@ -261,3 +267,63 @@ class OfflineSyncManager {
 }
 
 export const syncManager = new OfflineSyncManager();
+
+/**
+ * Proactively cache all operational store tables into local IndexedDB
+ * Runs in the background when online so all pages (POS, Dental, Inventory, Dashboard, Patients)
+ * have complete, fresh local datasets ready for instant offline access.
+ */
+export async function proactivelyCacheStore(storeId: string): Promise<void> {
+  if (typeof window === 'undefined' || !storeId) return;
+  if (!navigator.onLine) return;
+
+  try {
+    let csrfToken = '';
+    const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+    if (match) csrfToken = decodeURIComponent(match[1]);
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'X-Requested-With': 'XMLHttpRequest',
+      ...(csrfToken ? { 'X-XSRF-TOKEN': csrfToken } : {}),
+    };
+
+    const res = await fetch('/api/rest/v1/rpc/get_store_data', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers,
+      body: JSON.stringify({ _store_id: storeId }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      try {
+        localStorage.setItem(`cached_store_data_${storeId}`, JSON.stringify(data));
+        if (Array.isArray(data.items)) await cacheRecords('items', data.items);
+        if (Array.isArray(data.customers)) await cacheRecords('customers', data.customers);
+        if (Array.isArray(data.suppliers)) await cacheRecords('suppliers', data.suppliers);
+        if (Array.isArray(data.expenses)) await cacheRecords('expenses', data.expenses);
+        if (Array.isArray(data.sales)) await cacheRecords('sales', data.sales);
+        if (Array.isArray(data.categories)) await cacheRecords('categories', data.categories);
+        if (Array.isArray(data.payments)) await cacheRecords('payments', data.payments);
+        if (Array.isArray(data.returns)) await cacheRecords('returns', data.returns);
+        if (Array.isArray(data.stockTransfers)) await cacheRecords('stock_transfers', data.stockTransfers);
+        if (Array.isArray(data.purchases)) await cacheRecords('purchases', data.purchases);
+        if (Array.isArray(data.staffAccounts)) await cacheRecords('staff_accounts', data.staffAccounts);
+        if (Array.isArray(data.paymentAccounts)) await cacheRecords('payment_accounts', data.paymentAccounts);
+        if (Array.isArray(data.patients)) await cacheRecords('patients', data.patients);
+        if (Array.isArray(data.dentalServices)) await cacheRecords('dental_services', data.dentalServices);
+        if (Array.isArray(data.dentalItems)) await cacheRecords('dental_items', data.dentalItems);
+        if (Array.isArray(data.treatments)) await cacheRecords('treatments', data.treatments);
+        if (Array.isArray(data.appointments)) await cacheRecords('appointments', data.appointments);
+        if (Array.isArray(data.dentalCharts)) await cacheRecords('dental_charts', data.dentalCharts);
+        if (Array.isArray(data.doctors)) await cacheRecords('doctors', data.doctors);
+      } catch (cacheErr) {
+        console.warn('[OfflineDB] Error caching mirrored records:', cacheErr);
+      }
+    }
+  } catch (err) {
+    console.warn('[OfflineDB] Background proactive caching failed:', err);
+  }
+}
