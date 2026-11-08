@@ -1,7 +1,7 @@
 import './index.css';
 
 import { createRoot } from 'react-dom/client';
-import { createInertiaApp } from '@inertiajs/react';
+import { createInertiaApp, router } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from "@/components/ui/toaster";
@@ -11,11 +11,60 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppProvider } from '@/context/AppContext';
 import { AdminProvider } from '@/context/AdminContext';
 import DesktopLayout from '@/components/DesktopLayout';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import { initSubmitGuard } from '@/lib/submit-guard';
 import { getPlatformName, syncDocumentBranding } from '@/hooks/usePlatformName';
 
 // Initialize global double-click & duplicate submission guard
 initSubmitGuard();
+
+// Global Inertia offline navigation resilience
+router.on('exception', (event) => {
+    const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+    const errorMsg = event.detail?.exception?.message || '';
+    const isNetworkError =
+        isOffline ||
+        errorMsg.includes('Failed to fetch') ||
+        errorMsg.includes('NetworkError') ||
+        errorMsg.includes('network error') ||
+        errorMsg.includes('Load failed');
+
+    if (isNetworkError) {
+        event.preventDefault();
+        console.warn('[Inertia Router] Intercepted offline navigation network exception:', errorMsg);
+    }
+});
+
+router.on('invalid', (event) => {
+    const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+    if (isOffline) {
+        event.preventDefault();
+        console.warn('[Inertia Router] Intercepted invalid response while offline');
+    }
+});
+
+// Guard router.visit calls against unhandled offline rejections
+const originalRouterVisit = router.visit.bind(router);
+router.visit = (url, options = {}) => {
+    const wrappedOptions = {
+        ...options,
+        onError: (errors) => {
+            if (options.onError) options.onError(errors);
+        },
+        onCancel: () => {
+            if (options.onCancel) options.onCancel();
+        },
+        onFinish: (visit) => {
+            if (options.onFinish) options.onFinish(visit);
+        },
+    };
+
+    try {
+        return originalRouterVisit(url, wrappedOptions);
+    } catch (err) {
+        console.warn('[Inertia Router] Synchronous error in router.visit intercepted:', err);
+    }
+};
 
 // Register PWA Service Worker for seamless offline caching & refresh support
 if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
@@ -90,8 +139,12 @@ if (appEl && appEl.dataset.page) {
 }
 
 const ROUTE_PAGE_MAP = {
+    '/': 'DashboardPage',
     '/dashboard': 'DashboardPage',
+    '/pos': 'StartSalePage',
     '/start-sale': 'StartSalePage',
+    '/sale': 'StartSalePage',
+    '/customer-display': 'CustomerDisplayPage',
     '/inventory': 'InventoryPage',
     '/categories': 'CategoriesPage',
     '/sales-report': 'SalesReportPage',
@@ -109,6 +162,7 @@ const ROUTE_PAGE_MAP = {
     '/payment-accounts': 'PaymentAccountsPage',
     '/profile': 'ProfilePage',
     '/preferences': 'PreferencesPage',
+    '/store-edit': 'StoreEditPage',
     '/help': 'HelpPage',
     '/learning-center': 'LearningCenterPage',
     '/devices': 'DeviceManagementPage',
@@ -124,12 +178,35 @@ const ROUTE_PAGE_MAP = {
     '/dental-catalog': 'dental/DentalCatalogPage',
     '/dental-doctors': 'dental/DoctorsPage',
     '/doctors': 'dental/DoctorsPage',
+    '/admin/dashboard': 'admin/AdminDashboardPage',
+    '/admin/stores': 'admin/AdminStoresPage',
+    '/admin/licenses': 'admin/AdminLicensesPage',
+    '/admin/subscriptions': 'admin/AdminSubscriptionsPage',
+    '/admin/payments': 'admin/AdminPaymentsPage',
+    '/admin/users': 'admin/AdminUsersPage',
+    '/admin/plans': 'admin/AdminPlansPage',
+    '/admin/analytics': 'admin/AdminAnalyticsPage',
+    '/admin/support': 'admin/AdminSupportPage',
+    '/admin/settings': 'admin/AdminSettingsPage',
+    '/admin/exchange-rates': 'admin/AdminExchangeRatesPage',
+    '/admin/mpesa-settings': 'admin/AdminMpesaSettingsPage',
 };
 
 if (typeof window !== 'undefined') {
     const currentPath = window.location.pathname;
     const isDynamicPatient = currentPath.startsWith('/dental/patients/') && currentPath !== '/dental/patients';
+    const isReceipt = currentPath.startsWith('/receipt/');
     const patientId = isDynamicPatient ? currentPath.split('/').filter(Boolean).pop() : undefined;
+    const saleId = isReceipt ? currentPath.split('/').filter(Boolean).pop() : undefined;
+
+    let cachedUser = null;
+    let cachedStores = [];
+    try {
+        const u = localStorage.getItem('cached_auth_user');
+        if (u) cachedUser = JSON.parse(u);
+        const s = localStorage.getItem('cached_stores');
+        if (s) cachedStores = JSON.parse(s);
+    } catch (_) {}
 
     if (initialPageData) {
         // If an offline reload served the base App Shell whose URL doesn't match current route
@@ -142,7 +219,20 @@ if (typeof window !== 'undefined') {
             if (initialPageData.props) {
                 initialPageData.props.patientId = patientId;
             }
+        } else if (isReceipt && initialPageData.component !== 'ReceiptPage') {
+            initialPageData.component = 'ReceiptPage';
+            initialPageData.url = currentPath;
+            if (initialPageData.props) {
+                initialPageData.props.saleId = saleId;
+            }
         }
+
+        // Ensure safe hydration on props to prevent undefined crashes
+        if (!initialPageData.props) initialPageData.props = {};
+        if (!initialPageData.props.auth) initialPageData.props.auth = { user: cachedUser };
+        else if (!initialPageData.props.auth.user && cachedUser) initialPageData.props.auth.user = cachedUser;
+        if (!initialPageData.props.initialStores && cachedStores.length > 0) initialPageData.props.initialStores = cachedStores;
+        if (!initialPageData.props.systemBranding) initialPageData.props.systemBranding = { system_name: 'Maaldhis' };
     } else {
         // Fallback if data-page attribute is missing
         let matchedComp = ROUTE_PAGE_MAP[currentPath] || 'DashboardPage';
@@ -150,22 +240,17 @@ if (typeof window !== 'undefined') {
         if (isDynamicPatient) {
             matchedComp = 'dental/PatientDetailsPage';
             extraProps.patientId = patientId;
+        } else if (isReceipt) {
+            matchedComp = 'ReceiptPage';
+            extraProps.saleId = saleId;
         }
-
-        let cachedUser = null;
-        let cachedStores = [];
-        try {
-            const u = localStorage.getItem('cached_auth_user');
-            if (u) cachedUser = JSON.parse(u);
-            const s = localStorage.getItem('cached_stores');
-            if (s) cachedStores = JSON.parse(s);
-        } catch (_) {}
 
         initialPageData = {
             component: matchedComp,
             props: {
                 auth: { user: cachedUser },
                 initialStores: cachedStores,
+                systemBranding: { system_name: 'Maaldhis' },
                 isOfflineFallback: true,
                 ...extraProps,
             },
@@ -181,16 +266,22 @@ createInertiaApp({
     title: (title) => title ? `${title} - ${getPlatformName()}` : getPlatformName(),
     page: initialPageData,
     resolve: async (name) => {
-        const importPage = pages[`./pages/${name}.tsx`];
+        let importPage = pages[`./pages/${name}.tsx`];
         if (!importPage) {
-            console.error(`Page not found: ./pages/${name}.tsx`);
-            return;
+            const fallbackKey = Object.keys(pages).find(k => k.toLowerCase().endsWith(`/${name.toLowerCase()}.tsx`));
+            if (fallbackKey) {
+                importPage = pages[fallbackKey];
+            }
+        }
+        if (!importPage) {
+            console.error(`Page not found: ./pages/${name}.tsx, falling back to DashboardPage`);
+            importPage = pages['./pages/DashboardPage.tsx'];
         }
 
         const page = await importPage();
 
         // If it has a default export
-        if (page.default) {
+        if (page && page.default) {
             if (!name.startsWith('LoginPage') &&
                 !name.startsWith('SignupPage') &&
                 !name.startsWith('ResetPasswordPage') &&
@@ -208,17 +299,19 @@ createInertiaApp({
         syncDocumentBranding();
         const root = createRoot(el);
         root.render(
-            <QueryClientProvider client={queryClient}>
-                <TooltipProvider>
-                    <AdminProvider>
-                        <AppProvider>
-                            <Toaster />
-                            <Sonner />
-                            <App {...props} />
-                        </AppProvider>
-                    </AdminProvider>
-                </TooltipProvider>
-            </QueryClientProvider>
+            <ErrorBoundary>
+                <QueryClientProvider client={queryClient}>
+                    <TooltipProvider>
+                        <AdminProvider>
+                            <AppProvider>
+                                <Toaster />
+                                <Sonner />
+                                <App {...props} />
+                            </AppProvider>
+                        </AdminProvider>
+                    </TooltipProvider>
+                </QueryClientProvider>
+            </ErrorBoundary>
         );
     },
     progress: {

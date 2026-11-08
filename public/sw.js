@@ -1,10 +1,10 @@
 /**
- * Maaldhis PWA Service Worker (v2)
- * Strictly separates HTML document navigation responses from Inertia JSON responses.
- * Prevents raw JSON from ever being returned to browser document navigations.
+ * Maaldhis PWA Service Worker (v3)
+ * Comprehensive SPA Offline Navigation Fallback & Isolated Inertia Routing Engine.
+ * Prevents raw JSON on document refresh and eliminates white screen crashes on offline client-side visits.
  */
 
-const CACHE_VERSION = 'maaldhis-pwa-v2';
+const CACHE_VERSION = 'maaldhis-pwa-v3';
 const STATIC_CACHE = `maaldhis-static-${CACHE_VERSION}`;
 const HTML_SHELL_CACHE = `maaldhis-html-${CACHE_VERSION}`;
 const INERTIA_DATA_CACHE = `maaldhis-inertia-${CACHE_VERSION}`;
@@ -12,10 +12,86 @@ const API_CACHE = `maaldhis-api-${CACHE_VERSION}`;
 
 const PRECACHE_ASSETS = [
   '/',
+  '/index.html',
   '/manifest.json',
   '/pwa-icon.svg',
   '/favicon.ico',
 ];
+
+const SW_ROUTE_PAGE_MAP = {
+  '/': 'DashboardPage',
+  '/dashboard': 'DashboardPage',
+  '/pos': 'StartSalePage',
+  '/start-sale': 'StartSalePage',
+  '/sale': 'StartSalePage',
+  '/customer-display': 'CustomerDisplayPage',
+  '/inventory': 'InventoryPage',
+  '/categories': 'CategoriesPage',
+  '/customers': 'CustomersPage',
+  '/suppliers': 'SuppliersPage',
+  '/sales-report': 'SalesReportPage',
+  '/purchases': 'PurchasesPage',
+  '/expenses': 'ExpensesPage',
+  '/cash-flow': 'CashFlowPage',
+  '/credit-record': 'CreditRecordPage',
+  '/returns': 'ReturnsPage',
+  '/stock-transfers': 'StockTransfersPage',
+  '/stock-report': 'StockReportPage',
+  '/receipt-history': 'ReceiptHistoryPage',
+  '/staff-accounts': 'StaffAccountsPage',
+  '/payment-accounts': 'PaymentAccountsPage',
+  '/profile': 'ProfilePage',
+  '/preferences': 'PreferencesPage',
+  '/store-edit': 'StoreEditPage',
+  '/help': 'HelpPage',
+  '/learning-center': 'LearningCenterPage',
+  '/devices': 'DeviceManagementPage',
+  '/upgrade': 'UpgradePage',
+  '/create-store': 'CreateStorePage',
+  '/setup-wizard': 'SetupWizardPage',
+  '/select-store': 'SelectStorePage',
+  '/patients': 'dental/PatientsPage',
+  '/dental/patients': 'dental/PatientsPage',
+  '/appointments': 'dental/AppointmentsPage',
+  '/dental-charting': 'dental/DentalChartingPage',
+  '/dental-billing': 'dental/DentalBillingPage',
+  '/dental-catalog': 'dental/DentalCatalogPage',
+  '/dental-doctors': 'dental/DoctorsPage',
+  '/doctors': 'dental/DoctorsPage',
+  '/admin/dashboard': 'admin/AdminDashboardPage',
+  '/admin/stores': 'admin/AdminStoresPage',
+  '/admin/licenses': 'admin/AdminLicensesPage',
+  '/admin/subscriptions': 'admin/AdminSubscriptionsPage',
+  '/admin/payments': 'admin/AdminPaymentsPage',
+  '/admin/users': 'admin/AdminUsersPage',
+  '/admin/plans': 'admin/AdminPlansPage',
+  '/admin/analytics': 'admin/AdminAnalyticsPage',
+  '/admin/support': 'admin/AdminSupportPage',
+  '/admin/settings': 'admin/AdminSettingsPage',
+  '/admin/exchange-rates': 'admin/AdminExchangeRatesPage',
+  '/admin/mpesa-settings': 'admin/AdminMpesaSettingsPage',
+};
+
+function resolveRouteComponent(pathname) {
+  if (SW_ROUTE_PAGE_MAP[pathname]) {
+    return { component: SW_ROUTE_PAGE_MAP[pathname], props: {} };
+  }
+  if (pathname.startsWith('/dental/patients/') && pathname !== '/dental/patients') {
+    const parts = pathname.split('/').filter(Boolean);
+    return {
+      component: 'dental/PatientDetailsPage',
+      props: { patientId: parts[parts.length - 1] },
+    };
+  }
+  if (pathname.startsWith('/receipt/')) {
+    const parts = pathname.split('/').filter(Boolean);
+    return {
+      component: 'ReceiptPage',
+      props: { saleId: parts[parts.length - 1] },
+    };
+  }
+  return { component: 'DashboardPage', props: {} };
+}
 
 // Helper: strictly check if a response is a real HTML document and not JSON
 async function isValidHtmlResponse(response) {
@@ -34,19 +110,37 @@ async function isValidHtmlResponse(response) {
   }
 }
 
-// 1. Install Event: Pre-cache core shell resources and skip waiting
+// 1. Install Event: Pre-cache core shell resources, HTML App Shell and skip waiting
 self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
-    caches.open(STATIC_CACHE).then((cache) => {
-      return cache.addAll(PRECACHE_ASSETS).catch((err) => {
-        console.warn('[SW] Initial asset precaching partial failure:', err);
+    (async () => {
+      const staticCache = await caches.open(STATIC_CACHE);
+      await staticCache.addAll(PRECACHE_ASSETS).catch((err) => {
+        console.warn('[SW] Initial static precaching partial failure:', err);
       });
-    })
+
+      // Warm HTML_SHELL_CACHE immediately with root App Shell
+      try {
+        const rootRes = await fetch('/', {
+          credentials: 'same-origin',
+          headers: { 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' },
+        });
+        if (rootRes && rootRes.ok) {
+          const isHtml = await isValidHtmlResponse(rootRes);
+          if (isHtml) {
+            const htmlCache = await caches.open(HTML_SHELL_CACHE);
+            await htmlCache.put('/', rootRes.clone());
+            await htmlCache.put('/index.html', rootRes.clone());
+            await htmlCache.put('__app_shell__', rootRes.clone());
+          }
+        }
+      } catch (_) {}
+    })()
   );
 });
 
-// 2. Activate Event: Clean up outdated cache stores and claim clients
+// 2. Activate Event: Clean up outdated cache stores and claim clients immediately
 self.addEventListener('activate', (event) => {
   const allowedCaches = [STATIC_CACHE, HTML_SHELL_CACHE, INERTIA_DATA_CACHE, API_CACHE];
   event.waitUntil(
@@ -83,8 +177,9 @@ self.addEventListener('message', (event) => {
                   const fullUrl = new URL(route, self.location.origin).href;
                   cache.put(fullUrl, res.clone());
                 } catch (_) {}
-                // Ensure we have a valid App Shell fallback
+                // Keep App Shell and /index.html updated
                 cache.put('__app_shell__', res.clone());
+                cache.put('/index.html', res.clone());
               }
             }
           })
@@ -123,6 +218,8 @@ self.addEventListener('fetch', (event) => {
               cache.put(request.url, networkResponse.clone());
               cache.put(url.pathname, networkResponse.clone());
               cache.put('__app_shell__', networkResponse.clone());
+              cache.put('/index.html', networkResponse.clone());
+              cache.put('/', networkResponse.clone());
             }
           }
           return networkResponse;
@@ -143,13 +240,20 @@ self.addEventListener('fetch', (event) => {
             return candidate;
           }
 
-          // 3. Try global App Shell fallback
-          candidate = await cache.match('__app_shell__');
+          // 3. Try global App Shell fallback (/index.html, /, __app_shell__)
+          candidate = await cache.match('/index.html') || await cache.match('/') || await cache.match('__app_shell__');
           if (await isValidHtmlResponse(candidate)) {
             return candidate;
           }
 
-          // 4. Search all keys in HTML_SHELL_CACHE for any valid HTML document
+          // 4. Check static cache for / or /index.html
+          const staticCache = await caches.open(STATIC_CACHE);
+          candidate = await staticCache.match('/index.html') || await staticCache.match('/');
+          if (await isValidHtmlResponse(candidate)) {
+            return candidate;
+          }
+
+          // 5. Search all keys in HTML_SHELL_CACHE for any valid HTML document
           const keys = await cache.keys();
           for (const req of keys) {
             const res = await cache.match(req);
@@ -158,7 +262,7 @@ self.addEventListener('fetch', (event) => {
             }
           }
 
-          // 5. If no cached HTML exists, return clean fallback HTML
+          // 6. If no cached HTML exists, return clean fallback HTML
           return new Response(getOfflineHtml(), {
             headers: { 'Content-Type': 'text/html; charset=utf-8' },
           });
@@ -180,27 +284,41 @@ self.addEventListener('fetch', (event) => {
             const clone = networkResponse.clone();
             caches.open(INERTIA_DATA_CACHE).then((cache) => {
               cache.put(url.pathname, clone);
+              cache.put(request.url, clone);
             });
           }
           return networkResponse;
         })
         .catch(async () => {
           const cache = await caches.open(INERTIA_DATA_CACHE);
-          const cached = await cache.match(url.pathname);
+          let cached = await cache.match(request.url) || await cache.match(url.pathname);
           if (cached) return cached;
 
-          // Graceful fallback JSON for client-side navigation while offline
+          // Resolve target component and route props cleanly from SW_ROUTE_PAGE_MAP
+          const { component, props: routeProps } = resolveRouteComponent(url.pathname);
+          const inertiaVersion = request.headers.get('x-inertia-version') || '';
+
+          const payload = {
+            component,
+            props: {
+              auth: { user: null },
+              initialStores: [],
+              systemBranding: { system_name: 'Maaldhis' },
+              isOfflineFallback: true,
+              ...routeProps,
+            },
+            url: url.pathname,
+            version: inertiaVersion,
+          };
+
           return new Response(
-            JSON.stringify({
-              component: 'DashboardPage',
-              props: { isOffline: true },
-              url: url.pathname,
-              version: '',
-            }),
+            JSON.stringify(payload),
             {
+              status: 200,
               headers: {
                 'Content-Type': 'application/json',
                 'X-Inertia': 'true',
+                'X-Inertia-Version': inertiaVersion,
               },
             }
           );

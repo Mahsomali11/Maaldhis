@@ -2,6 +2,7 @@ import { ReactNode, useState, useEffect } from 'react';
 import DesktopSidebar from './DesktopSidebar';
 import LicenseExpiryBanner from './LicenseExpiryBanner';
 import OfflineSyncIndicator from './OfflineSyncIndicator';
+import ErrorBoundary from './ErrorBoundary';
 import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { useApp } from '@/context/AppContext';
 import { Menu, X, Store, WifiOff } from 'lucide-react';
@@ -156,7 +157,9 @@ export default function DesktopLayout({ children }: DesktopLayoutProps) {
           </div>
         )}
         <div className="flex-1 flex flex-col min-h-0 pb-8">
-          {children}
+          <ErrorBoundary>
+            {children}
+          </ErrorBoundary>
         </div>
       </main>
     </div>

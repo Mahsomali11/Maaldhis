@@ -89,6 +89,7 @@ Route::prefix('admin')->middleware(['auth', 'admin', 'role:super_admin'])->group
 Route::middleware(['auth', 'block_admin', 'role:owner,admin,cashier,inventory_manager,staff'])->group(function () {
     Route::get('/dashboard', fn() => Inertia::render('DashboardPage'))->name('dashboard');
     Route::get('/start-sale', fn() => Inertia::render('StartSalePage'));
+    Route::get('/pos', fn() => Inertia::render('StartSalePage'));
     Route::get('/customer-display', fn() => Inertia::render('CustomerDisplayPage'));
     Route::get('/receipt/{saleId}', fn($saleId) => Inertia::render('ReceiptPage', ['saleId' => $saleId]));
     Route::get('/api/receipt-details/{identifier}', [\App\Http\Controllers\SaleController::class, 'getReceiptDetails']);
