@@ -18,8 +18,8 @@ export default function SideDrawer({ isOpen, onClose }: SideDrawerProps) {
   const menuItems = [
     { label: 'Home', icon: Home, action: () => navigate('/dashboard'), visible: true },
     { label: 'My Profile', icon: User, action: () => navigate('/profile'), visible: true },
-    { label: 'Payment Accounts', icon: Wallet, action: () => navigate('/payment-accounts'), visible: (role === 'owner' || role === 'admin') && hasFeature('payment_integrations'), isLocked: !isLicenseActive },
-    { label: 'Preferences', icon: Settings, action: () => navigate('/preferences'), visible: role === 'owner' || role === 'admin' },
+    { label: 'Payment Accounts', icon: Wallet, action: () => navigate('/payment-accounts'), visible: (role === 'owner' || role === 'admin' || role === 'clinic_admin') && hasFeature('payment_integrations'), isLocked: !isLicenseActive },
+    { label: 'Preferences', icon: Settings, action: () => navigate('/preferences'), visible: role === 'owner' || role === 'admin' || role === 'clinic_admin' },
     { label: 'Learning Center', icon: BookOpen, action: () => navigate('/learning-center'), visible: true },
     { label: 'Help', icon: HelpCircle, action: () => navigate('/help'), visible: true },
     { label: 'Logout', icon: LogOut, action: () => logout(), danger: true, visible: true },

@@ -41,7 +41,7 @@ export default function AdminLicensesPage() {
   const loadData = useCallback(async () => {
     const [{ data: lic }, { data: st }, { data: pl }, { data: prof }] = await Promise.all([
       apiClient.from('licenses').select('*, plans(name)').order('created_at', { ascending: false }),
-      apiClient.from('stores').select('id, store_name, owner_user_id'),
+      apiClient.from('stores').select('id, store_name, owner_user_id, business_type'),
       apiClient.from('plans').select('*').eq('is_active', true),
       apiClient.from('profiles').select('id, email, full_name'),
     ]);
@@ -447,7 +447,7 @@ export default function AdminLicensesPage() {
         <table className="w-full">
           <thead>
             <tr className="border-b border-border">
-              {['License Key', 'Owner', 'Email', 'Plan', 'Start', 'Expiry', 'Days Left', 'Stores', 'Status', 'Actions'].map(h => (
+              {['License Key', 'Owner', 'Email', 'Plan', 'Module', 'Start', 'Expiry', 'Days Left', 'Stores', 'Status', 'Actions'].map(h => (
                 <th key={h} className="text-left py-3 px-4 text-xs font-medium text-muted-foreground  capitalize">{h}</th>
               ))}
             </tr>
@@ -458,12 +458,24 @@ export default function AdminLicensesPage() {
               const effectiveStatus = getEffectiveStatus(lic);
               const owner = getOwnerProfile(lic);
               const ownerStores = getOwnerStores(lic);
+              const primaryModule = ownerStores[0]?.business_type || 'standard_retail';
               return (
                 <tr key={lic.id} className="border-b border-border last:border-0 hover:bg-muted/50">
                   <td className="py-3 px-4 text-sm text-foreground font-mono">{lic.license_key}</td>
                   <td className="py-3 px-4 text-sm text-foreground">{owner?.full_name || '—'}</td>
                   <td className="py-3 px-4 text-sm text-muted-foreground">{owner?.email || '—'}</td>
                   <td className="py-3 px-4 text-sm text-muted-foreground">{lic.plans?.name || '—'}</td>
+                  <td className="py-3 px-4">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                      primaryModule === 'dental_clinic'
+                        ? 'bg-cyan-500/20 text-cyan-400'
+                        : primaryModule === 'grocery_bulk'
+                          ? 'bg-amber-500/20 text-amber-400'
+                          : 'bg-emerald-500/15 text-emerald-400'
+                    }`}>
+                      {primaryModule === 'dental_clinic' ? 'Dental Clinic' : primaryModule === 'grocery_bulk' ? 'Grocery / Bulk' : 'Standard Retail'}
+                    </span>
+                  </td>
                   <td className="py-3 px-4 text-sm text-muted-foreground">{formatDateStr(lic.start_date)}</td>
                   <td className="py-3 px-4 text-sm text-muted-foreground">{formatDateStr(lic.expiry_date)}</td>
                   <td className="py-3 px-4 text-sm">
@@ -533,9 +545,20 @@ export default function AdminLicensesPage() {
                     ) : (
                       <div className="space-y-1">
                         {ownerStores.map((s: any) => (
-                          <div key={s.id} className="flex items-center gap-2 bg-[hsl(220,15%,18%)] rounded-lg px-3 py-2">
-                            <Store size={12} className="text-primary" />
-                            <span className="text-foreground text-xs">{s.store_name}</span>
+                          <div key={s.id} className="flex items-center justify-between gap-2 bg-[hsl(220,15%,18%)] rounded-lg px-3 py-2">
+                            <div className="flex items-center gap-2">
+                              <Store size={12} className="text-primary" />
+                              <span className="text-foreground text-xs">{s.store_name}</span>
+                            </div>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                              s.business_type === 'dental_clinic'
+                                ? 'bg-cyan-500/20 text-cyan-400'
+                                : s.business_type === 'grocery_bulk'
+                                  ? 'bg-amber-500/20 text-amber-400'
+                                  : 'bg-emerald-500/15 text-emerald-400'
+                            }`}>
+                              {s.business_type === 'dental_clinic' ? 'Dental Clinic' : s.business_type === 'grocery_bulk' ? 'Grocery / Bulk' : 'Standard Retail'}
+                            </span>
                           </div>
                         ))}
                       </div>

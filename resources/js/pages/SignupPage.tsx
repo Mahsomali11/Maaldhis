@@ -20,6 +20,7 @@ export default function SignupPage() {
     storePhone: '',
     storeLocation: '',
     currency: 'KSh',
+    businessType: 'standard_retail' as 'standard_retail' | 'grocery_bulk' | 'dental_clinic',
   });
 
   const [selectedCountry, setSelectedCountry] = useState<CountryCode>(COUNTRY_CODES[0]);
@@ -233,6 +234,20 @@ export default function SignupPage() {
                     placeholder="City, Area, or full address"
                     className="w-full px-4 h-11 rounded-md border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all shadow-sm" 
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-muted-foreground capitalize tracking-wider">Business Type / Module *</label>
+                  <select
+                    value={data.businessType}
+                    onChange={e => setData('businessType', e.target.value as 'standard_retail' | 'grocery_bulk' | 'dental_clinic')}
+                    className="w-full px-4 h-11 rounded-md border border-input bg-background text-sm text-foreground font-medium focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all shadow-sm"
+                    required
+                  >
+                    <option value="standard_retail">Standard Retail (General POS & Inventory)</option>
+                    <option value="grocery_bulk">Grocery / Bulk Retail (Fractional & Dual-Unit POS)</option>
+                    <option value="dental_clinic">Dental Clinic (Patients, Appointments, Charting & Billing)</option>
+                  </select>
                 </div>
 
                 <div className="space-y-2">

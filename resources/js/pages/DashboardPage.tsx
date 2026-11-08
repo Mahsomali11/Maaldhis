@@ -1,8 +1,14 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { router, usePage } from '@inertiajs/react';
-import { ShoppingCart, Receipt, TrendingUp, CreditCard, Package, Clock, MapPin, Wallet, ArrowUpRight, ArrowDownRight, Store, Plus, Bell, ChevronRight, Activity, Calendar } from 'lucide-react';
+import {
+  ShoppingCart, Receipt, TrendingUp, CreditCard, Package, Clock, MapPin, Wallet,
+  ArrowUpRight, ArrowDownRight, Store, Plus, Bell, ChevronRight, Activity, Calendar,
+  Users, Stethoscope, HeartPulse, CheckCircle2, AlertCircle, PlayCircle, UserCheck
+} from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { useFeatureAccess } from '@/hooks/useFeatureAccess';
+import { api as apiClient } from '@/api';
+import type { Patient, Appointment, DentalTreatment } from '@/types';
 import TrialExpiryBanner from '@/components/TrialExpiryBanner';
 import OnboardingCards from '@/components/OnboardingCards';
 import { toast } from 'sonner';
@@ -12,6 +18,55 @@ export default function DashboardPage() {
   const { currentStore, items, sales, customers, payments, customerDebts, expenses, formatCurrency, user } = useApp();
   const userRole = user?.role || 'owner';
   const { hasFeature } = useFeatureAccess();
+
+  const isDentalClinic = currentStore?.business_type === 'dental_clinic';
+
+  // Dental Clinic Dashboard State
+  const [dentalPatients, setDentalPatients] = useState<Patient[]>([]);
+  const [dentalAppointments, setDentalAppointments] = useState<Appointment[]>([]);
+  const [dentalTreatments, setDentalTreatments] = useState<DentalTreatment[]>([]);
+  const [dentalLoading, setDentalLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isDentalClinic || !currentStore?.id) return;
+    setDentalLoading(true);
+    Promise.all([
+      apiClient.from('patients').select('*').eq('store_id', currentStore.id),
+      apiClient.from('appointments').select('*').eq('store_id', currentStore.id).order('appointment_date', { ascending: true }),
+      apiClient.from('treatments').select('*').eq('store_id', currentStore.id).order('created_at', { ascending: false }),
+    ]).then(([{ data: pts }, { data: appts }, { data: trs }]) => {
+      if (pts) setDentalPatients(pts as Patient[]);
+      if (appts) setDentalAppointments(appts as Appointment[]);
+      if (trs) setDentalTreatments(trs as DentalTreatment[]);
+      setDentalLoading(false);
+    });
+  }, [isDentalClinic, currentStore?.id]);
+
+  const dentalStats = useMemo(() => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const todayAppts = dentalAppointments.filter(a => String(a.appointment_date || '').split('T')[0] === todayStr);
+
+    let todayRev = 0;
+    let totalBalances = 0;
+    let completedTreatments = 0;
+
+    dentalTreatments.forEach(t => {
+      totalBalances += Number(t.balance_amount || 0);
+      if (t.status === 'completed') completedTreatments++;
+      const trDate = String(t.performed_at || t.created_at || '').split('T')[0].split(' ')[0];
+      if (trDate === todayStr) {
+        todayRev += Number(t.paid_amount || 0);
+      }
+    });
+
+    return {
+      todayAppts,
+      todayRevenue: todayRev,
+      totalBalances,
+      completedTreatments,
+      totalPatients: dentalPatients.length,
+    };
+  }, [dentalAppointments, dentalTreatments, dentalPatients]);
 
   const {
     recentSales,
@@ -124,27 +179,48 @@ export default function DashboardPage() {
               Welcome back, <span className="font-semibold">{currentStore?.store_name || 'Owner'}</span>
             </h1>
             <p className="text-sm text-muted-foreground mt-2 max-w-xl">
-              Here is what's happening with your store today. Review your daily metrics, inventory alerts, and quick actions to manage your business.
+              {isDentalClinic
+                ? "Here is what's happening at your dental practice today. Review patient schedules, appointments, clinical procedures, and billing."
+                : "Here is what's happening with your store today. Review your daily metrics, inventory alerts, and quick actions to manage your business."}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3 shrink-0 mt-4 md:mt-0">
-            {(userRole === 'owner' || userRole === 'admin') && (
+            {(userRole === 'owner' || userRole === 'admin' || userRole === 'clinic_admin') && (
               <button
                 onClick={() => navigate('/store-edit')}
                 className="flex-1 md:flex-none h-10 px-4 rounded-md bg-muted text-foreground text-sm font-medium hover:bg-accent transition-colors flex items-center justify-center gap-2 border border-border"
               >
                 <Store size={16} />
-                Store Settings
+                {isDentalClinic ? 'Clinic Settings' : 'Store Settings'}
               </button>
             )}
-            {(userRole === 'owner' || userRole === 'admin' || userRole === 'cashier') && (
-              <button
-                onClick={startSale}
-                className="flex-1 md:flex-none h-10 px-6 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm flex items-center justify-center gap-2 capitalize"
-              >
-                <Plus size={16} />
-                New Sale
-              </button>
+            {isDentalClinic ? (
+              <>
+                <button
+                  onClick={() => navigate('/appointments')}
+                  className="flex-1 md:flex-none h-10 px-4 rounded-md bg-secondary text-secondary-foreground text-sm font-medium hover:bg-secondary/80 transition-colors flex items-center justify-center gap-2 border border-border"
+                >
+                  <Calendar size={16} />
+                  Book Appointment
+                </button>
+                <button
+                  onClick={() => navigate('/patients')}
+                  className="flex-1 md:flex-none h-10 px-6 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm flex items-center justify-center gap-2 capitalize"
+                >
+                  <Plus size={16} />
+                  Register Patient
+                </button>
+              </>
+            ) : (
+              (userRole === 'owner' || userRole === 'admin' || userRole === 'cashier') && (
+                <button
+                  onClick={startSale}
+                  className="flex-1 md:flex-none h-10 px-6 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors shadow-sm flex items-center justify-center gap-2 capitalize"
+                >
+                  <Plus size={16} />
+                  New Sale
+                </button>
+              )
             )}
           </div>
         </div>
@@ -155,10 +231,280 @@ export default function DashboardPage() {
         <TrialExpiryBanner />
         <OnboardingCards />
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {isDentalClinic ? (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* Main Left Column */}
+            <div className="lg:col-span-8 space-y-8">
+              {/* Practice Performance Metrics */}
+              <div>
+                <h2 className="text-sm font-bold text-foreground capitalize tracking-wider mb-4 flex items-center gap-2">
+                  <Activity size={16} className="text-cyan-500" />
+                  Today's Practice Performance
+                </h2>
 
-          {/* Main Left Column */}
-          <div className="lg:col-span-8 space-y-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Hero Revenue Card */}
+                  <div className="bg-gradient-to-br from-cyan-600 to-teal-700 text-white rounded-md p-6 border border-cyan-500 shadow-sm flex flex-col justify-between relative overflow-hidden sm:col-span-2 md:col-span-1">
+                    <div className="absolute right-0 top-0 opacity-10 pointer-events-none translate-x-1/4 -translate-y-1/4">
+                      <Stethoscope size={120} />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold capitalize tracking-wider text-white/80 mb-2">Practice Revenue Today</p>
+                      <h3 className="text-4xl font-light tracking-tight">{formatCurrency(dentalStats.todayRevenue)}</h3>
+                    </div>
+                    <div className="mt-8 flex items-center gap-2 text-sm text-white/90">
+                      <span className="flex items-center gap-1 bg-white/20 px-2 py-0.5 rounded text-xs font-medium">
+                        <CheckCircle2 size={14} /> {dentalStats.completedTreatments}
+                      </span>
+                      <span className="text-xs">Completed treatments</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-4">
+                    {/* Operating Expenses */}
+                    <div className="bg-card rounded-md p-5 border border-border shadow-sm flex flex-col justify-between hover:border-cyan-500/50 transition-colors">
+                      <div className="flex justify-between items-start mb-2">
+                        <p className="text-xs font-bold text-muted-foreground capitalize tracking-wider">Clinic Expenses</p>
+                        <div className="w-8 h-8 rounded bg-secondary flex items-center justify-center shrink-0 border border-border/50 shadow-sm">
+                          <ArrowDownRight size={14} className="text-primary" />
+                        </div>
+                      </div>
+                      <div>
+                        <h3 className="text-2xl font-semibold text-foreground tracking-tight">{formatCurrency(todayExpenses)}</h3>
+                        <p className="text-xs text-muted-foreground mt-1">Recorded today</p>
+                      </div>
+                    </div>
+
+                    {/* Outstanding Balances */}
+                    <div className="bg-card rounded-md p-5 border border-border shadow-sm flex flex-col justify-between hover:border-amber-500/50 transition-colors">
+                      <div className="flex justify-between items-start mb-2">
+                        <p className="text-xs font-bold text-muted-foreground capitalize tracking-wider">Patient Balances Due</p>
+                        <div className="w-8 h-8 rounded bg-amber-500/10 flex items-center justify-center shrink-0 border border-amber-500/20 shadow-sm">
+                          <Wallet size={14} className="text-amber-500" />
+                        </div>
+                      </div>
+                      <div>
+                        <h3 className="text-2xl font-semibold text-foreground tracking-tight">{formatCurrency(dentalStats.totalBalances)}</h3>
+                        <p className="text-xs text-muted-foreground mt-1">Pending collection from patients</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Navigation Strip */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                <button onClick={() => navigate('/patients')} className="flex flex-col items-center justify-center gap-2 p-4 bg-muted/30 rounded-md border border-border hover:bg-muted/50 hover:border-cyan-500/50 transition-all group">
+                  <Users size={20} className="text-muted-foreground group-hover:text-cyan-500 transition-colors" />
+                  <span className="text-xs font-semibold text-foreground capitalize tracking-wider">Patients</span>
+                </button>
+                <button onClick={() => navigate('/appointments')} className="flex flex-col items-center justify-center gap-2 p-4 bg-muted/30 rounded-md border border-border hover:bg-muted/50 hover:border-cyan-500/50 transition-all group">
+                  <Calendar size={20} className="text-muted-foreground group-hover:text-cyan-500 transition-colors" />
+                  <span className="text-xs font-semibold text-foreground capitalize tracking-wider">Appointments</span>
+                </button>
+                <button onClick={() => navigate('/dental-doctors')} className="flex flex-col items-center justify-center gap-2 p-4 bg-muted/30 rounded-md border border-border hover:bg-muted/50 hover:border-cyan-500/50 transition-all group">
+                  <UserCheck size={20} className="text-muted-foreground group-hover:text-cyan-500 transition-colors" />
+                  <span className="text-xs font-semibold text-foreground capitalize tracking-wider">Doctors</span>
+                </button>
+                <button onClick={() => navigate('/dental-charting')} className="flex flex-col items-center justify-center gap-2 p-4 bg-muted/30 rounded-md border border-border hover:bg-muted/50 hover:border-cyan-500/50 transition-all group">
+                  <HeartPulse size={20} className="text-muted-foreground group-hover:text-cyan-500 transition-colors" />
+                  <span className="text-xs font-semibold text-foreground capitalize tracking-wider">Odontogram</span>
+                </button>
+                <button onClick={() => navigate('/dental-billing')} className="flex flex-col items-center justify-center gap-2 p-4 bg-muted/30 rounded-md border border-border hover:bg-muted/50 hover:border-cyan-500/50 transition-all group">
+                  <Stethoscope size={20} className="text-muted-foreground group-hover:text-cyan-500 transition-colors" />
+                  <span className="text-xs font-semibold text-foreground capitalize tracking-wider">Billing</span>
+                </button>
+              </div>
+
+              {/* Today's Appointments Schedule */}
+              <div className="bg-card rounded-md border border-border shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Calendar size={16} className="text-cyan-500" />
+                    <h3 className="font-semibold text-foreground text-sm">Today's Patient Schedule ({dentalStats.todayAppts.length})</h3>
+                  </div>
+                  <button onClick={() => navigate('/appointments')} className="text-xs font-bold text-primary hover:underline">
+                    View All
+                  </button>
+                </div>
+                {dentalStats.todayAppts.length > 0 ? (
+                  <div className="divide-y divide-border">
+                    {dentalStats.todayAppts.map(appt => (
+                      <div key={appt.id} className="p-4 hover:bg-muted/30 transition-colors flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20 text-cyan-500 shrink-0">
+                            <Clock size={16} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-foreground">{appt.patient_name}</p>
+                            <p className="text-xs text-muted-foreground">{appt.appointment_time || '09:00'} &bull; {appt.reason || 'Consultation'}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-muted text-foreground border border-border capitalize">
+                            {appt.status.replace('_', ' ')}
+                          </span>
+                          <button
+                            onClick={() => navigate(`/dental-billing?patient_id=${appt.patient_id || ''}&appointment_id=${appt.id}`)}
+                            className="px-2.5 py-1 rounded bg-primary text-primary-foreground text-xs font-bold hover:opacity-90"
+                          >
+                            Bill
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-10 flex flex-col items-center justify-center text-center bg-muted/10">
+                    <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-3 border border-border text-muted-foreground">
+                      <Calendar size={20} />
+                    </div>
+                    <p className="text-sm font-semibold text-foreground mb-1">No appointments scheduled for today</p>
+                    <p className="text-xs text-muted-foreground mb-3">Click below to book a patient consultation or procedure.</p>
+                    <button
+                      onClick={() => navigate('/appointments')}
+                      className="px-3.5 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-bold"
+                    >
+                      Book Today's Appointment
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Recent Dental Invoices Feed */}
+              <div className="bg-card rounded-md border border-border shadow-sm overflow-hidden">
+                <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Receipt size={16} className="text-emerald-500" />
+                    <h3 className="font-semibold text-foreground text-sm">Recent Dental Invoices</h3>
+                  </div>
+                  <button onClick={() => navigate('/dental-billing')} className="text-xs font-bold text-primary hover:underline">
+                    View Billing
+                  </button>
+                </div>
+                {dentalTreatments.length > 0 ? (
+                  <div className="divide-y divide-border">
+                    {dentalTreatments.slice(0, 6).map(tr => (
+                      <div key={tr.id} className="p-4 hover:bg-muted/30 transition-colors flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-500 shrink-0">
+                            <Stethoscope size={16} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-foreground">
+                              {tr.procedure_name} {tr.tooth_numbers ? `(${tr.tooth_numbers})` : ''}
+                            </p>
+                            <p className="text-xs text-muted-foreground">{tr.patient_name} &bull; {tr.invoice_no}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm font-bold text-foreground">{formatCurrency(tr.total_amount)}</p>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${
+                            tr.payment_status === 'paid'
+                              ? 'bg-emerald-500/15 text-emerald-500'
+                              : 'bg-amber-500/15 text-amber-500'
+                          }`}>
+                            {tr.payment_status}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-10 text-center text-xs text-muted-foreground">
+                    No treatment invoices generated yet.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Right Sidebar Column */}
+            <div className="lg:col-span-4 space-y-8">
+              {/* Clinic Badge */}
+              <div className="bg-background rounded-md border border-border shadow-sm p-6 flex items-center gap-5">
+                <div className="shrink-0">
+                  {currentStore?.logo_url ? (
+                    <img src={currentStore.logo_url} alt={currentStore.store_name} className="w-20 h-20 rounded-xl object-cover border border-border shadow-sm bg-card" />
+                  ) : (
+                    <div className="w-20 h-20 rounded-xl bg-cyan-500/10 flex items-center justify-center border border-cyan-500/20 text-cyan-500 shadow-sm">
+                      <Stethoscope size={32} />
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-500/15 text-cyan-500 border border-cyan-500/30 uppercase tracking-widest inline-block mb-1">
+                    Dental Clinic
+                  </span>
+                  <h3 className="text-xl font-black text-foreground mb-1 break-words leading-tight truncate capitalize">{currentStore?.store_name || 'Dental Clinic'}</h3>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <MapPin size={13} className="shrink-0" />
+                      <span className="truncate">{currentStore?.location || 'Clinical Center'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <span className="font-mono bg-muted px-1.5 py-0.5 rounded border border-border text-[10px] shrink-0">ID: {currentStore?.store_code}</span>
+                      <span className="truncate">Practice Code</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Practice Care Overview Widget */}
+              <div className="bg-card rounded-md border border-border shadow-sm flex flex-col">
+                <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+                  <h3 className="font-semibold text-foreground text-sm flex items-center gap-2 capitalize">
+                    <HeartPulse size={16} className="text-cyan-500" />
+                    Practice Overview
+                  </h3>
+                  <span className="bg-cyan-500/15 text-cyan-500 border border-cyan-500/30 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider">
+                    Live
+                  </span>
+                </div>
+
+                <div className="p-5 flex items-center justify-between bg-muted/10 border-b border-border">
+                  <div>
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Total Patients</p>
+                    <p className="text-xl font-semibold text-foreground mt-1">{dentalStats.totalPatients} <span className="text-sm font-normal text-muted-foreground">records</span></p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Today's Visits</p>
+                    <p className="text-xl font-semibold text-cyan-500 mt-1">{dentalStats.todayAppts.length}</p>
+                  </div>
+                </div>
+
+                <div className="p-5 space-y-3">
+                  <div className="flex items-center justify-between text-xs py-1 border-b border-border/50">
+                    <span className="text-muted-foreground">Allergy Alerts</span>
+                    <span className="font-bold text-amber-500">
+                      {dentalPatients.filter(p => p.allergies && p.allergies.trim().length > 0).length} Patients
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs py-1 border-b border-border/50">
+                    <span className="text-muted-foreground">Completed Treatments</span>
+                    <span className="font-bold text-emerald-500">{dentalStats.completedTreatments}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs py-1">
+                    <span className="text-muted-foreground">Unpaid Patient Balances</span>
+                    <span className="font-bold text-amber-500">{formatCurrency(dentalStats.totalBalances)}</span>
+                  </div>
+                </div>
+
+                <div className="p-3 border-t border-border bg-muted/10 text-center flex gap-2">
+                  <button onClick={() => navigate('/dental-charting')} className="flex-1 text-xs py-2 rounded-lg bg-card border border-border font-bold text-foreground hover:bg-muted transition-colors">
+                    Odontogram
+                  </button>
+                  <button onClick={() => navigate('/dental-billing')} className="flex-1 text-xs py-2 rounded-lg bg-primary text-primary-foreground font-bold hover:opacity-90 transition-opacity">
+                    New Invoice
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+            {/* Main Left Column */}
+            <div className="lg:col-span-8 space-y-8">
 
             {/* Primary Metrics Grid - Restructured */}
             <div>
@@ -219,7 +565,7 @@ export default function DashboardPage() {
 
             {/* Quick Navigation Strip */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              {(userRole === 'owner' || userRole === 'admin') && (
+              {(userRole === 'owner' || userRole === 'admin' || userRole === 'clinic_admin') && (
                 <button onClick={() => navigate('/sales-report')} className="flex flex-col items-center justify-center gap-2 p-4 bg-muted/30 rounded-md border border-border hover:bg-muted/50 hover:border-primary/50 transition-all group">
                   <TrendingUp size={20} className="text-muted-foreground group-hover:text-primary transition-colors" />
                   <span className="text-xs font-semibold text-foreground  capitalize tracking-wider">Reports</span>
@@ -237,7 +583,7 @@ export default function DashboardPage() {
                   <span className="text-xs font-semibold text-foreground  capitalize tracking-wider">Customers</span>
                 </button>
               )}
-              {(userRole === 'owner' || userRole === 'admin') && (
+              {(userRole === 'owner' || userRole === 'admin' || userRole === 'clinic_admin') && (
                 <button onClick={() => navigate('/expenses')} className="flex flex-col items-center justify-center gap-2 p-4 bg-muted/30 rounded-md border border-border hover:bg-muted/50 hover:border-primary/50 transition-all group">
                   <Receipt size={20} className="text-muted-foreground group-hover:text-primary transition-colors" />
                   <span className="text-xs font-semibold text-foreground  capitalize tracking-wider">Expenses</span>
@@ -373,6 +719,7 @@ export default function DashboardPage() {
           </div>
 
         </div>
+        )}
       </div>
     </div>
   );

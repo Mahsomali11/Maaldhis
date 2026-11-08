@@ -33,7 +33,7 @@ interface PaymentAccount {
 const ACCOUNT_TYPES = ['Cash', 'Mobile Money', 'Bank', 'Card', 'Digital Wallet'];
 
 export default function PaymentAccountsPage() {
-  const { currentStore, recordTransfer, accountTransfers, formatCurrency } = useApp();
+  const { currentStore, recordTransfer, accountTransfers, formatCurrency, sales, expenses, payments } = useApp();
   const [accounts, setAccounts] = useState<PaymentAccount[]>([]);
   const [activeTab, setActiveTab] = useState<'accounts' | 'history'>('accounts');
   const [loading, setLoading] = useState(true);
@@ -248,6 +248,26 @@ export default function PaymentAccountsPage() {
     }
   };
 
+  const getAccountMetrics = (accountId: string) => {
+    const accSales = (sales || []).filter(s => s.payment_account_id === accountId && s.status !== 'voided');
+    const accExpenses = (expenses || []).filter(e => e.payment_account_id === accountId);
+    const accPayments = (payments || []).filter(p => p.payment_account_id === accountId && (!p.sale_id || p.payment_type !== 'sale'));
+
+    const salesInflow = accSales.reduce((sum, s) => sum + (Number(s.paid_amount) || 0), 0);
+    const paymentsInflow = accPayments.filter(p => p.direction !== 'out').reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    const totalInflow = salesInflow + paymentsInflow;
+
+    const expensesOutflow = accExpenses.reduce((sum, e) => {
+      if (e.status === 'reversed') return sum;
+      return sum + (Number(e.amount) || 0);
+    }, 0);
+    const paymentsOutflow = accPayments.filter(p => p.direction === 'out').reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    const totalOutflow = expensesOutflow + paymentsOutflow;
+
+    const netBalance = totalInflow - totalOutflow;
+    return { totalInflow, totalOutflow, netBalance };
+  };
+
   const accountToDelete = deleteId ? accounts.find(a => a.id === deleteId) : null;
 
   return (
@@ -328,6 +348,7 @@ export default function PaymentAccountsPage() {
                     <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">Account Details</th>
                     <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">Type</th>
                     <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest">Provider</th>
+                    <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest text-right">Net Balance</th>
                     <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest text-center">Status</th>
                     <th className="px-6 py-4 text-[11px] font-bold text-muted-foreground  capitalize tracking-widest text-right">Actions</th>
                   </tr>
@@ -349,6 +370,21 @@ export default function PaymentAccountsPage() {
                       </td>
                       <td className="px-6 py-4 text-sm text-muted-foreground font-medium">
                         {account.provider_name || '—'}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        {(() => {
+                          const m = getAccountMetrics(account.id);
+                          return (
+                            <div>
+                              <span className={`font-black text-sm block ${m.netBalance >= 0 ? 'text-foreground' : 'text-destructive'}`}>
+                                {formatCurrency(m.netBalance)}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground block font-medium">
+                                Inflow: {formatCurrency(m.totalInflow)}
+                              </span>
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="px-6 py-4 text-center">
                         <div className="flex items-center justify-center gap-3">
@@ -410,6 +446,7 @@ export default function PaymentAccountsPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
+                      <button onClick={() => setViewingAccount(account)} className="p-2 rounded-lg text-primary hover:bg-primary/10" title="View Ledger"><Wallet size={16} /></button>
                       <button onClick={() => openEdit(account)} className="p-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"><Pencil size={16} /></button>
                       {account.is_active && (
                         <button onClick={() => setDeleteId(account.id)} className="p-2 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><Trash2 size={16} /></button>
@@ -427,6 +464,22 @@ export default function PaymentAccountsPage() {
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-muted-foreground">Provider</span>
                       <span className="font-medium text-foreground">{account.provider_name || '—'}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span className="text-muted-foreground">Net Balance</span>
+                      {(() => {
+                        const m = getAccountMetrics(account.id);
+                        return (
+                          <div className="text-right">
+                            <span className={`font-black text-sm block ${m.netBalance >= 0 ? 'text-foreground' : 'text-destructive'}`}>
+                              {formatCurrency(m.netBalance)}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground block font-medium">
+                              Inflow: {formatCurrency(m.totalInflow)}
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </div>
                     <div className="flex justify-between items-center text-sm pt-2 border-t border-border/30">
                       <span className="text-muted-foreground">Visibility in checkout</span>

@@ -13,6 +13,7 @@ export default function CreateStorePage() {
   const [phone, setPhone] = useState('');
   const [country, setCountry] = useState('');
   const [currency, setCurrency] = useState('KES');
+  const [businessType, setBusinessType] = useState<'standard_retail' | 'grocery_bulk' | 'dental_clinic'>('standard_retail');
   const [currencies, setCurrencies] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [blocked, setBlocked] = useState<string | null>(null);
@@ -63,10 +64,11 @@ export default function CreateStorePage() {
         phone,
         currency: selectedCurrency?.currency_symbol || currency,
         country,
+        business_type: businessType,
       };
       const newStore = await addStore(store as any);
       if (newStore) {
-        toast.success('Store created successfully!');
+        toast.success(businessType === 'dental_clinic' ? 'Dental Clinic created successfully!' : 'Store created successfully!');
         navigate('/dashboard');
       } else {
         toast.error('Failed to create store. Please try again.');
@@ -168,6 +170,28 @@ export default function CreateStorePage() {
                         required 
                         disabled={loading} 
                       />
+                    </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <label className="text-[11px] font-bold text-muted-foreground capitalize tracking-widest">Business Type / Module <span className="text-destructive">*</span></label>
+                      <select
+                        value={businessType}
+                        onChange={e => setBusinessType(e.target.value as 'standard_retail' | 'grocery_bulk' | 'dental_clinic')}
+                        className="w-full px-5 h-14 rounded-2xl border-2 border-border bg-background text-base font-bold text-foreground focus:outline-none focus:ring-0 focus:border-primary transition-all shadow-sm"
+                        required
+                        disabled={loading}
+                      >
+                        <option value="standard_retail">Standard Retail (General POS & Inventory)</option>
+                        <option value="grocery_bulk">Grocery / Bulk Retail (Decimal & Wholesale/Retail Units)</option>
+                        <option value="dental_clinic">Dental Clinic (Patients, Appointments, Dental Charting & Billing)</option>
+                      </select>
+                      <p className="text-xs font-medium text-muted-foreground mt-1 pl-2">
+                        {businessType === 'dental_clinic'
+                          ? 'Configures this instance as a standalone Dental Clinic with Patient Management, Appointments, Odontogram Charting, and Treatment Billing.'
+                          : businessType === 'grocery_bulk'
+                            ? 'Configures this store for Grocery / Bulk Retail with fractional quantities and wholesale-to-retail unit conversion.'
+                            : 'Configures this store for Standard Retail POS with integer item quantities.'}
+                      </p>
                     </div>
                   </div>
                </div>

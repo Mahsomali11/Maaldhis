@@ -62,7 +62,7 @@ export default function CashFlowPage() {
   // Dynamic breakdown by payment account
   const salesByAccount = paymentAccounts.map(acc => {
     const total = filteredPayments
-      .filter(p => (p.payment_type === 'sale' || p.payment_type === 'debt_collection') && (p.payment_account_id === acc.id || p.method === acc.account_name))
+      .filter(p => (p.payment_type === 'sale' || p.payment_type === 'debt_collection' || p.payment_type === 'dental_invoice' || (p.reference && String(p.reference).startsWith('DEN-'))) && (p.payment_account_id === acc.id || p.method === acc.account_name))
       .reduce((s, p) => s + p.amount, 0);
     return { account: acc, total };
   });
@@ -98,7 +98,7 @@ export default function CashFlowPage() {
 
   // Closing cash only counts "Cash" type accounts (excluding reversed expenses so cash is credited back)
   const cashAccountSales = filteredPayments
-    .filter(p => (p.payment_type === 'sale' || p.payment_type === 'debt_collection') && paymentAccounts.some(a => (p.payment_account_id === a.id || p.method === a.account_name) && a.account_type === 'Cash'))
+    .filter(p => (p.payment_type === 'sale' || p.payment_type === 'debt_collection' || p.payment_type === 'dental_invoice' || (p.reference && String(p.reference).startsWith('DEN-'))) && paymentAccounts.some(a => (p.payment_account_id === a.id || p.method === a.account_name) && a.account_type === 'Cash'))
     .reduce((s, p) => s + p.amount, 0);
   const cashExpenses = filteredExpenses
     .filter(e => e.status !== 'reversed' && paymentAccounts.some(a => (e.payment_account_id === a.id || e.payment_method === a.account_name) && a.account_type === 'Cash'))

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import PageHeader from '@/components/PageHeader';
 import { useApp } from '@/context/AppContext';
-import { Trash2, UserPlus, X, Pencil, Plus, Search, ShieldAlert, BadgeCheck, LayoutGrid, Eye } from 'lucide-react';
+import { Trash2, UserPlus, X, Pencil, Plus, Search, ShieldAlert, BadgeCheck, LayoutGrid, Eye, Stethoscope, Calendar, Receipt } from 'lucide-react';
 import StaffActivityDashboard from '@/components/StaffActivityDashboard';
 import { toast } from 'sonner';
 import {
@@ -22,6 +22,7 @@ export default function StaffAccountsPage() {
   const pageAuthUser = props?.auth?.user;
   const navigate = (url: string) => router.visit(url);
   const userRole = user?.role || 'owner';
+  const isDentalClinic = currentStore?.business_type === 'dental_clinic';
 
   const currentUserId = String(pageAuthUser?.id || user?.id || '').trim();
   const currentUserEmail = String(pageAuthUser?.email || user?.email || '').trim().toLowerCase();
@@ -42,7 +43,7 @@ export default function StaffAccountsPage() {
   };
 
   useEffect(() => {
-    if (userRole !== 'owner' && userRole !== 'admin') {
+    if (userRole !== 'owner' && userRole !== 'admin' && userRole !== 'clinic_admin') {
       toast.error('Forbidden: You do not have permission to manage Staff Accounts.');
       navigate('/dashboard');
     }
@@ -53,7 +54,7 @@ export default function StaffAccountsPage() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'admin' | 'cashier' | 'inventory_manager'>('cashier');
+  const [role, setRole] = useState<string>('cashier');
   const [storeId, setStoreId] = useState<string>(currentStore?.id || '');
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [viewingStaffId, setViewingStaffId] = useState<string | null>(null);
@@ -68,7 +69,13 @@ export default function StaffAccountsPage() {
   const staffToDelete = deleteId ? staffAccounts.find(s => s.id === deleteId) : null;
 
   const resetForm = () => {
-    setName(''); setEmail(''); setPhone(''); setPassword(''); setRole('cashier'); setStoreId(currentStore?.id || ''); setEditingId(null);
+    setName('');
+    setEmail('');
+    setPhone('');
+    setPassword('');
+    setRole(isDentalClinic ? 'dentist' : 'cashier');
+    setStoreId(currentStore?.id || '');
+    setEditingId(null);
   };
 
   const openEdit = (staff: typeof staffAccounts[0]) => {
@@ -81,7 +88,7 @@ export default function StaffAccountsPage() {
     setEmail(staff.email);
     setPhone(staff.phone || '');
     setPassword('');
-    setRole(staff.role as typeof role);
+    setRole(staff.role as string);
     setStoreId(staff.store_id);
     setShowForm(true);
   };
@@ -105,7 +112,7 @@ export default function StaffAccountsPage() {
           full_name: name.trim(),
           email: email.trim(),
           phone: phone.trim(),
-          role,
+          role: role as any,
           store_id: storeId,
           ...(password.trim() ? { password: password.trim() } : {}),
         });
@@ -120,7 +127,7 @@ export default function StaffAccountsPage() {
           full_name: name.trim(),
           email: email.trim(),
           phone: phone.trim(),
-          role,
+          role: role as any,
           is_active: true,
           password,
         });
@@ -152,9 +159,48 @@ export default function StaffAccountsPage() {
   };
 
   const getRoleBadge = (r: string) => {
-     if (r === 'admin') return <span className="inline-flex items-center gap-1 bg-info/10 text-info border border-info/20 px-2.5 py-0.5 rounded-full text-[10px] font-bold  capitalize tracking-widest"><ShieldAlert size={10} /> Admin</span>;
-     if (r === 'inventory_manager') return <span className="inline-flex items-center gap-1 bg-warning/10 text-warning border border-warning/20 px-2.5 py-0.5 rounded-full text-[10px] font-bold  capitalize tracking-widest"><LayoutGrid size={10} /> Inventory</span>;
-     return <span className="inline-flex items-center gap-1 bg-success/10 text-success border border-success/20 px-2.5 py-0.5 rounded-full text-[10px] font-bold  capitalize tracking-widest"><BadgeCheck size={10} /> Cashier</span>;
+    if (isDentalClinic) {
+      if (r === 'admin' || r === 'clinic_admin') {
+        return (
+          <span className="inline-flex items-center gap-1 bg-info/10 text-info border border-info/20 px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize tracking-widest">
+            <ShieldAlert size={10} /> Clinic Admin
+          </span>
+        );
+      }
+      if (r === 'dentist' || r === 'dental_doctor') {
+        return (
+          <span className="inline-flex items-center gap-1 bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize tracking-widest">
+            <Stethoscope size={10} /> Dentist / Doctor
+          </span>
+        );
+      }
+      if (r === 'receptionist' || r === 'front_desk') {
+        return (
+          <span className="inline-flex items-center gap-1 bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize tracking-widest">
+            <Calendar size={10} /> Receptionist
+          </span>
+        );
+      }
+      if (r === 'cashier' || r === 'billing_clerk') {
+        return (
+          <span className="inline-flex items-center gap-1 bg-success/10 text-success border border-success/20 px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize tracking-widest">
+            <Receipt size={10} /> Billing Clerk
+          </span>
+        );
+      }
+      if (r === 'owner') {
+        return (
+          <span className="inline-flex items-center gap-1 bg-primary/10 text-primary border border-primary/20 px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize tracking-widest">
+            <ShieldAlert size={10} /> Owner
+          </span>
+        );
+      }
+    }
+
+    if (r === 'admin') return <span className="inline-flex items-center gap-1 bg-info/10 text-info border border-info/20 px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize tracking-widest"><ShieldAlert size={10} /> Admin</span>;
+    if (r === 'inventory_manager') return <span className="inline-flex items-center gap-1 bg-warning/10 text-warning border border-warning/20 px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize tracking-widest"><LayoutGrid size={10} /> Inventory</span>;
+    if (r === 'owner') return <span className="inline-flex items-center gap-1 bg-primary/10 text-primary border border-primary/20 px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize tracking-widest"><ShieldAlert size={10} /> Owner</span>;
+    return <span className="inline-flex items-center gap-1 bg-success/10 text-success border border-success/20 px-2.5 py-0.5 rounded-full text-[10px] font-bold capitalize tracking-widest"><BadgeCheck size={10} /> Cashier</span>;
   };
 
   const viewingStaff = viewingStaffId ? staffAccounts.find(s => s.id === viewingStaffId) : null;
@@ -165,13 +211,24 @@ export default function StaffAccountsPage() {
       <PageHeader 
         title="Staff Accounts" 
         rightAction={
-          <button 
-            onClick={() => { resetForm(); setShowForm(true); }}
-            className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-bold hover:bg-primary/90 transition-all shadow-sm"
-          >
-            <Plus size={18} />
-            Add Staff
-          </button>
+          <div className="flex items-center gap-2">
+            {isDentalClinic && (
+              <button
+                onClick={() => navigate('/dental-doctors')}
+                className="hidden sm:flex items-center gap-1.5 px-4 py-2.5 bg-muted hover:bg-muted/80 text-foreground border border-border rounded-xl text-sm font-semibold transition-all shadow-sm"
+              >
+                <Stethoscope size={16} />
+                <span>Doctors Directory</span>
+              </button>
+            )}
+            <button 
+              onClick={() => { resetForm(); setShowForm(true); }}
+              className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-xl text-sm font-bold hover:bg-primary/90 transition-all shadow-sm"
+            >
+              <Plus size={18} />
+              Add Staff
+            </button>
+          </div>
         }
       />
       
@@ -354,16 +411,22 @@ export default function StaffAccountsPage() {
           {/* Sidebar Info Column */}
           <div className="xl:col-span-1">
             <div className="bg-card rounded-3xl border border-border shadow-sm p-6 sm:p-8 sticky top-6">
-              <h4 className="text-[11px] font-bold text-primary  capitalize tracking-widest mb-6 flex items-center gap-2">
+              <h4 className="text-[11px] font-bold text-primary capitalize tracking-widest mb-6 flex items-center gap-2">
                  <ShieldAlert size={14} /> Role Permissions
               </h4>
               <div className="space-y-6">
-                {[
+                {(isDentalClinic ? [
+                  { name: 'Owner', desc: 'Full access to everything', icon: ShieldAlert, color: 'text-primary bg-primary/10' },
+                  { name: 'Clinic Admin / Manager', desc: 'Manage clinic operations, staff, and reports', icon: ShieldAlert, color: 'text-info bg-info/10' },
+                  { name: 'Dental Doctor / Dentist', desc: 'Manage patients, appointments, dental charts (odontogram), and treatment billing', icon: Stethoscope, color: 'text-cyan-600 dark:text-cyan-400 bg-cyan-500/10' },
+                  { name: 'Receptionist / Front Desk', desc: 'Manage patient registrations and appointments scheduling', icon: Calendar, color: 'text-purple-600 dark:text-purple-400 bg-purple-500/10' },
+                  { name: 'Cashier / Billing Clerk', desc: 'Process treatment invoices and handle patient payments', icon: Receipt, color: 'text-success bg-success/10' },
+                ] : [
                   { name: 'Owner', desc: 'Full access to everything', icon: ShieldAlert, color: 'text-primary bg-primary/10' },
                   { name: 'Admin', desc: 'Manage staff, inventory, and reports', icon: ShieldAlert, color: 'text-info bg-info/10' },
                   { name: 'Inventory Manager', desc: 'Manage stock and transfers', icon: LayoutGrid, color: 'text-warning bg-warning/10' },
                   { name: 'Cashier', desc: 'Process sales and handle payments', icon: BadgeCheck, color: 'text-success bg-success/10' },
-                ].map(r => (
+                ]).map(r => (
                   <div key={r.name} className="flex items-start gap-4">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${r.color}`}>
                        <r.icon size={14} />
@@ -461,15 +524,29 @@ export default function StaffAccountsPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[11px] font-bold text-muted-foreground  capitalize tracking-widest block">Role Assignment</label>
+                  <label className="text-[11px] font-bold text-muted-foreground capitalize tracking-widest block">Role Assignment</label>
                   <select 
                     value={role} 
-                    onChange={e => setRole(e.target.value as typeof role)}
+                    onChange={e => setRole(e.target.value)}
                     className="w-full px-4 h-12 rounded-xl border border-input bg-background text-sm text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
                   >
-                    <option value="cashier">Cashier</option>
-                    <option value="admin">Admin</option>
-                    <option value="inventory_manager">Inventory</option>
+                    {isDentalClinic ? (
+                      <>
+                        <option value="admin">Clinic Admin / Manager</option>
+                        <option value="dentist">Dental Doctor / Dentist</option>
+                        <option value="receptionist">Receptionist / Front Desk</option>
+                        <option value="cashier">Cashier / Billing Clerk</option>
+                        {role === 'inventory_manager' && (
+                          <option value="inventory_manager">Inventory Manager (Legacy)</option>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <option value="cashier">Cashier</option>
+                        <option value="admin">Admin</option>
+                        <option value="inventory_manager">Inventory Manager</option>
+                      </>
+                    )}
                   </select>
                 </div>
               </div>

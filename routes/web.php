@@ -106,6 +106,15 @@ Route::middleware(['auth', 'block_admin', 'role:owner,admin,cashier,inventory_ma
     Route::get('/receipt-history', fn() => Inertia::render('ReceiptHistoryPage'));
     Route::get('/stock-transfers', fn() => Inertia::render('StockTransfersPage'));
     Route::get('/stock-report', fn() => Inertia::render('StockReportPage'));
+    Route::get('/patients', fn() => Inertia::render('dental/PatientsPage'));
+    Route::get('/dental/patients/{id}', [\App\Http\Controllers\PatientController::class, 'showPage']);
+    Route::get('/patients/{id}', [\App\Http\Controllers\PatientController::class, 'showPage']);
+    Route::get('/appointments', fn() => Inertia::render('dental/AppointmentsPage'));
+    Route::get('/dental-charting', fn() => Inertia::render('dental/DentalChartingPage'));
+    Route::get('/dental-billing', fn() => Inertia::render('dental/DentalBillingPage'));
+    Route::get('/dental-catalog', fn() => Inertia::render('dental/DentalCatalogPage'));
+    Route::get('/dental-doctors', fn() => Inertia::render('dental/DoctorsPage'));
+    Route::get('/doctors', fn() => Inertia::render('dental/DoctorsPage'));
     Route::get('/profile', fn() => Inertia::render('ProfilePage'));
     Route::get('/help', fn() => Inertia::render('HelpPage'));
     Route::get('/learning-center', fn() => Inertia::render('LearningCenterPage'));

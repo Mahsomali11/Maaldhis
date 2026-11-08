@@ -2,6 +2,7 @@ import { forwardRef } from 'react';
 import { router } from '@inertiajs/react';
 import { ArrowLeft } from 'lucide-react';
 import { ReactNode } from 'react';
+import OfflineSyncIndicator from './OfflineSyncIndicator';
 
 interface PageHeaderProps {
   title: string;
@@ -33,11 +34,14 @@ const PageHeader = forwardRef<HTMLElement, PageHeaderProps>(({ title, showBack =
           )}
           <h1 className="text-xl sm:text-2xl font-black text-foreground tracking-tight capitalize">{title}</h1>
         </div>
-        {rightAction && (
-           <div className="flex items-center gap-3">
-              {rightAction}
-           </div>
-        )}
+        <div className="flex items-center gap-3">
+          <OfflineSyncIndicator className="hidden sm:inline-flex" />
+          {rightAction && (
+             <div className="flex items-center gap-3">
+                {rightAction}
+             </div>
+          )}
+        </div>
       </div>
     </header>
   );

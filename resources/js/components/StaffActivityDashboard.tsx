@@ -23,6 +23,19 @@ export default function StaffActivityDashboard({ staff, onClose }: Props) {
     }
   }, [currentStore?.id]);
 
+  const isDentalClinic = currentStore?.business_type === 'dental_clinic';
+  const formatRole = (r: string) => {
+    if (isDentalClinic) {
+      if (r === 'admin' || r === 'clinic_admin') return 'Clinic Admin';
+      if (r === 'dentist' || r === 'dental_doctor') return 'Dentist / Doctor';
+      if (r === 'receptionist' || r === 'front_desk') return 'Receptionist';
+      if (r === 'cashier' || r === 'billing_clerk') return 'Billing Clerk';
+      if (r === 'owner') return 'Owner';
+    }
+    if (r === 'inventory_manager') return 'Inventory Manager';
+    return r?.replace(/_/g, ' ') || 'Staff';
+  };
+
   const staffUserId = staff.user_id;
 
   // Compute date boundaries
@@ -178,8 +191,8 @@ export default function StaffActivityDashboard({ staff, onClose }: Props) {
           </button>
           <div>
             <h2 className="text-xl font-bold text-foreground capitalize">{staff.full_name}</h2>
-            <p className="text-xs text-muted-foreground flex items-center gap-1  capitalize tracking-widest font-bold">
-              <ShieldCheck size={12} /> {staff.role}
+            <p className="text-xs text-muted-foreground flex items-center gap-1 capitalize tracking-widest font-bold">
+              <ShieldCheck size={12} /> {formatRole(staff.role)}
             </p>
           </div>
         </div>

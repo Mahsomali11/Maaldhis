@@ -34,7 +34,7 @@ export interface Store {
   tax_enabled?: boolean;
   tax_rate?: number;
   low_stock_threshold?: number;
-  business_type?: 'standard_retail' | 'grocery_bulk';
+  business_type?: 'standard_retail' | 'grocery_bulk' | 'dental_clinic';
   created_at: string;
 }
 
@@ -256,7 +256,7 @@ export interface StaffAccount {
   full_name: string;
   email: string;
   phone: string;
-  role: 'owner' | 'admin' | 'cashier' | 'inventory_manager';
+  role: 'owner' | 'admin' | 'cashier' | 'inventory_manager' | 'dentist' | 'receptionist' | 'clinic_admin' | 'dental_doctor' | 'billing_clerk' | string;
   is_active: boolean;
   created_at: string;
 }
@@ -290,4 +290,122 @@ export interface PurchaseItem {
   base_quantity?: number | null;
   returned_quantity?: number;
   returned_base_quantity?: number;
+}
+
+export interface Patient {
+  id: string;
+  store_id: string;
+  patient_code?: string;
+  full_name: string;
+  phone?: string;
+  email?: string;
+  gender?: string;
+  age?: number | null;
+  date_of_birth?: string | null;
+  address?: string;
+  blood_group?: string;
+  allergies?: string;
+  medical_history?: string;
+  dental_history?: string;
+  notes?: string;
+  created_at: string;
+  invoices?: DentalTreatment[];
+  treatments?: DentalTreatment[];
+  appointments?: Appointment[];
+  dentalCharts?: DentalChartEntry[];
+  dental_charts?: DentalChartEntry[];
+  payments?: any[];
+}
+
+export interface Appointment {
+  id: string;
+  store_id: string;
+  patient_id?: string | null;
+  patient_name: string;
+  patient_phone?: string;
+  doctor_id?: string | null;
+  doctor_name?: string;
+  service_id?: string | null;
+  appointment_date: string;
+  appointment_time?: string;
+  duration_minutes?: number;
+  reason?: string;
+  status: 'scheduled' | 'checked_in' | 'in_progress' | 'completed' | 'cancelled';
+  notes?: string;
+  created_by?: string | null;
+  created_at: string;
+}
+
+export interface Doctor {
+  id: string;
+  store_id: string;
+  staff_account_id?: string | null;
+  user_id?: string | null;
+  name: string;
+  specialization: string;
+  phone?: string;
+  email?: string;
+  working_hours?: string;
+  is_active: boolean;
+  notes?: string;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface DentalChartEntry {
+  id: string;
+  store_id: string;
+  patient_id: string;
+  tooth_number: number;
+  tooth_name?: string;
+  condition_status: 'healthy' | 'caries' | 'filled' | 'crown' | 'root_canal' | 'missing' | 'extraction_needed' | 'implant';
+  surface?: string;
+  diagnosis?: string;
+  treatment_plan?: string;
+  notes?: string;
+  updated_by?: string | null;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface TreatmentLineItem {
+  id: string;
+  type: 'service' | 'product';
+  item_id?: string;
+  name: string;
+  category?: string;
+  tooth_number?: string;
+  unit_price: number;
+  quantity: number;
+  total: number;
+  current_stock?: number;
+}
+
+export interface DentalTreatment {
+  id: string;
+  store_id: string;
+  patient_id?: string | null;
+  patient_name: string;
+  appointment_id?: string | null;
+  invoice_no?: string;
+  tooth_numbers?: string;
+  procedure_name: string;
+  category?: string;
+  diagnosis?: string;
+  prescription?: string;
+  doctor_name?: string;
+  cost: number;
+  discount: number;
+  total_amount: number;
+  paid_amount: number;
+  balance_amount: number;
+  payment_status: 'paid' | 'partial' | 'unpaid';
+  payment_method?: string;
+  payment_account_id?: string | null;
+  status: 'planned' | 'in_progress' | 'completed';
+  notes?: string;
+  items_detail?: TreatmentLineItem[];
+  performed_at?: string;
+  created_by?: string | null;
+  created_at: string;
 }

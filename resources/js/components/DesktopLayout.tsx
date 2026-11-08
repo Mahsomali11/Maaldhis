@@ -1,8 +1,10 @@
 import { ReactNode, useState, useEffect } from 'react';
 import DesktopSidebar from './DesktopSidebar';
 import LicenseExpiryBanner from './LicenseExpiryBanner';
+import OfflineSyncIndicator from './OfflineSyncIndicator';
+import { useOfflineSync } from '@/hooks/useOfflineSync';
 import { useApp } from '@/context/AppContext';
-import { Menu, X, Store } from 'lucide-react';
+import { Menu, X, Store, WifiOff } from 'lucide-react';
 import { usePage, router } from '@inertiajs/react';
 import { ROUTE_FEATURE_MAP } from '@/lib/features';
 import { useFeatureAccess } from '@/hooks/useFeatureAccess';
@@ -17,6 +19,7 @@ export default function DesktopLayout({ children }: DesktopLayoutProps) {
   const { url, props } = usePage<any>();
   const { hasFeature } = useFeatureAccess();
   const { systemName, systemLogo } = useSystemBranding();
+  const { isOnline, pendingCount } = useOfflineSync();
   const daysRemaining = licenseStatus?.days_remaining ?? 999;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -97,12 +100,15 @@ export default function DesktopLayout({ children }: DesktopLayoutProps) {
           )}
           <div className="font-black text-lg text-foreground tracking-tight leading-none truncate">{systemName}</div>
         </div>
-        <button
-          onClick={() => setMobileMenuOpen(true)}
-          className="w-10 h-10 rounded-xl bg-muted text-foreground flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-all shadow-sm"
-        >
-          <Menu size={20} />
-        </button>
+        <div className="flex items-center gap-2">
+          <OfflineSyncIndicator compact={true} />
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            className="w-10 h-10 rounded-xl bg-muted text-foreground flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-all shadow-sm"
+          >
+            <Menu size={20} />
+          </button>
+        </div>
       </div>
 
       {/* Mobile Sidebar Overlay */}
@@ -128,6 +134,17 @@ export default function DesktopLayout({ children }: DesktopLayoutProps) {
 
       {/* Main Content Area */}
       <main className="flex-1 min-w-0 flex flex-col overflow-y-auto">
+        {!isOnline && (
+          <div className="bg-amber-500/10 border-b border-amber-500/20 px-4 py-2 text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center justify-center gap-2 shrink-0">
+            <WifiOff size={14} className="animate-pulse shrink-0" />
+            <span>Working in Offline Mode. All operations are cached locally and will synchronize automatically when connection is restored.</span>
+            {pendingCount > 0 && (
+              <span className="px-2 py-0.5 rounded-full bg-amber-500 text-black text-[10px] font-black">
+                {pendingCount} queued
+              </span>
+            )}
+          </div>
+        )}
 
 
         {licenseStatus?.status === 'active' && daysRemaining <= 7 && (

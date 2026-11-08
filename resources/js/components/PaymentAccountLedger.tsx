@@ -12,7 +12,7 @@ export default function PaymentAccountLedger({ account, onClose }: { account: an
   const transactions = useMemo(() => {
     const accSales = sales.filter(s => s.payment_account_id === account.id && s.status !== 'voided');
     const accExpenses = expenses.filter(e => e.payment_account_id === account.id);
-    const accPayments = payments.filter(p => p.payment_account_id === account.id && (p.payment_type === 'debt_collection' || p.payment_type === 'transfer'));
+    const accPayments = payments.filter(p => p.payment_account_id === account.id && (!p.sale_id || p.payment_type !== 'sale'));
 
     const merged = [
       ...accSales.map(s => ({
@@ -21,7 +21,7 @@ export default function PaymentAccountLedger({ account, onClose }: { account: an
         type: 'Sale',
         reference: s.receipt_no,
         description: `Sale to ${s.customer_id ? 'Customer' : 'Walk-in'}`,
-        amount: s.paid_amount,
+        amount: Number(s.paid_amount) || 0,
         isOutflow: false
       })),
       ...accExpenses.flatMap(e => {
@@ -31,7 +31,7 @@ export default function PaymentAccountLedger({ account, onClose }: { account: an
           type: 'Expense',
           reference: '-',
           description: e.expense_type + (e.status === 'reversed' ? ' (Reversed)' : '') + (e.note ? ` - ${e.note}` : ''),
-          amount: e.amount,
+          amount: Number(e.amount) || 0,
           isOutflow: true
         }];
 
@@ -42,23 +42,40 @@ export default function PaymentAccountLedger({ account, onClose }: { account: an
             type: 'Expense Refund',
             reference: 'REV',
             description: `Refund: ${e.expense_type}${e.refund_reason ? ` (${e.refund_reason})` : ''}`,
-            amount: Number(e.refund_amount || e.amount),
+            amount: Number(e.refund_amount || e.amount) || 0,
             isOutflow: false
           });
         }
         return items;
       }),
-      ...accPayments.map(p => ({
-        id: p.id,
-        date: new Date(p.created_at),
-        type: p.payment_type === 'transfer' ? 'Transfer' : 'Debt Collection',
-        reference: p.reference || '-',
-        description: p.payment_type === 'transfer' 
-          ? (p.direction === 'in' ? 'Transfer In' : 'Transfer Out') 
-          : `Debt payment from Customer`,
-        amount: p.amount,
-        isOutflow: p.direction === 'out'
-      }))
+      ...accPayments.map(p => {
+        let type = 'Debt Collection';
+        let description = 'Debt payment from Customer';
+        let isOutflow = p.direction === 'out';
+
+        if (p.payment_type === 'transfer') {
+          type = 'Transfer';
+          description = p.direction === 'in' ? 'Transfer In' : 'Transfer Out';
+        } else if (p.payment_type === 'dental_invoice' || p.payment_type === 'dental' || (p.reference && String(p.reference).startsWith('DEN-'))) {
+          type = 'Dental Treatment';
+          description = p.reference ? `Dental Invoice: ${p.reference}` : 'Dental Treatment Payment';
+          isOutflow = false;
+        } else if (p.payment_type === 'sale') {
+          type = 'Direct Sale';
+          description = p.reference ? `Payment for ${p.reference}` : 'Direct Sale Payment';
+          isOutflow = false;
+        }
+
+        return {
+          id: p.id,
+          date: new Date(p.created_at),
+          type,
+          reference: p.reference || '-',
+          description,
+          amount: Number(p.amount) || 0,
+          isOutflow
+        };
+      })
     ];
 
     // Filter by time
@@ -109,11 +126,11 @@ export default function PaymentAccountLedger({ account, onClose }: { account: an
 
         <div className="grid grid-cols-1 sm:grid-cols-3 p-6 gap-6 bg-card border-b border-border">
           <div className="bg-success/10 border border-success/20 rounded-2xl p-5">
-            <p className="text-xs font-bold text-success  capitalize tracking-wider mb-1 flex items-center gap-1"><ArrowDownRight size={14}/> Inflow (Sales)</p>
+            <p className="text-xs font-bold text-success  capitalize tracking-wider mb-1 flex items-center gap-1"><ArrowDownRight size={14}/> Total Inflow</p>
             <p className="text-2xl font-black text-success">{formatCurrency(inflow)}</p>
           </div>
           <div className="bg-destructive/10 border border-destructive/20 rounded-2xl p-5">
-            <p className="text-xs font-bold text-destructive  capitalize tracking-wider mb-1 flex items-center gap-1"><ArrowUpRight size={14}/> Outflow (Expenses)</p>
+            <p className="text-xs font-bold text-destructive  capitalize tracking-wider mb-1 flex items-center gap-1"><ArrowUpRight size={14}/> Total Outflow</p>
             <p className="text-2xl font-black text-destructive">{formatCurrency(outflow)}</p>
           </div>
           <div className={`border rounded-2xl p-5 ${net >= 0 ? 'bg-primary/10 border-primary/20' : 'bg-muted border-border'}`}>

@@ -10,6 +10,7 @@ export default function AdminStoresPage() {
   const [stores, setStores] = useState<any[]>([]);
   const [licenses, setLicenses] = useState<any[]>([]);
   const [search, setSearch] = useState('');
+  const [moduleFilter, setModuleFilter] = useState<'all' | 'standard_retail' | 'grocery_bulk' | 'dental_clinic'>('all');
   const [loading, setLoading] = useState(true);
   const [selectedStore, setSelectedStore] = useState<any>(null);
   const [showDetail, setShowDetail] = useState(false);
@@ -61,10 +62,40 @@ export default function AdminStoresPage() {
     if (error) toast.error('Failed to delete'); else { toast.success('Store deleted'); loadData(); }
   };
 
-  const filtered = stores.filter((s: any) =>
-    s.store_name.toLowerCase().includes(search.toLowerCase()) ||
-    s.profiles?.email?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = stores.filter((s: any) => {
+    const matchesSearch =
+      s.store_name.toLowerCase().includes(search.toLowerCase()) ||
+      s.profiles?.email?.toLowerCase().includes(search.toLowerCase());
+    const storeModule = s.business_type || 'standard_retail';
+    const matchesModule = moduleFilter === 'all' || storeModule === moduleFilter;
+    return matchesSearch && matchesModule;
+  });
+
+  const getModuleBadge = (businessType?: string) => {
+    if (businessType === 'dental_clinic') {
+      return { label: 'Dental Clinic', className: 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' };
+    }
+    if (businessType === 'grocery_bulk') {
+      return { label: 'Grocery / Bulk', className: 'bg-amber-500/20 text-amber-400 border border-amber-500/30' };
+    }
+    return { label: 'Standard Retail', className: 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25' };
+  };
+
+  const updateStoreModule = async (store: any, newModule: 'standard_retail' | 'grocery_bulk' | 'dental_clinic') => {
+    const { error } = await apiClient
+      .from('stores')
+      .update({ business_type: newModule } as any)
+      .eq('id', store.id);
+    if (error) {
+      toast.error('Failed to update store module');
+      return;
+    }
+    toast.success(`Updated "${store.store_name}" module to ${getModuleBadge(newModule).label}`);
+    setStores(prev => prev.map((s: any) => s.id === store.id ? { ...s, business_type: newModule } : s));
+    if (selectedStore?.id === store.id) {
+      setSelectedStore((prev: any) => prev ? { ...prev, business_type: newModule } : null);
+    }
+  };
 
   const getEffectiveLicenseStatus = (license: any): string => {
     if (!license) return 'none';
@@ -109,9 +140,21 @@ export default function AdminStoresPage() {
         </div>
       </div>
 
-      <div className="relative max-w-sm">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-        <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search stores..." className="w-full pl-10 pr-4 py-2 rounded-lg bg-card border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-[hsl(145,63%,42%)]" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="relative max-w-sm flex-1">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search stores..." className="w-full pl-10 pr-4 py-2 rounded-lg bg-card border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-[hsl(145,63%,42%)]" />
+        </div>
+        <select
+          value={moduleFilter}
+          onChange={e => setModuleFilter(e.target.value as any)}
+          className="px-3 py-2 rounded-lg bg-card border border-border text-foreground text-sm focus:outline-none focus:ring-1 focus:ring-[hsl(145,63%,42%)]"
+        >
+          <option value="all">All Modules ({stores.length})</option>
+          <option value="standard_retail">Standard Retail ({stores.filter((s: any) => !s.business_type || s.business_type === 'standard_retail').length})</option>
+          <option value="grocery_bulk">Grocery / Bulk ({stores.filter((s: any) => s.business_type === 'grocery_bulk').length})</option>
+          <option value="dental_clinic">Dental Clinic ({stores.filter((s: any) => s.business_type === 'dental_clinic').length})</option>
+        </select>
       </div>
 
       <div className="bg-card rounded-xl border border-border overflow-hidden">
@@ -119,7 +162,7 @@ export default function AdminStoresPage() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border">
-                {['Store Name', 'Owner', 'Phone', 'Location', 'Plan', 'License', 'Expiry', 'Actions'].map(h => (
+                {['Store Name', 'Module / Type', 'Owner', 'Phone', 'Location', 'Plan', 'License', 'Expiry', 'Actions'].map(h => (
                   <th key={h} className="text-left py-3 px-4 text-xs font-medium text-muted-foreground  capitalize">{h}</th>
                 ))}
               </tr>
@@ -127,9 +170,22 @@ export default function AdminStoresPage() {
             <tbody>
               {filtered.map((store: any) => {
                 const lic = getLicense(store.id);
+                const modBadge = getModuleBadge(store.business_type);
                 return (
                   <tr key={store.id} className="border-b border-border last:border-0 hover:bg-muted/50">
                     <td className="py-3 px-4 text-sm text-foreground font-medium">{store.store_name}</td>
+                    <td className="py-3 px-4">
+                      <select
+                        value={store.business_type || 'standard_retail'}
+                        onChange={e => updateStoreModule(store, e.target.value as any)}
+                        className={`px-2.5 py-1 rounded-full text-xs font-semibold cursor-pointer focus:outline-none ${modBadge.className}`}
+                        title="Change Store Module / Business Type"
+                      >
+                        <option value="standard_retail" className="bg-card text-foreground">Standard Retail</option>
+                        <option value="grocery_bulk" className="bg-card text-foreground">Grocery / Bulk</option>
+                        <option value="dental_clinic" className="bg-card text-foreground">Dental Clinic</option>
+                      </select>
+                    </td>
                     <td className="py-3 px-4 text-sm text-muted-foreground">{store.profiles?.email || '—'}</td>
                     <td className="py-3 px-4 text-sm text-muted-foreground">{store.phone || '—'}</td>
                     <td className="py-3 px-4 text-sm text-muted-foreground">{store.location || '—'}</td>
@@ -163,6 +219,18 @@ export default function AdminStoresPage() {
           <div className="bg-card rounded-2xl sm:rounded-3xl border border-border max-w-lg w-full p-6 shadow-2xl animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
             <h2 className="text-xl font-bold text-foreground mb-4 capitalize">{selectedStore.store_name}</h2>
             <div className="space-y-3 text-sm">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Active Module</span>
+                <select
+                  value={selectedStore.business_type || 'standard_retail'}
+                  onChange={e => updateStoreModule(selectedStore, e.target.value as any)}
+                  className={`px-2.5 py-1 rounded-full text-xs font-semibold cursor-pointer focus:outline-none ${getModuleBadge(selectedStore.business_type).className}`}
+                >
+                  <option value="standard_retail" className="bg-card text-foreground">Standard Retail</option>
+                  <option value="grocery_bulk" className="bg-card text-foreground">Grocery / Bulk</option>
+                  <option value="dental_clinic" className="bg-card text-foreground">Dental Clinic</option>
+                </select>
+              </div>
               <div className="flex justify-between"><span className="text-muted-foreground">Owner</span><span className="text-foreground">{selectedStore.profiles?.full_name || selectedStore.profiles?.email}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Email</span><span className="text-foreground">{selectedStore.profiles?.email}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Phone</span><span className="text-foreground">{selectedStore.phone || '—'}</span></div>

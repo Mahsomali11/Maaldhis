@@ -24,6 +24,11 @@ export const FEATURE_KEYS = {
   receipt_history: 'receipt_history',
   stock_report: 'stock_report',
   editable_price: 'editable_price',
+  dental_patients: 'dental_patients',
+  dental_appointments: 'dental_appointments',
+  dental_charting: 'dental_charting',
+  dental_billing: 'dental_billing',
+  dental_catalog: 'dental_catalog',
 } as const;
 
 export type FeatureKey = keyof typeof FEATURE_KEYS;
@@ -83,6 +88,16 @@ export const FEATURE_GROUPS = [
       { key: 'multi_store', label: 'Multi-Store Support' },
       { key: 'api_integrations', label: 'API Integrations' },
     ]
+  },
+  {
+    name: 'Dental Clinic Module',
+    features: [
+      { key: 'dental_patients', label: 'Patient Records & Medical History' },
+      { key: 'dental_appointments', label: 'Dental Appointments & Scheduling' },
+      { key: 'dental_charting', label: 'Interactive Dental Charting (Odontogram)' },
+      { key: 'dental_billing', label: 'Treatment Billing & Dental Invoicing' },
+      { key: 'dental_catalog', label: 'Dental Services & Items Catalog' },
+    ]
   }
 ];
 
@@ -107,4 +122,9 @@ export const ROUTE_FEATURE_MAP: Record<string, FeatureKey> = {
   '/receipt-history': 'receipt_history',
   '/stock-report': 'stock_report',
   '/payment-accounts': 'payment_integrations',
+  '/patients': 'dental_patients',
+  '/appointments': 'dental_appointments',
+  '/dental-charting': 'dental_charting',
+  '/dental-billing': 'dental_billing',
+  '/dental-catalog': 'dental_catalog',
 };

@@ -137,6 +137,13 @@ class DynamicApiController extends Controller
         if ($table === 'returns') return '\\App\\Models\\ReturnModel';
         if ($table === 'profiles') return '\\App\\Models\\User'; // Use users table for profiles
         if ($table === 'license_extension_logs') return '\\App\\Models\\LicenseExtension';
+        if (in_array($table, ['patients', 'dental_patients'], true)) return '\\App\\Models\\Patient';
+        if (in_array($table, ['appointments', 'dental_appointments'], true)) return '\\App\\Models\\Appointment';
+        if ($table === 'dental_charts') return '\\App\\Models\\DentalChart';
+        if (in_array($table, ['treatments', 'dental_treatments'], true)) return '\\App\\Models\\Treatment';
+        if (in_array($table, ['doctors', 'dental_doctors'], true)) return '\\App\\Models\\Doctor';
+        if (in_array($table, ['dental_services', 'services'], true)) return '\\App\\Models\\DentalService';
+        if (in_array($table, ['dental_items'], true)) return '\\App\\Models\\DentalItem';
         
         $modelName = Str::studly(Str::singular($table));
         $class = '\\App\\Models\\' . $modelName;
@@ -340,7 +347,7 @@ class DynamicApiController extends Controller
         if ($table === 'items') {
             $body = $this->normalizeItemPayload($body, false);
         } elseif ($table === 'stores' && array_key_exists('business_type', $body)) {
-            $body['business_type'] = in_array($body['business_type'], ['standard_retail', 'grocery_bulk'], true)
+            $body['business_type'] = in_array($body['business_type'], ['standard_retail', 'grocery_bulk', 'dental_clinic'], true)
                 ? $body['business_type']
                 : 'standard_retail';
         }
@@ -478,10 +485,38 @@ class DynamicApiController extends Controller
                 unset($body['updated_at']);
             }
         }
+        if (isset($body['performed_at']) && !empty($body['performed_at'])) {
+            try {
+                $body['performed_at'] = \Carbon\Carbon::parse($body['performed_at'])->format('Y-m-d H:i:s');
+            } catch (\Exception $e) {
+                unset($body['performed_at']);
+            }
+        }
         if ($table === 'items') {
             $body = $this->normalizeItemPayload($body, true);
         } elseif ($table === 'stores' && empty($body['business_type'])) {
             $body['business_type'] = 'standard_retail';
+        } elseif ($table === 'payments') {
+            if (isset($body['type']) && !isset($body['payment_type'])) {
+                $body['payment_type'] = $body['type'];
+                unset($body['type']);
+            }
+            if (empty($body['payment_type'])) {
+                $body['payment_type'] = 'sale';
+            }
+            if (empty($body['direction'])) {
+                $body['direction'] = 'in';
+            }
+            if (empty($body['created_by'])) {
+                $body['created_by'] = $user?->id ?? \Illuminate\Support\Facades\DB::table('users')->value('id');
+            }
+            // Strip any extraneous fields (such as 'notes' or 'type') not present in the payments table schema
+            $validPaymentCols = [
+                'id', 'store_id', 'sale_id', 'customer_id', 'supplier_id',
+                'payment_type', 'direction', 'method', 'amount', 'reference',
+                'created_by', 'created_at', 'updated_at', 'payment_account_id'
+            ];
+            $body = array_intersect_key($body, array_flip($validPaymentCols));
         }
 
         try {
@@ -531,7 +566,7 @@ class DynamicApiController extends Controller
         if ($table === 'items') {
             $body = $this->normalizeItemPayload($body, false);
         } elseif ($table === 'stores' && array_key_exists('business_type', $body)) {
-            $body['business_type'] = in_array($body['business_type'], ['standard_retail', 'grocery_bulk'], true)
+            $body['business_type'] = in_array($body['business_type'], ['standard_retail', 'grocery_bulk', 'dental_clinic'], true)
                 ? $body['business_type']
                 : 'standard_retail';
         }
@@ -566,6 +601,57 @@ class DynamicApiController extends Controller
                 \Illuminate\Support\Facades\DB::table('licenses')
                     ->where('plan_id', $id)
                     ->update(['features_enabled' => $featuresJson]);
+            }
+
+            if ($table === 'staff_accounts') {
+                $updatedStaff = $record->fresh();
+                $store = \App\Models\Store::find($updatedStaff->store_id);
+                if ($store && $store->business_type === 'dental_clinic') {
+                    $linkedDoctor = \App\Models\Doctor::where('staff_account_id', $updatedStaff->id)
+                        ->orWhere('email', $updatedStaff->email)
+                        ->first();
+
+                    if (in_array($updatedStaff->role, ['dentist', 'dental_doctor'], true)) {
+                        if ($linkedDoctor) {
+                            $linkedDoctor->update([
+                                'name' => $updatedStaff->full_name,
+                                'email' => $updatedStaff->email,
+                                'phone' => $updatedStaff->phone,
+                                'is_active' => $updatedStaff->is_active,
+                            ]);
+                        } else {
+                            \App\Models\Doctor::create([
+                                'id' => (string) \Illuminate\Support\Str::uuid(),
+                                'store_id' => $store->id,
+                                'staff_account_id' => $updatedStaff->id,
+                                'user_id' => $updatedStaff->user_id,
+                                'name' => $updatedStaff->full_name,
+                                'specialization' => 'General Dentist',
+                                'phone' => $updatedStaff->phone ?? '',
+                                'email' => $updatedStaff->email,
+                                'working_hours' => 'Mon - Sat: 09:00 AM - 05:00 PM',
+                                'is_active' => $updatedStaff->is_active,
+                            ]);
+                        }
+                    } elseif ($linkedDoctor) {
+                        $linkedDoctor->update(['is_active' => false]);
+                    }
+                }
+            }
+
+            if ($table === 'doctors') {
+                $updatedDoctor = $record->fresh();
+                if ($updatedDoctor->staff_account_id) {
+                    $staff = \App\Models\StaffAccount::find($updatedDoctor->staff_account_id);
+                    if ($staff) {
+                        $staff->update([
+                            'full_name' => $updatedDoctor->name,
+                            'email' => $updatedDoctor->email,
+                            'phone' => $updatedDoctor->phone,
+                            'is_active' => $updatedDoctor->is_active,
+                        ]);
+                    }
+                }
             }
             
             $this->invalidateTableCache($table, $body, $request);
@@ -702,6 +788,35 @@ class DynamicApiController extends Controller
                         'error' => 'Forbidden: You cannot delete your own staff account.',
                         'message' => 'Forbidden: You cannot delete your own staff account.',
                     ], 403);
+                }
+
+                $doctor = \App\Models\Doctor::where('staff_account_id', $record->id)->first();
+                if ($doctor) {
+                    $hasAppts = \Illuminate\Support\Facades\DB::table('appointments')->where('doctor_id', $doctor->id)->exists();
+                    if ($hasAppts) {
+                        $doctor->update(['is_active' => false]);
+                    } else {
+                        $doctor->delete();
+                    }
+                }
+            }
+
+            if ($table === 'doctors') {
+                $hasAppts = \Illuminate\Support\Facades\DB::table('appointments')->where('doctor_id', $record->id)->exists();
+                if ($record->staff_account_id) {
+                    $staff = \App\Models\StaffAccount::find($record->staff_account_id);
+                    if ($staff) {
+                        if ($hasAppts) {
+                            $staff->update(['is_active' => false]);
+                        } else {
+                            $staff->delete();
+                        }
+                    }
+                }
+                if ($hasAppts) {
+                    $record->update(['is_active' => false]);
+                    $this->invalidateTableCache($table, [], $request);
+                    return response()->json(['message' => 'Doctor has existing appointments and was marked as inactive.'], 200);
                 }
             }
             $record->delete();

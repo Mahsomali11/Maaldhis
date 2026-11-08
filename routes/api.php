@@ -139,6 +139,24 @@ Route::middleware(['auth:sanctum'])->group(function () {
             ]);
         });
 
+        Route::get('/dental/doctors', [\App\Http\Controllers\DoctorController::class, 'index']);
+        Route::post('/dental/doctors', [\App\Http\Controllers\DoctorController::class, 'store']);
+        Route::put('/dental/doctors/{id}', [\App\Http\Controllers\DoctorController::class, 'update']);
+        Route::delete('/dental/doctors/{id}', [\App\Http\Controllers\DoctorController::class, 'destroy']);
+
+        Route::get('/dental/services', [\App\Http\Controllers\DentalCatalogController::class, 'getServices']);
+        Route::post('/dental/services', [\App\Http\Controllers\DentalCatalogController::class, 'storeService']);
+        Route::put('/dental/services/{id}', [\App\Http\Controllers\DentalCatalogController::class, 'updateService']);
+        Route::delete('/dental/services/{id}', [\App\Http\Controllers\DentalCatalogController::class, 'destroyService']);
+
+        Route::get('/dental/items', [\App\Http\Controllers\DentalCatalogController::class, 'getItems']);
+        Route::post('/dental/items', [\App\Http\Controllers\DentalCatalogController::class, 'storeItem']);
+        Route::put('/dental/items/{id}', [\App\Http\Controllers\DentalCatalogController::class, 'updateItem']);
+        Route::delete('/dental/items/{id}', [\App\Http\Controllers\DentalCatalogController::class, 'destroyItem']);
+
+        Route::get('/dental/patients/{id}', [\App\Http\Controllers\PatientController::class, 'show']);
+        Route::put('/dental/patients/{id}', [\App\Http\Controllers\PatientController::class, 'update']);
+
         Route::get('/rest/v1/{table}', [DynamicApiController::class, 'index']);
         Route::post('/rest/v1/{table}', [DynamicApiController::class, 'store']);
         Route::patch('/rest/v1/{table}', [DynamicApiController::class, 'update']);

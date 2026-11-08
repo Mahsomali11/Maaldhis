@@ -62,7 +62,7 @@ export default function ExpensesPage() {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
 
-  const isOwnerOrAdmin = user?.role === 'owner' || user?.role === 'admin' || user?.role === 'superadmin' || user?.role === 'super_owner' || (Boolean(currentStore?.owner_user_id) && Boolean(user?.id) && currentStore?.owner_user_id === user?.id);
+  const isOwnerOrAdmin = user?.role === 'owner' || user?.role === 'admin' || user?.role === 'clinic_admin' || user?.role === 'superadmin' || user?.role === 'super_owner' || (Boolean(currentStore?.owner_user_id) && Boolean(user?.id) && currentStore?.owner_user_id === user?.id);
 
   useEffect(() => {
     if (!currentStore) return;

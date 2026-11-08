@@ -13,7 +13,7 @@ export default function StoreEditPage() {
   const userRole = user?.role || 'owner';
 
   useEffect(() => {
-    if (userRole !== 'owner' && userRole !== 'admin') {
+    if (userRole !== 'owner' && userRole !== 'admin' && userRole !== 'clinic_admin') {
       toast.error('Forbidden: You do not have permission to access Store Settings.');
       navigate('/dashboard');
     }
@@ -29,8 +29,12 @@ export default function StoreEditPage() {
   const [receiptTemplate, setReceiptTemplate] = useState(currentStore?.receipt_template || 'classic');
   const [primaryColor, setPrimaryColor] = useState(currentStore?.primary_color || '#2d7d46');
   const [secondaryColor, setSecondaryColor] = useState(currentStore?.secondary_color || '#1e5c32');
-  const [businessType, setBusinessType] = useState<'standard_retail' | 'grocery_bulk'>(
-    currentStore?.business_type === 'grocery_bulk' ? 'grocery_bulk' : 'standard_retail'
+  const [businessType, setBusinessType] = useState<'standard_retail' | 'grocery_bulk' | 'dental_clinic'>(
+    currentStore?.business_type === 'dental_clinic'
+      ? 'dental_clinic'
+      : currentStore?.business_type === 'grocery_bulk'
+        ? 'grocery_bulk'
+        : 'standard_retail'
   );
   const [saving, setSaving] = useState(false);
 
@@ -155,16 +159,19 @@ export default function StoreEditPage() {
                     <label className="text-xs font-bold text-muted-foreground capitalize tracking-wider">Business Type / Store Mode</label>
                     <select
                       value={businessType}
-                      onChange={e => setBusinessType(e.target.value as 'standard_retail' | 'grocery_bulk')}
+                      onChange={e => setBusinessType(e.target.value as 'standard_retail' | 'grocery_bulk' | 'dental_clinic')}
                       className="w-full px-4 h-11 rounded-md border border-input bg-background text-sm text-foreground font-medium focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all shadow-sm"
                     >
                       <option value="standard_retail">Standard Retail (Default — Integer quantities, single-unit items)</option>
                       <option value="grocery_bulk">Grocery / Bulk Retail (Decimal quantities & Wholesale/Retail unit conversion)</option>
+                      <option value="dental_clinic">Dental Clinic (Patients, Appointments, Dental Charting & Treatment Billing)</option>
                     </select>
                     <p className="text-[11px] text-muted-foreground leading-relaxed">
-                      {businessType === 'grocery_bulk'
-                        ? 'Grocery / Bulk Mode active: Enables fractional quantities (e.g. 0.25, 0.5) and Wholesale vs Retail base-unit conversions in Inventory & POS.'
-                        : 'Standard Retail Mode active: Uses standard whole-unit integer quantities and hides bulk conversion fields.'}
+                      {businessType === 'dental_clinic'
+                        ? 'Dental Clinic Mode active: Displays dedicated Dental Clinic menus (Patients, Appointments, Dental Charting, Treatment Billing) and hides retail inventory/POS menus.'
+                        : businessType === 'grocery_bulk'
+                          ? 'Grocery / Bulk Mode active: Enables fractional quantities (e.g. 0.25, 0.5) and Wholesale vs Retail base-unit conversions in Inventory & POS.'
+                          : 'Standard Retail Mode active: Uses standard whole-unit integer quantities and hides bulk conversion fields.'}
                     </p>
                   </div>
                   

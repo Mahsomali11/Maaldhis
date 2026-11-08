@@ -3,7 +3,8 @@ import {
   Home, Receipt, TrendingUp, CreditCard, Undo2, Package, BarChart3,
   Users, ArrowLeftRight, Clock, Truck, UserCog, FileText, ShoppingCart,
   Settings, BookOpen, HelpCircle, Store, LogOut, ChevronDown, Check, Plus, Lock, User, Wallet,
-  ChevronsUpDown, ShieldCheck, LayoutDashboard, Database, Smartphone, DollarSign, Layers
+  ChevronsUpDown, ShieldCheck, LayoutDashboard, Database, Smartphone, DollarSign, Layers,
+  Stethoscope, Calendar, HeartPulse, UserCheck
 } from 'lucide-react';
 import { useApp } from '@/context/AppContext';
 import { useAdmin } from '@/context/AdminContext';
@@ -11,6 +12,7 @@ import { useFeatureAccess } from '@/hooks/useFeatureAccess';
 import { useSystemBranding } from '@/hooks/usePlatformName';
 import { ROUTE_FEATURE_MAP } from '@/lib/features';
 import type { FeatureKey } from '@/lib/features';
+import OfflineSyncIndicator from './OfflineSyncIndicator';
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 
@@ -22,6 +24,16 @@ const mainNav = [
       { label: 'Categories', path: '/categories' }
   ] },
   { label: 'Sales Report', icon: BarChart3, path: '/sales-report' },
+];
+
+const dentalMainNav = [
+  { label: 'Clinic Dashboard', icon: LayoutDashboard, path: '/dashboard' },
+  { label: 'Patients', icon: Users, path: '/patients' },
+  { label: 'Appointments', icon: Calendar, path: '/appointments' },
+  { label: 'Doctors', icon: UserCheck, path: '/dental-doctors' },
+  { label: 'Dental Charting', icon: HeartPulse, path: '/dental-charting' },
+  { label: 'Treatment Billing', icon: Stethoscope, path: '/dental-billing' },
+  { label: 'Dental Catalog', icon: Layers, path: '/dental-catalog' },
 ];
 
 const moduleNav = [
@@ -36,6 +48,14 @@ const moduleNav = [
   { label: 'Receipt History', icon: Clock, path: '/receipt-history' },
   { label: 'Staff Accounts', icon: UserCog, path: '/staff-accounts' },
   { label: 'Stock Report', icon: FileText, path: '/stock-report' },
+];
+
+const dentalModuleNav = [
+  { label: 'Purchases', icon: ShoppingCart, path: '/purchases' },
+  { label: 'Suppliers', icon: Truck, path: '/suppliers' },
+  { label: 'Expenses', icon: Receipt, path: '/expenses' },
+  { label: 'Cash Flow', icon: TrendingUp, path: '/cash-flow' },
+  { label: 'Staff Accounts', icon: UserCog, path: '/staff-accounts' },
 ];
 
 const bottomNav = [
@@ -88,22 +108,86 @@ export default function DesktopSidebar({ isMobile = false }: { isMobile?: boolea
   const isActive = (path: string) => location.pathname === path || (path !== '/inventory' && location.pathname.startsWith(path + '/'));
   const isExactActive = (path: string) => location.pathname === path;
 
+  const isDentalClinic = currentStore?.business_type === 'dental_clinic';
+
+  const formatRoleLabel = (r: string) => {
+    if (isDentalClinic) {
+      if (r === 'admin' || r === 'clinic_admin') return 'Clinic Admin';
+      if (r === 'dentist' || r === 'dental_doctor') return 'Dentist';
+      if (r === 'receptionist' || r === 'front_desk') return 'Receptionist';
+      if (r === 'cashier' || r === 'billing_clerk') return 'Billing Clerk';
+      if (r === 'owner') return 'Owner';
+    }
+    if (r === 'inventory_manager') return 'Inventory Manager';
+    return r?.replace(/_/g, ' ') || 'Staff';
+  };
+
   const isItemVisible = (path: string) => {
-    if (role === 'superadmin') return true;
-    if (role === 'owner' || role === 'admin') return true;
-    if (role === 'cashier') {
-      const allowedPaths = ['/dashboard', '/start-sale', '/receipt-history', '/returns', '/customers', '/profile', '/help', '/expenses'];
+    if (role === 'superadmin' || role === 'super_admin') return true;
+    if (role === 'owner' || role === 'admin' || role === 'clinic_admin') return true;
+
+    if (isDentalClinic) {
+      if (role === 'dentist' || role === 'dental_doctor') {
+        const allowedPaths = [
+          '/dashboard',
+          '/patients',
+          '/appointments',
+          '/dental-doctors',
+          '/dental-charting',
+          '/dental-billing',
+          '/dental-catalog',
+          '/profile',
+          '/learning-center',
+          '/help',
+        ];
+        return allowedPaths.includes(path);
+      }
+      if (role === 'receptionist' || role === 'front_desk') {
+        const allowedPaths = [
+          '/dashboard',
+          '/patients',
+          '/appointments',
+          '/dental-doctors',
+          '/profile',
+          '/learning-center',
+          '/help',
+        ];
+        return allowedPaths.includes(path);
+      }
+      if (role === 'cashier' || role === 'billing_clerk') {
+        const allowedPaths = [
+          '/dashboard',
+          '/patients',
+          '/appointments',
+          '/dental-doctors',
+          '/dental-billing',
+          '/dental-catalog',
+          '/expenses',
+          '/cash-flow',
+          '/profile',
+          '/learning-center',
+          '/help',
+        ];
+        return allowedPaths.includes(path);
+      }
+    }
+
+    if (role === 'cashier' || role === 'billing_clerk') {
+      const allowedPaths = ['/dashboard', '/start-sale', '/receipt-history', '/returns', '/customers', '/profile', '/help', '/expenses', '/patients', '/appointments', '/dental-charting', '/dental-billing', '/dental-catalog'];
       return allowedPaths.includes(path);
     }
     if (role === 'inventory_manager') {
-      const allowedPaths = ['/dashboard', '/inventory', '/stock-transfers', '/suppliers', '/purchases', '/stock-report', '/profile', '/help'];
+      const allowedPaths = ['/dashboard', '/inventory', '/stock-transfers', '/suppliers', '/purchases', '/stock-report', '/profile', '/help', '/patients', '/appointments', '/dental-charting', '/dental-catalog'];
       return allowedPaths.includes(path);
     }
     return false;
   };
 
-  const filteredMainNav = mainNav.filter(item => isItemVisible(item.path));
-  const filteredModuleNav = moduleNav.filter(item => isItemVisible(item.path));
+  const activeMainSource = isDentalClinic ? dentalMainNav : mainNav;
+  const activeModuleSource = isDentalClinic ? dentalModuleNav : moduleNav;
+
+  const filteredMainNav = activeMainSource.filter(item => isItemVisible(item.path));
+  const filteredModuleNav = activeModuleSource.filter(item => isItemVisible(item.path));
   const filteredBottomNav = bottomNav.filter(item => isItemVisible(item.path));
 
   const NavItem = ({ label, icon: Icon, path, subItems }: { label: string; icon: any; path: string; subItems?: any[] }) => {
@@ -199,14 +283,14 @@ export default function DesktopSidebar({ isMobile = false }: { isMobile?: boolea
           <div className="flex flex-col min-w-0">
             <span className="font-black text-xl tracking-tight text-foreground leading-none truncate">{systemName}</span>
             <span className="text-[10px] font-bold text-primary capitalize tracking-widest mt-1 leading-none">
-              {isAdmin ? 'Admin Portal' : 'POS System'}
+              {isAdmin ? 'Admin Portal' : isDentalClinic ? 'Dental Clinic' : 'POS System'}
             </span>
           </div>
         </div>
 
         {/* Store Selector */}
         {!isAdmin && (
-          <div className="px-6 mb-8 relative z-50" ref={dropdownRef}>
+          <div className="px-6 mb-4 relative z-50" ref={dropdownRef}>
             <button
               onClick={() => setStoreDropdownOpen(!storeDropdownOpen)}
               className="w-full flex items-center justify-between bg-card border border-border p-3 rounded-2xl transition-all shadow-sm hover:shadow-md hover:border-primary/30"
@@ -221,7 +305,7 @@ export default function DesktopSidebar({ isMobile = false }: { isMobile?: boolea
                 )}
                 <div className="text-left min-w-0 flex flex-col justify-center">
                   <p className="text-sm font-black text-foreground truncate">{currentStore?.store_name || 'My Store'}</p>
-                  <p className="text-[10px] font-bold text-muted-foreground  capitalize tracking-widest truncate">{role}</p>
+                  <p className="text-[10px] font-bold text-muted-foreground capitalize tracking-widest truncate">{formatRoleLabel(role)}</p>
                 </div>
               </div>
               <ChevronsUpDown size={16} className="text-muted-foreground shrink-0" />
@@ -264,6 +348,11 @@ export default function DesktopSidebar({ isMobile = false }: { isMobile?: boolea
             )}
           </div>
         )}
+
+        {/* Sync Status Badge */}
+        <div className="px-6 mb-4 shrink-0">
+          <OfflineSyncIndicator className="w-full justify-center py-1.5" />
+        </div>
 
         {/* Navigation Links */}
         <div className="flex-1 overflow-y-auto pb-6 space-y-6 px-3">
@@ -311,7 +400,7 @@ export default function DesktopSidebar({ isMobile = false }: { isMobile?: boolea
                 </div>
                 <div className="flex-1 flex flex-col items-start min-w-0">
                   <span className="truncate w-full text-left text-sm font-bold text-foreground leading-tight">{displayUser?.full_name || 'User'}</span>
-                  <span className="text-[10px] font-bold text-muted-foreground  capitalize tracking-widest leading-tight">{role}</span>
+                  <span className="text-[10px] font-bold text-muted-foreground capitalize tracking-widest leading-tight">{formatRoleLabel(role)}</span>
                 </div>
               </button>
               <div className="h-px bg-border/50 my-1 mx-2"></div>

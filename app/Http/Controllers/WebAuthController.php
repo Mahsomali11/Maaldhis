@@ -160,12 +160,18 @@ class WebAuthController extends Controller
             'phone' => $request->phone ?? '',
         ]);
 
+        $rawBusinessType = $request->input('businessType', $request->input('business_type', 'standard_retail'));
+        $businessType = in_array($rawBusinessType, ['standard_retail', 'grocery_bulk', 'dental_clinic'], true)
+            ? $rawBusinessType
+            : 'standard_retail';
+
         $store = \App\Models\Store::create([
             'owner_user_id' => $user->id,
             'store_name' => $request->storeName,
             'phone' => $request->storePhone ?? '',
             'location' => $request->storeLocation ?? '',
             'currency' => $request->currency ?? 'KSh',
+            'business_type' => $businessType,
         ]);
 
         Auth::login($user);

@@ -64,5 +64,44 @@ class AppServiceProvider extends ServiceProvider
                 // Ignore if DB is temporarily unreachable; will retry on next request
             }
         }
+
+        $dentalFlagFile = rtrim(sys_get_temp_dir(), '\\/') . DIRECTORY_SEPARATOR . 'maaldhis_storage' . DIRECTORY_SEPARATOR . 'schema_dental_clinic_v1.flag';
+        if (!is_file($dentalFlagFile)) {
+            try {
+                $dentalMigration = include base_path('database/migrations/2026_11_08_122000_create_dental_clinic_tables.php');
+                if (is_object($dentalMigration) && method_exists($dentalMigration, 'up')) {
+                    $dentalMigration->up();
+                    @file_put_contents($dentalFlagFile, date('c'));
+                }
+            } catch (\Throwable $e) {
+                // Ignore if DB is temporarily unreachable; will retry on next request
+            }
+        }
+
+        $dentalItemsDetailFlag = rtrim(sys_get_temp_dir(), '\\/') . DIRECTORY_SEPARATOR . 'maaldhis_storage' . DIRECTORY_SEPARATOR . 'schema_dental_items_detail_v1.flag';
+        if (!is_file($dentalItemsDetailFlag)) {
+            try {
+                $detailMigration = include base_path('database/migrations/2026_11_08_134500_add_items_detail_to_treatments_table.php');
+                if (is_object($detailMigration) && method_exists($detailMigration, 'up')) {
+                    $detailMigration->up();
+                    @file_put_contents($dentalItemsDetailFlag, date('c'));
+                }
+            } catch (\Throwable $e) {
+                // Ignore if DB is temporarily unreachable; will retry on next request
+            }
+        }
+
+        $dentalSyncPaymentsFlag = rtrim(sys_get_temp_dir(), '\\/') . DIRECTORY_SEPARATOR . 'maaldhis_storage' . DIRECTORY_SEPARATOR . 'schema_dental_sync_payments_v1.flag';
+        if (!is_file($dentalSyncPaymentsFlag)) {
+            try {
+                $syncMigration = include base_path('database/migrations/2026_11_08_141000_sync_dental_treatments_payments.php');
+                if (is_object($syncMigration) && method_exists($syncMigration, 'up')) {
+                    $syncMigration->up();
+                    @file_put_contents($dentalSyncPaymentsFlag, date('c'));
+                }
+            } catch (\Throwable $e) {
+                // Ignore if DB is temporarily unreachable; will retry on next request
+            }
+        }
     }
 }

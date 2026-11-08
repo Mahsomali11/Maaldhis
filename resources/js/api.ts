@@ -1,3 +1,13 @@
+import {
+  cacheRecord,
+  cacheRecords,
+  getCachedRecords,
+  getCachedRecord,
+  removeCachedRecord,
+  enqueueSyncItem,
+} from '@/lib/offline/indexedDb';
+import { syncManager } from '@/lib/offline/syncManager';
+
 export interface User {
   id: string;
   email?: string;
@@ -49,6 +59,54 @@ const getHeaders = (extraHeaders?: Record<string, string>): Record<string, strin
   };
 };
 
+function filterCachedRecords(records: any[], query: Record<string, string>): any[] {
+  let result = [...records];
+
+  for (const [key, val] of Object.entries(query)) {
+    if (key === 'select' || key === 'order' || key === 'limit' || key === 'count' || key === 'head') continue;
+
+    if (val.startsWith('eq.')) {
+      const target = val.slice(3);
+      result = result.filter(r => {
+        const itemVal = r[key];
+        if (typeof itemVal === 'boolean') {
+          return String(itemVal) === target.toLowerCase();
+        }
+        return String(itemVal ?? '') === target;
+      });
+    } else if (val.startsWith('neq.')) {
+      const target = val.slice(4);
+      result = result.filter(r => String(r[key] ?? '') !== target);
+    } else if (val.startsWith('in.')) {
+      const list = val.slice(4, -1).split(',');
+      result = result.filter(r => list.includes(String(r[key] ?? '')));
+    }
+  }
+
+  // Handle order
+  if (query.order) {
+    const [col, dir] = query.order.split('.');
+    const isAsc = dir !== 'desc';
+    result.sort((a, b) => {
+      const valA = a[col] ?? '';
+      const valB = b[col] ?? '';
+      if (valA < valB) return isAsc ? -1 : 1;
+      if (valA > valB) return isAsc ? 1 : -1;
+      return 0;
+    });
+  }
+
+  // Handle limit
+  if (query.limit) {
+    const lim = parseInt(query.limit, 10);
+    if (!isNaN(lim) && lim > 0) {
+      result = result.slice(0, lim);
+    }
+  }
+
+  return result;
+}
+
 class QueryBuilder {
   private table: string;
   private query: Record<string, string> = {};
@@ -58,6 +116,109 @@ class QueryBuilder {
 
   constructor(table: string) {
     this.table = table;
+  }
+
+  private getIdFromQueryOrPayload(): string | null {
+    if (this.query.id && this.query.id.startsWith('eq.')) {
+      return this.query.id.slice(3);
+    }
+    if (this.payload && typeof this.payload === 'object' && this.payload.id) {
+      return String(this.payload.id);
+    }
+    return null;
+  }
+
+  private async handleOfflineMutation(method: string, url: string): Promise<any> {
+    const isSingle = this.isSingle;
+
+    if (this.action === 'insert') {
+      const records = Array.isArray(this.payload) ? this.payload : [this.payload];
+      const preparedList = records.map(item => {
+        const copy = { ...item };
+        if (!copy.id) {
+          copy.id = typeof crypto !== 'undefined' && crypto.randomUUID
+            ? crypto.randomUUID()
+            : `id_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+        }
+        if (!copy.created_at) copy.created_at = new Date().toISOString();
+        if (!copy.updated_at) copy.updated_at = new Date().toISOString();
+        return copy;
+      });
+
+      // Save to IndexedDB immediately so UI displays it right away
+      await cacheRecords(this.table, preparedList);
+
+      // Enqueue to sync queue
+      for (const item of preparedList) {
+        await enqueueSyncItem({
+          store_id: item.store_id,
+          table: this.table,
+          action: 'insert',
+          url,
+          method: 'POST',
+          payload: item,
+        });
+      }
+
+      window.dispatchEvent(new CustomEvent('action-complete'));
+      return {
+        data: isSingle ? preparedList[0] : (Array.isArray(this.payload) ? preparedList : preparedList[0]),
+        count: preparedList.length,
+        error: null,
+      };
+    }
+
+    if (this.action === 'update') {
+      const id = this.getIdFromQueryOrPayload();
+      if (id) {
+        const existing = await getCachedRecord(this.table, id);
+        const merged = { ...(existing || {}), ...this.payload, updated_at: new Date().toISOString() };
+        await cacheRecord(this.table, merged);
+      }
+
+      await enqueueSyncItem({
+        store_id: this.payload?.store_id,
+        table: this.table,
+        action: 'update',
+        url,
+        method: 'PATCH',
+        payload: this.payload,
+      });
+
+      window.dispatchEvent(new CustomEvent('action-complete'));
+      return { data: this.payload, count: 1, error: null };
+    }
+
+    if (this.action === 'delete') {
+      const id = this.getIdFromQueryOrPayload();
+      if (id) {
+        await removeCachedRecord(this.table, id);
+      }
+
+      await enqueueSyncItem({
+        table: this.table,
+        action: 'delete',
+        url,
+        method: 'DELETE',
+      });
+
+      window.dispatchEvent(new CustomEvent('action-complete'));
+      return { data: null, count: 1, error: null };
+    }
+
+    return { data: null, count: 0, error: null };
+  }
+
+  private async handleOfflineFallback(method: string, url: string): Promise<any> {
+    if (this.action === 'select') {
+      const storeId = this.query.store_id?.startsWith('eq.') ? this.query.store_id.slice(3) : undefined;
+      const cached = await getCachedRecords(this.table, storeId);
+      const filtered = filterCachedRecords(cached, this.query);
+      const data = this.isSingle ? (filtered[0] || null) : filtered;
+      return { data, count: filtered.length, error: null };
+    }
+
+    return this.handleOfflineMutation(method, url);
   }
 
   select(fields = '*', options?: { count?: string; head?: boolean }) {
@@ -152,6 +313,17 @@ class QueryBuilder {
     }
 
     const executeRequest = async () => {
+      const isBrowserOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+
+      // Handle offline mode immediately if offline
+      if (isBrowserOffline) {
+        if (this.action !== 'select') {
+          return this.handleOfflineMutation(method, url);
+        } else {
+          return this.handleOfflineFallback(method, url);
+        }
+      }
+
       try {
         const extraHeaders: Record<string, string> = {};
         if (isMutating) {
@@ -203,10 +375,47 @@ class QueryBuilder {
           storeLicenseRpcCache.clear();
         }
 
+        // Cache fresh records to IndexedDB for offline availability
+        if (method === 'GET' && Array.isArray(data)) {
+          cacheRecords(this.table, data).catch(() => {});
+        } else if (method === 'POST' && data) {
+          if (Array.isArray(data)) {
+            cacheRecords(this.table, data).catch(() => {});
+          } else {
+            cacheRecord(this.table, data).catch(() => {});
+          }
+        } else if (method === 'PATCH' && this.payload) {
+          const id = this.getIdFromQueryOrPayload();
+          if (id) {
+            getCachedRecord(this.table, id).then(existing => {
+              cacheRecord(this.table, { ...(existing || {}), ...this.payload }).catch(() => {});
+            }).catch(() => {});
+          }
+        } else if (method === 'DELETE') {
+          const id = this.getIdFromQueryOrPayload();
+          if (id) {
+            removeCachedRecord(this.table, id).catch(() => {});
+          }
+        }
+
         const result = { data, count, error: null };
         window.dispatchEvent(new CustomEvent('action-complete'));
         return result;
-      } catch (error) {
+      } catch (error: any) {
+        // Fallback to offline storage if network drops or request fails due to connection
+        const isNetworkFailure =
+          isBrowserOffline ||
+          !navigator.onLine ||
+          error?.message?.includes('Failed to fetch') ||
+          error?.message?.includes('NetworkError') ||
+          error?.message?.includes('network error') ||
+          error?.name === 'AbortError';
+
+        if (isNetworkFailure) {
+          console.warn(`[Offline Mode] Network request failed for ${method} ${url}. Switching to local persistence.`);
+          return this.handleOfflineFallback(method, url);
+        }
+
         window.dispatchEvent(new CustomEvent('action-error', { detail: error }));
         return { data: null, error };
       } finally {
@@ -503,11 +712,27 @@ export const api = {
     }
 
     const exec = async () => {
+      const fullUrl = `${API_URL}${path}`;
+      const isBrowserOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+
+      if (isBrowserOffline) {
+        console.warn(`[Offline Mode] Device offline. Enqueueing mutation for ${fullUrl}`);
+        await enqueueSyncItem({
+          store_id: body?.store_id,
+          action: 'custom_post',
+          url: fullUrl,
+          method: 'POST',
+          payload: body,
+        });
+        window.dispatchEvent(new CustomEvent('action-complete'));
+        return { data: { success: true, offline: true, ...body }, error: null };
+      }
+
       try {
         const extraHeaders: Record<string, string> = {
           'X-Idempotency-Key': generateIdempotencyKey(requestKey)
         };
-        const res = await fetch(`${API_URL}${path}`, {
+        const res = await fetch(fullUrl, {
           method: 'POST',
           headers: getHeaders(extraHeaders),
           credentials: 'same-origin',
@@ -517,7 +742,27 @@ export const api = {
         window.dispatchEvent(new CustomEvent('action-complete'));
         if (!res.ok) return { data: { error: data.error || data.message || 'Error' }, error: null };
         return { data, error: null };
-      } catch (e) {
+      } catch (e: any) {
+        const isNetworkFailure =
+          !navigator.onLine ||
+          e?.message?.includes('Failed to fetch') ||
+          e?.message?.includes('NetworkError') ||
+          e?.message?.includes('network error') ||
+          e?.name === 'AbortError';
+
+        if (isNetworkFailure) {
+          console.warn(`[Offline Mode] Network failure on POST ${fullUrl}. Saving operation locally to sync queue.`);
+          await enqueueSyncItem({
+            store_id: body?.store_id,
+            action: 'custom_post',
+            url: fullUrl,
+            method: 'POST',
+            payload: body,
+          });
+          window.dispatchEvent(new CustomEvent('action-complete'));
+          return { data: { success: true, offline: true, ...body }, error: null };
+        }
+
         window.dispatchEvent(new CustomEvent('action-error', { detail: e }));
         return { data: { error: (e as Error).message }, error: e };
       } finally {

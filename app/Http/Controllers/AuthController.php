@@ -88,12 +88,18 @@ class AuthController extends Controller
             'phone' => $request->phone ?? '',
         ]);
 
+        $rawBusinessType = $request->input('businessType', $request->input('business_type', 'standard_retail'));
+        $businessType = in_array($rawBusinessType, ['standard_retail', 'grocery_bulk', 'dental_clinic'], true)
+            ? $rawBusinessType
+            : 'standard_retail';
+
         $store = \App\Models\Store::create([
             'owner_user_id' => $user->id,
             'store_name' => $request->storeName,
             'phone' => $request->storePhone ?? '',
             'location' => $request->storeLocation ?? '',
             'currency' => $request->currency ?? 'KSh',
+            'business_type' => $businessType,
         ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
@@ -147,6 +153,24 @@ class AuthController extends Controller
                 'role' => $request->role,
                 'is_active' => true,
             ]);
+
+            // If the store is a dental clinic and staff role is dentist, automatically create Doctor profile
+            $store = \App\Models\Store::find($request->store_id);
+            if ($store && $store->business_type === 'dental_clinic' && in_array($staff->role, ['dentist', 'dental_doctor'], true)) {
+                \App\Models\Doctor::firstOrCreate(
+                    ['store_id' => $store->id, 'email' => $staff->email],
+                    [
+                        'id' => (string) \Illuminate\Support\Str::uuid(),
+                        'staff_account_id' => $staff->id,
+                        'user_id' => $user->id,
+                        'name' => $staff->full_name,
+                        'specialization' => 'General Dentist',
+                        'phone' => $staff->phone ?? '',
+                        'working_hours' => 'Mon - Sat: 09:00 AM - 05:00 PM',
+                        'is_active' => true,
+                    ]
+                );
+            }
 
             return response()->json(['user' => $user, 'staff' => $staff], 201);
         });

@@ -10,7 +10,7 @@ const BarcodeScanner = lazy(() => import('@/components/BarcodeScanner'));
 export default function PurchasesPage() {
   const { purchases, purchaseItems: globalPurchaseItems, suppliers, items, categories, currentStore, formatCurrency, recordPurchase, refreshData, userRole } = useApp();
   const isGroceryMode = currentStore?.business_type === 'grocery_bulk';
-  const canManagePurchases = !userRole || userRole === 'owner' || userRole === 'admin';
+  const canManagePurchases = !userRole || userRole === 'owner' || userRole === 'admin' || userRole === 'clinic_admin';
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedPurchase, setSelectedPurchase] = useState<any | null>(null);
