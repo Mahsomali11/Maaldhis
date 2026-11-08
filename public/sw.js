@@ -1,11 +1,13 @@
 /**
- * Maaldhis PWA Service Worker
- * Handles runtime caching, offline app-shell serving, and static asset persistence.
+ * Maaldhis PWA Service Worker (v2)
+ * Strictly separates HTML document navigation responses from Inertia JSON responses.
+ * Prevents raw JSON from ever being returned to browser document navigations.
  */
 
-const CACHE_VERSION = 'maaldhis-pwa-v1';
+const CACHE_VERSION = 'maaldhis-pwa-v2';
 const STATIC_CACHE = `maaldhis-static-${CACHE_VERSION}`;
-const PAGE_CACHE = `maaldhis-pages-${CACHE_VERSION}`;
+const HTML_SHELL_CACHE = `maaldhis-html-${CACHE_VERSION}`;
+const INERTIA_DATA_CACHE = `maaldhis-inertia-${CACHE_VERSION}`;
 const API_CACHE = `maaldhis-api-${CACHE_VERSION}`;
 
 const PRECACHE_ASSETS = [
@@ -14,6 +16,23 @@ const PRECACHE_ASSETS = [
   '/pwa-icon.svg',
   '/favicon.ico',
 ];
+
+// Helper: strictly check if a response is a real HTML document and not JSON
+async function isValidHtmlResponse(response) {
+  if (!response) return false;
+  const contentType = response.headers.get('content-type') || '';
+  if (!contentType.includes('text/html')) return false;
+
+  try {
+    const clone = response.clone();
+    const text = await clone.text();
+    const trimmed = text.trim();
+    // Must start with HTML tag or DOCTYPE, never a JSON object
+    return trimmed.startsWith('<') && !trimmed.startsWith('{');
+  } catch (_) {
+    return false;
+  }
+}
 
 // 1. Install Event: Pre-cache core shell resources and skip waiting
 self.addEventListener('install', (event) => {
@@ -29,7 +48,7 @@ self.addEventListener('install', (event) => {
 
 // 2. Activate Event: Clean up outdated cache stores and claim clients
 self.addEventListener('activate', (event) => {
-  const allowedCaches = [STATIC_CACHE, PAGE_CACHE, API_CACHE];
+  const allowedCaches = [STATIC_CACHE, HTML_SHELL_CACHE, INERTIA_DATA_CACHE, API_CACHE];
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
@@ -44,20 +63,29 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// 3. Message Event: Allow frontend to request background pre-caching of key routes
+// 3. Message Event: Pre-cache HTML App Shells for critical routes
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'PRECACHE_ROUTES') {
     const routes = event.data.routes || [];
-    caches.open(PAGE_CACHE).then((cache) => {
+    caches.open(HTML_SHELL_CACHE).then((cache) => {
       routes.forEach((route) => {
-        fetch(route, { credentials: 'same-origin', headers: { 'Accept': 'text/html' } })
-          .then((res) => {
+        // Explicitly request text/html so Laravel renders app.blade.php
+        fetch(route, {
+          credentials: 'same-origin',
+          headers: { 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' },
+        })
+          .then(async (res) => {
             if (res && res.status === 200) {
-              cache.put(route, res.clone());
-              try {
-                const fullUrl = new URL(route, self.location.origin).href;
-                cache.put(fullUrl, res.clone());
-              } catch (_) {}
+              const isHtml = await isValidHtmlResponse(res);
+              if (isHtml) {
+                cache.put(route, res.clone());
+                try {
+                  const fullUrl = new URL(route, self.location.origin).href;
+                  cache.put(fullUrl, res.clone());
+                } catch (_) {}
+                // Ensure we have a valid App Shell fallback
+                cache.put('__app_shell__', res.clone());
+              }
             }
           })
           .catch(() => {});
@@ -66,7 +94,7 @@ self.addEventListener('message', (event) => {
   }
 });
 
-// 4. Fetch Event: Intercept network traffic with tailored offline strategies
+// 4. Fetch Event: Tailored routing strategies
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   const url = new URL(request.url);
@@ -76,7 +104,10 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // A. Navigation Requests (Address Bar / Hard Refresh / F5)
+  // =========================================================================
+  // Strategy A: Full Document Navigation (F5 / Hard Refresh / Address Bar)
+  // Must ALWAYS return a verified HTML Application Shell, NEVER raw JSON!
+  // =========================================================================
   const isNavigation =
     request.mode === 'navigate' ||
     (request.headers.get('accept') && request.headers.get('accept').includes('text/html'));
@@ -84,51 +115,50 @@ self.addEventListener('fetch', (event) => {
   if (isNavigation) {
     event.respondWith(
       fetch(request)
-        .then((networkResponse) => {
+        .then(async (networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
-            const clone = networkResponse.clone();
-            caches.open(PAGE_CACHE).then((cache) => {
-              // Cache under full URL and pathname
-              cache.put(request.url, clone.clone());
-              cache.put(url.pathname, clone.clone());
-              // Save as primary App Shell fallback
-              cache.put('__app_shell__', clone);
-            });
+            const isHtml = await isValidHtmlResponse(networkResponse);
+            if (isHtml) {
+              const cache = await caches.open(HTML_SHELL_CACHE);
+              cache.put(request.url, networkResponse.clone());
+              cache.put(url.pathname, networkResponse.clone());
+              cache.put('__app_shell__', networkResponse.clone());
+            }
           }
           return networkResponse;
         })
         .catch(async () => {
-          console.warn('[SW] Offline navigation intercepted for:', request.url);
-          const cache = await caches.open(PAGE_CACHE);
+          console.warn('[SW] Offline document navigation intercepted for:', request.url);
+          const cache = await caches.open(HTML_SHELL_CACHE);
 
-          // 1. Exact match by full URL
-          let cachedResponse = await cache.match(request.url);
-          if (!cachedResponse) {
-            // 2. Match by pathname
-            cachedResponse = await cache.match(url.pathname);
+          // 1. Try exact match by full URL
+          let candidate = await cache.match(request.url);
+          if (await isValidHtmlResponse(candidate)) {
+            return candidate;
           }
-          if (!cachedResponse) {
-            // 3. Match App Shell fallback
-            cachedResponse = await cache.match('__app_shell__');
+
+          // 2. Try match by pathname
+          candidate = await cache.match(url.pathname);
+          if (await isValidHtmlResponse(candidate)) {
+            return candidate;
           }
-          if (!cachedResponse) {
-            // 4. Match any cached HTML document
-            const keys = await cache.keys();
-            for (const req of keys) {
-              const res = await cache.match(req);
-              const contentType = res?.headers?.get('content-type') || '';
-              if (contentType.includes('text/html')) {
-                cachedResponse = res;
-                break;
-              }
+
+          // 3. Try global App Shell fallback
+          candidate = await cache.match('__app_shell__');
+          if (await isValidHtmlResponse(candidate)) {
+            return candidate;
+          }
+
+          // 4. Search all keys in HTML_SHELL_CACHE for any valid HTML document
+          const keys = await cache.keys();
+          for (const req of keys) {
+            const res = await cache.match(req);
+            if (await isValidHtmlResponse(res)) {
+              return res;
             }
           }
 
-          if (cachedResponse) {
-            return cachedResponse;
-          }
-
-          // 5. Emergency offline fallback page
+          // 5. If no cached HTML exists, return clean fallback HTML
           return new Response(getOfflineHtml(), {
             headers: { 'Content-Type': 'text/html; charset=utf-8' },
           });
@@ -137,7 +167,10 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // B. Inertia Client-Side Visits (X-Inertia: true)
+  // =========================================================================
+  // Strategy B: Inertia AJAX Client-Side Visits (X-Inertia: true)
+  // Strictly isolated in INERTIA_DATA_CACHE — never stored in HTML_SHELL_CACHE!
+  // =========================================================================
   const isInertia = request.headers.get('x-inertia') === 'true';
   if (isInertia) {
     event.respondWith(
@@ -145,16 +178,18 @@ self.addEventListener('fetch', (event) => {
         .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
             const clone = networkResponse.clone();
-            caches.open(PAGE_CACHE).then((cache) => {
-              cache.put(request, clone);
+            caches.open(INERTIA_DATA_CACHE).then((cache) => {
+              cache.put(url.pathname, clone);
             });
           }
           return networkResponse;
         })
         .catch(async () => {
-          const cache = await caches.open(PAGE_CACHE);
-          const cached = await cache.match(request);
+          const cache = await caches.open(INERTIA_DATA_CACHE);
+          const cached = await cache.match(url.pathname);
           if (cached) return cached;
+
+          // Graceful fallback JSON for client-side navigation while offline
           return new Response(
             JSON.stringify({
               component: 'DashboardPage',
@@ -174,7 +209,9 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // C. Static Bundles & Assets (/build/*, .js, .css, fonts, images)
+  // =========================================================================
+  // Strategy C: Static Bundles & Assets (/build/*, .js, .css, fonts, images)
+  // =========================================================================
   const isStaticAsset =
     url.pathname.startsWith('/build/') ||
     url.pathname.endsWith('.js') ||
@@ -194,10 +231,9 @@ self.addEventListener('fetch', (event) => {
       caches.open(STATIC_CACHE).then(async (cache) => {
         const cachedResponse = await cache.match(request);
         if (cachedResponse) {
-          // Stale-while-revalidate in background if online
           fetch(request)
             .then((networkResponse) => {
-              if (networkResponse && networkResponse.status === 200) {
+              if (networkResponse && (networkResponse.status === 200 || networkResponse.type === 'opaque')) {
                 cache.put(request, networkResponse);
               }
             })
@@ -205,7 +241,6 @@ self.addEventListener('fetch', (event) => {
           return cachedResponse;
         }
 
-        // Fetch from network and cache
         return fetch(request).then((networkResponse) => {
           if (networkResponse && (networkResponse.status === 200 || networkResponse.type === 'opaque')) {
             cache.put(request, networkResponse.clone());
@@ -220,7 +255,9 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // D. GET API Requests (/api/*)
+  // =========================================================================
+  // Strategy D: GET API Requests (/api/*)
+  // =========================================================================
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(
       fetch(request)
@@ -340,4 +377,3 @@ function getOfflineHtml() {
 </body>
 </html>`;
 }
-
