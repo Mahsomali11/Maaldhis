@@ -17,6 +17,35 @@ import { getPlatformName, syncDocumentBranding } from '@/hooks/usePlatformName';
 // Initialize global double-click & duplicate submission guard
 initSubmitGuard();
 
+// Register PWA Service Worker for seamless offline caching & refresh support
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker
+            .register('/sw.js', { scope: '/' })
+            .then((registration) => {
+                if (registration.active) {
+                    registration.active.postMessage({
+                        type: 'PRECACHE_ROUTES',
+                        routes: [
+                            '/dashboard',
+                            '/start-sale',
+                            '/inventory',
+                            '/patients',
+                            '/dental-billing',
+                            '/dental-charting',
+                            '/dental-catalog',
+                            '/sales-report',
+                            '/expenses'
+                        ],
+                    });
+                }
+            })
+            .catch((error) => {
+                console.warn('[PWA] Service Worker registration failed:', error);
+            });
+    });
+}
+
 const queryClient = new QueryClient();
 
 // Extract Inertia page data to fix compatibility with Laravel 10+ inertia adapter

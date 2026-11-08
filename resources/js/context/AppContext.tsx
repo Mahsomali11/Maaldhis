@@ -164,6 +164,31 @@ function getInitialInertiaContext(): {
     const parsed = JSON.parse(dataPage);
     const user = parsed?.props?.auth?.user;
     if (!user || !user.id) {
+      if (typeof localStorage !== 'undefined') {
+        try {
+          const cachedUserStr = localStorage.getItem('cached_auth_user');
+          const cachedStoresStr = localStorage.getItem('cached_stores');
+          if (cachedUserStr) {
+            const cachedUser = JSON.parse(cachedUserStr);
+            const cachedStores = cachedStoresStr ? JSON.parse(cachedStoresStr) : [];
+            const savedStoreId = localStorage.getItem('currentStoreId');
+            const currentStore = cachedStores.find((s: any) => s.id === savedStoreId) || cachedStores[0] || null;
+            return {
+              session: { access_token: 'session', user: cachedUser },
+              profile: {
+                id: cachedUser.id,
+                email: cachedUser.email || '',
+                full_name: cachedUser.full_name || cachedUser.name || '',
+                phone: cachedUser.phone || '',
+              },
+              stores: cachedStores,
+              currentStore,
+              isAuthenticated: true,
+              hasInitialStores: cachedStores.length > 0,
+            };
+          }
+        } catch (_) {}
+      }
       return { session: null, profile: null, stores: [], currentStore: null, isAuthenticated: false, hasInitialStores: false };
     }
     const session: Session = { access_token: 'session', user };
@@ -179,8 +204,16 @@ function getInitialInertiaContext(): {
     const savedStoreId = typeof localStorage !== 'undefined' ? localStorage.getItem('currentStoreId') : null;
     const preferredStoreId = (user.role !== 'owner' && user.assigned_store_id) ? user.assigned_store_id : savedStoreId;
     const currentStore = stores.find(s => s.id === preferredStoreId) || stores.find(s => s.id === savedStoreId) || stores[0] || null;
-    if (currentStore && typeof localStorage !== 'undefined') {
-      localStorage.setItem('currentStoreId', currentStore.id);
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem('cached_auth_user', JSON.stringify(user));
+        if (hasInitialStores) {
+          localStorage.setItem('cached_stores', JSON.stringify(stores));
+        }
+        if (currentStore) {
+          localStorage.setItem('currentStoreId', currentStore.id);
+        }
+      } catch (_) {}
     }
     return {
       session,

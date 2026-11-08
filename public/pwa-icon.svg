@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4F46E5" />
+      <stop offset="100%" stop-color="#7C3AED" />
+    </linearGradient>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#818CF8" stop-opacity="0.2" />
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="24" flood-color="#000000" flood-opacity="0.25" />
+    </filter>
+  </defs>
+
+  <!-- Background with smooth rounded corners -->
+  <rect width="512" height="512" rx="128" fill="url(#grad)" />
+
+  <!-- Subtle inner glow overlay -->
+  <rect x="16" y="16" width="480" height="480" rx="112" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="4" />
+
+  <!-- Center Icon: Combined Geometric Symbol of Store & Cross Shield -->
+  <g filter="url(#shadow)" transform="translate(106, 106)">
+    <!-- Main Store / Fortress Front -->
+    <path d="M150 20 L270 90 L270 240 C270 270 150 295 150 295 C150 295 30 270 30 240 L30 90 Z" 
+          fill="none" 
+          stroke="#FFFFFF" 
+          stroke-width="22" 
+          stroke-linecap="round" 
+          stroke-linejoin="round" />
+    
+    <!-- Central Modern Plus / Cross (Healthcare + Clinical + Commerce) -->
+    <path d="M150 85 L150 205 M90 145 L210 145" 
+          stroke="#FFFFFF" 
+          stroke-width="24" 
+          stroke-linecap="round" 
+          stroke-linejoin="round" />
+
+    <!-- Pulse Wave Accent -->
+    <circle cx="150" cy="145" r="14" fill="#38BDF8" />
+  </g>
+</svg>
+

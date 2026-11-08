@@ -40,10 +40,17 @@ function getInitialAdminFromDom(): { session: Session | null; admin: AdminProfil
   try {
     const appEl = document.getElementById('app');
     const dataPage = appEl?.getAttribute('data-page');
-    if (!dataPage) return { session: null, admin: null };
-    const parsed = JSON.parse(dataPage);
-    const user = parsed?.props?.auth?.user;
+    let user = null;
+    if (dataPage) {
+      const parsed = JSON.parse(dataPage);
+      user = parsed?.props?.auth?.user;
+    }
+    if (!user && typeof localStorage !== 'undefined') {
+      const cached = localStorage.getItem('cached_admin_user');
+      if (cached) user = JSON.parse(cached);
+    }
     if (isPlatformAdminUser(user)) {
+      try { localStorage.setItem('cached_admin_user', JSON.stringify(user)); } catch (_) {}
       const roleVal = (user.admin_role || 'super_owner') as 'super_owner' | 'admin' | 'support';
       return {
         session: { access_token: 'session', user },
